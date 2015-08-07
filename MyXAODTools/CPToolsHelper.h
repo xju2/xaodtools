@@ -6,6 +6,7 @@
 #include "xAODMuon/Muon.h"
 #include "xAODTracking/VertexContainer.h"
 #include "xAODTracking/Vertex.h"
+#include "xAODTracking/TrackParticle.h"
 
 #include "GoodRunsLists/GoodRunsListSelectionTool.h"
 #include "JetMomentTools/JetVertexTaggerTool.h"
@@ -34,12 +35,24 @@ public:
             unsigned int n_trks = 2);
     static bool GetTrackSumPt(const xAOD::Vertex& vertex, 
             float& sum_px, float& sum_py);
-    // void SetIsolationWP(const string& wp);
+    // Track quality
+    static void GetTrackQuality(const xAOD::Electron& el, 
+            const xAOD::EventInfo& ei, 
+            const xAOD::VertexContainer& vertices,
+            float& d0, float& z0, float& zp);
+    static void GetTrackQuality(const xAOD::Muon& muon,
+            const xAOD::EventInfo& ei, 
+            const xAOD::VertexContainer& vertices,
+            float& d0, float& z0, float& zp);
+    static void GetTrackQuality(const xAOD::TrackParticle* track, 
+            const xAOD::EventInfo& ei, 
+            const xAOD::VertexContainer& vertices,
+            float& d0, float& z0, float& zp);
+    static const xAOD::Vertex* GetPrimVtx(const xAOD::VertexContainer& vertices);
 
 private:    
     const char* APP_NAME = "CPToolsHelper"; 
     string iso_wp_ ;
-
 
     GoodRunsListSelectionTool *grl_tool_;
     JetVertexTaggerTool* pjvtag_tool_; 
@@ -47,6 +60,7 @@ private:
     Trig::TrigDecisionTool *m_trigDecisionTool_;
     CP::IsolationSelectionTool* iso_tool_;
     AsgElectronLikelihoodTool* ele_medium_LLH_tool_;
+
 
     bool initialize();
 };

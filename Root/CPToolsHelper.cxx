@@ -2,6 +2,7 @@
 
 #include "CPAnalysisExamples/errorcheck.h"
 #include "xAODTracking/TrackParticle.h"
+#include "xAODTracking/TrackParticlexAODHelpers.h"
 
 #include "MyXAODTools/CPToolsHelper.h"
 
@@ -131,4 +132,51 @@ bool CPToolsHelper::GetTrackSumPt(const xAOD::Vertex& vertex,
     sum_px = px;
     sum_py = py;
     return true;
+}
+
+const xAOD::Vertex* CPToolsHelper::GetPrimVtx(const xAOD::VertexContainer& vertices)
+{
+    for ( const auto& vx : vertices ) {
+      if (vx->vertexType() == xAOD::VxType::PriVtx) {
+        return vx;
+      }
+    }
+    return nullptr;
+}
+
+void CPToolsHelper::GetTrackQuality(const xAOD::TrackParticle* track, 
+        const xAOD::EventInfo& evtInfo, 
+        const xAOD::VertexContainer& vertices,
+        float& d0, float& z0, float& zp)
+{
+  // d0
+  d0 = xAOD::TrackingHelpers::d0significance( track , 
+          evtInfo.beamPosSigmaX(), 
+          evtInfo.beamPosSigmaY(), 
+          evtInfo.beamPosSigmaXY() );
+  // z0 
+  const xAOD::Vertex* pv = GetPrimVtx(vertices);
+  if(pv != nullptr){
+      double primvertex_z = pv ? pv->z() : 0;
+      z0 = (track->z0() + track->vz() - primvertex_z);
+      zp = z0*track->theta();
+  }
+}
+
+void CPToolsHelper::GetTrackQuality(const xAOD::Electron& input, 
+        const xAOD::EventInfo& evtInfo, 
+        const xAOD::VertexContainer& vertices,
+        float& d0, float& z0, float& zp)
+{
+  const xAOD::TrackParticle* track =  input.trackParticle();
+  GetTrackQuality(track, evtInfo, vertices, d0, z0, zp);
+}
+
+void CPToolsHelper::GetTrackQuality(const xAOD::Muon& input, 
+        const xAOD::EventInfo& evtInfo, 
+        const xAOD::VertexContainer& vertices,
+        float& d0, float& z0, float& zp)
+{
+  const xAOD::TrackParticle* track =  input.primaryTrackParticle();
+  GetTrackQuality(track, evtInfo, vertices, d0, z0, zp);
 }
