@@ -49,9 +49,13 @@ public:
             const xAOD::VertexContainer& vertices,
             float& d0, float& z0, float& zp);
     static const xAOD::Vertex* GetPrimVtx(const xAOD::VertexContainer& vertices);
+    static bool GetProcessEventsInfo(const char* file_name, 
+            uint64_t& n_events_processed,
+            double& sum_of_weights,
+            double& sum_of_weights_squared);
 
 private:    
-    const char* APP_NAME = "CPToolsHelper"; 
+    static const char* APP_NAME; 
     string iso_wp_ ;
 
     GoodRunsListSelectionTool *grl_tool_;

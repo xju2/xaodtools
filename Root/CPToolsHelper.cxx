@@ -4,7 +4,16 @@
 #include "xAODTracking/TrackParticle.h"
 #include "xAODTracking/TrackParticlexAODHelpers.h"
 
+#ifdef ROOTCORE 
+#include "xAODRootAccess/Init.h"
+#include "xAODRootAccess/TEvent.h"
+#endif
+
 #include "MyXAODTools/CPToolsHelper.h"
+#include "xAODCutFlow/CutBookkeeper.h"
+#include "xAODCutFlow/CutBookkeeperContainer.h"
+
+const char* CPToolsHelper::APP_NAME = "CPToolsHelper";
 
 CPToolsHelper::CPToolsHelper(){
     initialize();
@@ -179,4 +188,44 @@ void CPToolsHelper::GetTrackQuality(const xAOD::Muon& input,
 {
   const xAOD::TrackParticle* track =  input.primaryTrackParticle();
   GetTrackQuality(track, evtInfo, vertices, d0, z0, zp);
+}
+
+bool CPToolsHelper::GetProcessEventsInfo(const char* file_name, 
+        uint64_t& n_events_processed,
+        double& sum_of_weights,
+        double& sum_of_weights_squared)
+{
+    TFile* ifile = TFile::Open(file_name, "READ");
+    xAOD::TEvent event( xAOD::TEvent::kBranchAccess );
+    CHECK( event.readFrom( ifile ) );
+    //Read the CutBookkeeper container
+    const xAOD::CutBookkeeperContainer* completeCBC = 0;
+    if (!event.retrieveMetaInput(completeCBC, "CutBookkeepers").isSuccess()) 
+    {
+        Error( APP_NAME, "Failed to retrieve CutBookkeepers from MetaData! Exiting.");
+    }
+
+    // First, let's find the smallest cycle number,
+    // i.e., the original first processing step/cycle
+    int minCycle = 10000;
+    for ( auto cbk : *completeCBC ) {
+        if ( minCycle > cbk->cycle() ) { minCycle = cbk->cycle(); }
+    }
+    // Now, let's actually find the right one that contains all the needed info...
+    const xAOD::CutBookkeeper* allEventsCBK = 0;
+    for ( auto cbk :  *completeCBC ) {
+        if ( minCycle == cbk->cycle() && cbk->name() == "AllExecutedEvents" ) 
+        {
+            allEventsCBK = cbk;
+            break;
+        }
+    }
+    if(allEventsCBK) {
+        n_events_processed = allEventsCBK->nAcceptedEvents();
+        sum_of_weights = allEventsCBK->sumOfEventWeights();
+        sum_of_weights_squared = allEventsCBK->sumOfEventWeightsSquared();
+    } else { Info( APP_NAME, "No relevent CutBookKeepers found" ); }	
+
+    ifile->Close();
+    return true;
 }
