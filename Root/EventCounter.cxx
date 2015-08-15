@@ -10,6 +10,7 @@
 #include <fstream>
 #include <sstream>
 #include <memory>
+#include <exception>
 
 using namespace std;
 
@@ -99,18 +100,23 @@ void EventCounter::GetTotalEventsDic(const char* file_name, const char* tree_nam
     if(is_mc_){
         int mc_channel_number; Long64_t total_entries;
         float mcweight ;
+        uint64_t n_events_processed;
+        double sum_of_weights;
         associate->SetBranchAddress("mc_channel_number", &mc_channel_number);
         associate->SetBranchAddress("MCWeight", &mcweight);
+        associate->SetBranchAddress("nEventsProcessed", &n_events_processed);
+        associate->SetBranchAddress("nSumEventWeights", &sum_of_weights);
+
         total_entries = associate->GetEntries();
         for(Long64_t ientry = 0; ientry < total_entries; ientry++){
             associate->LoadTree(ientry);
             associate->GetEntry(ientry);
             try{
-                total_events_dic_.at(mc_channel_number) += mcweight;
-                all_events_noweight_dic_.at(mc_channel_number) += 1.0;
+                total_events_dic_.at(mc_channel_number) += sum_of_weights;
+                all_events_noweight_dic_.at(mc_channel_number) += n_events_processed;
             }catch (const std::out_of_range& oor){
-                total_events_dic_[mc_channel_number] = mcweight;
-                all_events_noweight_dic_[mc_channel_number] = 1.0;
+                total_events_dic_[mc_channel_number] = sum_of_weights;
+                all_events_noweight_dic_[mc_channel_number] = n_events_processed;
             }
         }
     } else {
@@ -174,11 +180,13 @@ double EventCounter::getTotalEventsNoWeight(int mc_channel_number){
 
 double EventCounter::getUtil(int mc_channel_number, std::map<int, double>& dic, const char* name)
 {
+    
     double total = 0.0;
     try{
         total = dic.at(mc_channel_number);
     }catch(const std::out_of_range& oor){
         cout<<"Error: "<< mc_channel_number<< " not exist in "<<name<<endl;
+        throw std::out_of_range("CHECK DICTIONARY");
     }
     return total;
 }
@@ -231,7 +239,7 @@ void EventCounter::ReadEventInfo(const char* input_name)
 {
     if (input_name == NULL){
         printf("[ERROR] (%s:%d:) Input point is NULL ", __FILE__, __LINE__);
-        return;
+        throw std::invalid_argument("Give a Weight File!");
     }
     fstream in_file(input_name, fstream::in);
     do {

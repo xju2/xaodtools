@@ -224,6 +224,7 @@ bool CPToolsHelper::GetProcessEventsInfo(const char* file_name,
         n_events_processed = allEventsCBK->nAcceptedEvents();
         sum_of_weights = allEventsCBK->sumOfEventWeights();
         sum_of_weights_squared = allEventsCBK->sumOfEventWeightsSquared();
+        // Info(APP_NAME, "input stream: %s", allEventsCBK->inputStream().c_str());
     } else { Info( APP_NAME, "No relevent CutBookKeepers found" ); }	
 
     ifile->Close();
