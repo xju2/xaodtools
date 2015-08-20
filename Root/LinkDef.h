@@ -5,6 +5,7 @@
 #include <MyXAODTools/CPToolsHelper.h>
 #include <MyXAODTools/EventCounter.h>
 #include <MyXAODTools/EventInfoCreator.h>
+#include <MyXAODTools/PhotonBranch.h>
 #include <MyXAODTools/TrackBranch.h>
 
 #ifdef __CINT__
@@ -18,6 +19,7 @@
 #pragma link C++ class CPToolsHelper;
 #pragma link C++ class EventCounter;
 #pragma link C++ class EventInfoCreator;
+#pragma link C++ class PhotonBranch;
 #pragma link C++ class TrackBranch;
 
 #endif
