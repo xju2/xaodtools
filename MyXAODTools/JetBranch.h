@@ -5,6 +5,7 @@
 
 #include "xAODJet/Jet.h"
 #include "MyXAODTools/BranchCreatorBase.h"
+#include "JetSelectorTools/JetCleaningTool.h"
 
 using namespace std;
 
@@ -16,9 +17,10 @@ public:
 
     void AttachBranchToTree(TTree& );
     void ClearBranch();
-    void CreateBranch();
+    bool CreateBranch();
     void Fill(const xAOD::Jet& jet);
 private:
+    static const char* APP_NAME;
     vector<float>* emF_;
     vector<float>* hecF_;
     vector<float>* larQ_;
@@ -28,6 +30,10 @@ private:
     vector<float>* negE_;
     vector<float>* avg_larQF_;
     vector<int>*  frac_sampling_max_index_;
+    vector<bool>* jet_isBadTight_;
+    vector<float>* jet_timing_;
+
+    JetCleaningTool* jetCleaningTool_ ;
 };
 
 #endif

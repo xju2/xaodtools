@@ -1,12 +1,15 @@
 #include <stdlib.h>
 
 #include "MyXAODTools/JetBranch.h"
+#include "CPAnalysisExamples/errorcheck.h"
+
+const char* JetBranch::APP_NAME = "JetBranch";
 
 JetBranch::JetBranch(){
     CreateBranch();
 }
 
-void JetBranch::CreateBranch()
+bool JetBranch::CreateBranch()
 {
     emF_ = new vector<float>();
     hecF_ = new vector<float>();
@@ -17,6 +20,13 @@ void JetBranch::CreateBranch()
     negE_ = new vector<float>();
     avg_larQF_ = new vector<float>();
     frac_sampling_max_index_ = new vector<int>();
+    jet_isBadTight_ = new vector<bool>();
+    jet_timing_ = new vector<float>();
+
+    jetCleaningTool_ = new JetCleaningTool("JetCleaningToolTight");
+    CHECK(jetCleaningTool_->setProperty("CutLevel", "TightBad"));
+    CHECK(jetCleaningTool_->initialize());
+    return true;
 }
 
 JetBranch::~JetBranch(){
@@ -29,6 +39,9 @@ JetBranch::~JetBranch(){
     delete negE_;
     delete avg_larQF_;
     delete frac_sampling_max_index_;
+    delete jet_isBadTight_;
+    delete jet_timing_;
+    delete jetCleaningTool_;
 }
 
 void JetBranch::ClearBranch(){
@@ -41,6 +54,8 @@ void JetBranch::ClearBranch(){
     negE_->clear();
     avg_larQF_->clear();
     frac_sampling_max_index_->clear();
+    jet_isBadTight_->clear();
+    jet_timing_->clear();
 }
 
 void JetBranch::AttachBranchToTree(TTree& tree){
@@ -53,6 +68,8 @@ void JetBranch::AttachBranchToTree(TTree& tree){
     tree.Branch("jet_negE", &negE_);
     tree.Branch("jet_avgLArQF", &avg_larQF_);
     tree.Branch("jet_fracSamplingMaxIndex", &frac_sampling_max_index_);
+    tree.Branch("jet_isBadTight", &jet_isBadTight_);
+    tree.Branch("jet_timing", &jet_timing_);
 }
 
 void JetBranch::Fill(const xAOD::Jet& jet) 
@@ -71,4 +88,7 @@ void JetBranch::Fill(const xAOD::Jet& jet)
     negE_->push_back(jet.getAttribute<float>(xAOD::JetAttribute::NegativeE));
     avg_larQF_->push_back(jet.getAttribute<float>(xAOD::JetAttribute::AverageLArQF));
     frac_sampling_max_index_->push_back(jet.getAttribute<int>(xAOD::JetAttribute::FracSamplingMaxIndex));
+    jet_timing_->push_back(jet.getAttribute<float>(xAOD::JetAttribute::Timing));
+
+    jet_isBadTight_->push_back((bool)jetCleaningTool_->keep(jet));
 }

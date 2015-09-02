@@ -20,6 +20,7 @@ public:
 private:
     int n_base_ph_;
     vector<bool>* ph_is_tight_;
+    vector<bool>* ph_is_medium_;
     vector<float>* ph_topoetcone40_;
     vector<TLorentzVector>* ph_p4_;
     vector<float>* ph_etaBE_;
