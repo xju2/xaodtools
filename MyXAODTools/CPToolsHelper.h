@@ -49,7 +49,12 @@ public:
             const xAOD::VertexContainer& vertices,
             float& d0, float& z0, float& zp);
     static const xAOD::Vertex* GetPrimVtx(const xAOD::VertexContainer& vertices);
+
     static bool GetProcessEventsInfo(const char* file_name, 
+            uint64_t& n_events_processed,
+            double& sum_of_weights,
+            double& sum_of_weights_squared);
+    static bool GetProcessEventsInfo(xAOD::TEvent& event,
             uint64_t& n_events_processed,
             double& sum_of_weights,
             double& sum_of_weights_squared);
