@@ -67,6 +67,8 @@ void EventCounter::GetCrossSection()
                 root_core_path.c_str()));
     LoadXS(Form("%s/data/MyXAODTools/xs_sm.txt", 
                 root_core_path.c_str()));
+    LoadXS(Form("%s/data/MyXAODTools/xs_monojet_signal.txt", 
+                root_core_path.c_str()));
     cout<<"Cross section DB is loaded"<<endl;
 }
 

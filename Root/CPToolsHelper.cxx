@@ -34,7 +34,8 @@ bool CPToolsHelper::initialize(){
     grl_tool_ = new GoodRunsListSelectionTool("GoodRunsListSelectionTool");
     std::vector<std::string> myvals;
     string maindir(getenv("ROOTCOREBIN"));
-    myvals.push_back(maindir+"/data/MyXAODTools/data15_13TeV.CombinedPerf.xml");
+    myvals.push_back(maindir+"/data/MyXAODTools/data15_13TeV_50ns.xml");
+    myvals.push_back(maindir+"/data/MyXAODTools/data15_13TeV_25ns_pD.xml");
     CHECK( grl_tool_->setProperty( "GoodRunsListVec", myvals) );
     CHECK( grl_tool_->setProperty("PassThrough", false) );
     CHECK( grl_tool_->initialize() );
@@ -190,14 +191,11 @@ void CPToolsHelper::GetTrackQuality(const xAOD::Muon& input,
   GetTrackQuality(track, evtInfo, vertices, d0, z0, zp);
 }
 
-bool CPToolsHelper::GetProcessEventsInfo(const char* file_name, 
+bool CPToolsHelper::GetProcessEventsInfo(xAOD::TEvent& event, 
         uint64_t& n_events_processed,
         double& sum_of_weights,
         double& sum_of_weights_squared)
 {
-    TFile* ifile = TFile::Open(file_name, "READ");
-    xAOD::TEvent event( xAOD::TEvent::kBranchAccess );
-    CHECK( event.readFrom( ifile ) );
     //Read the CutBookkeeper container
     const xAOD::CutBookkeeperContainer* completeCBC = 0;
     if (!event.retrieveMetaInput(completeCBC, "CutBookkeepers").isSuccess()) 
@@ -227,6 +225,18 @@ bool CPToolsHelper::GetProcessEventsInfo(const char* file_name,
         // Info(APP_NAME, "input stream: %s", allEventsCBK->inputStream().c_str());
     } else { Info( APP_NAME, "No relevent CutBookKeepers found" ); }	
 
+    return true;
+}
+
+bool CPToolsHelper::GetProcessEventsInfo(const char* file_name, 
+        uint64_t& n_events_processed,
+        double& sum_of_weights,
+        double& sum_of_weights_squared)
+{
+    TFile* ifile = TFile::Open(file_name, "READ");
+    xAOD::TEvent event( xAOD::TEvent::kBranchAccess );
+    CHECK( event.readFrom( ifile ) );
+    CHECK( GetProcessEventsInfo(event, n_events_processed, sum_of_weights, sum_of_weights_squared));
     ifile->Close();
     return true;
 }
