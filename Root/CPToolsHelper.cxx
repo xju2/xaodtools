@@ -82,6 +82,10 @@ bool CPToolsHelper::PassGRL(const xAOD::EventInfo& ei){
     }
 }
 
+bool CPToolsHelper::PassGRL(int run_number, int lumi_block){
+    return grl_tool_->passRunLB(run_number, lumi_block);
+}
+
 float CPToolsHelper::NewJVT(const xAOD::Jet& jet)
 {
     return pjvtag_tool_->updateJvt(jet);
@@ -169,7 +173,7 @@ void CPToolsHelper::GetTrackQuality(const xAOD::TrackParticle* track,
   if(pv != nullptr){
       double primvertex_z = pv ? pv->z() : 0;
       z0 = (track->z0() + track->vz() - primvertex_z);
-      zp = z0*track->theta();
+      zp = z0*TMath::Sin(track->theta());
   }
 }
 

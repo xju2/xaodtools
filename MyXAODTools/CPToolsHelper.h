@@ -24,6 +24,7 @@ public:
     virtual ~CPToolsHelper();
 
     bool PassGRL(const xAOD::EventInfo& ei);
+    bool PassGRL(int run_number, int lumi_block);
     float NewJVT(const xAOD::Jet& jet);
     bool PassTrigger(const string& trig_name);
     bool PassIsolation(const xAOD::Muon& muon);
