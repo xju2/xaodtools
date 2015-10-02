@@ -35,7 +35,7 @@ bool CPToolsHelper::initialize(){
     std::vector<std::string> myvals;
     string maindir(getenv("ROOTCOREBIN"));
     myvals.push_back(maindir+"/data/MyXAODTools/data15_13TeV_50ns.xml");
-    myvals.push_back(maindir+"/data/MyXAODTools/data15_13TeV_25ns_pD.xml");
+    myvals.push_back(maindir+"/data/MyXAODTools/data15_13TeV_25ns_pE5.xml");
     CHECK( grl_tool_->setProperty( "GoodRunsListVec", myvals) );
     CHECK( grl_tool_->setProperty("PassThrough", false) );
     CHECK( grl_tool_->initialize() );
