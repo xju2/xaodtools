@@ -2,10 +2,13 @@
 #define __MYXAODTOOLS_EVENTINFOCREATOR_H__
 
 #include <TTree.h>
+#include <vector>
 
 #include "xAODEventInfo/EventInfo.h"
 
 #include "MyXAODTools/BranchCreatorBase.h"
+
+using namespace std;
 class EventInfoCreator
 {
 
@@ -27,6 +30,7 @@ private:
     int event_number_;
     int mc_channel_number_;
     float mc_weight_;
+    vector<float>* mc_weights_;
 
     float actualIPC_; // actual interaction per crossing for the current BCID -- for in-time pile-up
     float averageIPC_;// average interaction per corssing for all BCIDs -- for out-of-time pile-up

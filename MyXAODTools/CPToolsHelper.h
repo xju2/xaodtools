@@ -7,6 +7,7 @@
 #include "xAODTracking/VertexContainer.h"
 #include "xAODTracking/Vertex.h"
 #include "xAODTracking/TrackParticle.h"
+#include "xAODBase/IParticle.h"
 
 #include "GoodRunsLists/GoodRunsListSelectionTool.h"
 #include "JetMomentTools/JetVertexTaggerTool.h"
@@ -14,6 +15,7 @@
 #include "TrigDecisionTool/TrigDecisionTool.h"
 #include "IsolationSelection/IsolationSelectionTool.h"
 #include "ElectronPhotonSelectorTools/AsgElectronLikelihoodTool.h"
+#include "PileupReweighting/PileupReweightingTool.h"
 
 #include <string>
 

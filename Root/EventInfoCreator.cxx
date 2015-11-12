@@ -3,15 +3,17 @@
 
 EventInfoCreator::EventInfoCreator(){
     is_data_ = false;
+    mc_weights_ = new vector<float>();
 }
 
 EventInfoCreator::EventInfoCreator(bool is_data):
     is_data_(is_data)
 {
+    mc_weights_ = new vector<float>();
 }
 
 EventInfoCreator::~EventInfoCreator(){
-
+    delete mc_weights_;
 }
 
 void EventInfoCreator::AttachMiniToTree(TTree& tree){
@@ -19,6 +21,7 @@ void EventInfoCreator::AttachMiniToTree(TTree& tree){
     tree.Branch("EventNumber", &event_number_, "EventNumber/I");
     tree.Branch("mc_channel_number", &mc_channel_number_, "mc_channel_number/I");
     tree.Branch("MCWeight", &mc_weight_, "MCWeight/F");
+    tree.Branch("MCWeights", &mc_weights_);
 }
 
 void EventInfoCreator::AttachBranchToTree(TTree& tree)
@@ -33,6 +36,7 @@ void EventInfoCreator::AttachBranchToTree(TTree& tree)
 void EventInfoCreator::ClearBranch(){
     run_number_ = -1;
     event_number_ = -1;
+    mc_weights_->clear();
 }
 
 void EventInfoCreator::Fill(const xAOD::EventInfo& ei){
@@ -44,6 +48,9 @@ void EventInfoCreator::Fill(const xAOD::EventInfo& ei){
         const vector<float>& weights = ei.mcEventWeights();
         if(weights.size() > 0) mc_weight_ = weights[0];
         else mc_weight_ = 1.0;
+        for(auto weight : weights){
+            mc_weights_->push_back(weight);
+        }
     }
     actualIPC_ = ei.actualInteractionsPerCrossing();
     averageIPC_ = ei.averageInteractionsPerCrossing();

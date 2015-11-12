@@ -25,7 +25,7 @@ CPToolsHelper::~CPToolsHelper(){
     delete pjvtag_tool_;
     delete m_trigConfigTool_;
     delete m_trigDecisionTool_;
-    delete iso_tool_;
+    if(iso_tool_) delete iso_tool_;
     delete ele_medium_LLH_tool_;
 }
 
@@ -34,8 +34,9 @@ bool CPToolsHelper::initialize(){
     grl_tool_ = new GoodRunsListSelectionTool("GoodRunsListSelectionTool");
     std::vector<std::string> myvals;
     string maindir(getenv("ROOTCOREBIN"));
-    myvals.push_back(maindir+"/data/MyXAODTools/data15_13TeV_50ns.xml");
-    myvals.push_back(maindir+"/data/MyXAODTools/data15_13TeV_25ns_pE5.xml");
+    // myvals.push_back(maindir+"/data/MyXAODTools/data15_13TeV_50ns.xml");
+    // myvals.push_back(maindir+"/data/MyXAODTools/data15_13TeV_25ns_pG2.xml");
+    myvals.push_back(maindir+"/data/MyXAODTools/data15_13TeV_25ns_all2015_3_34fb.xml");
     CHECK( grl_tool_->setProperty( "GoodRunsListVec", myvals) );
     CHECK( grl_tool_->setProperty("PassThrough", false) );
     CHECK( grl_tool_->initialize() );
@@ -59,8 +60,10 @@ bool CPToolsHelper::initialize(){
 
     // Isolation tool
     iso_tool_ = new CP::IsolationSelectionTool("iso_tool");
-    CHECK(iso_tool_->setProperty("ElectronWP", "Loose")); 
-    CHECK(iso_tool_->setProperty("MuonWP", "Loose")); 
+    // CHECK(iso_tool_->setProperty("ElectronWP", "FixedCutLoose")); 
+    // CHECK(iso_tool_->setProperty("MuonWP", "FixedCutLoose")); 
+    CHECK(iso_tool_->setProperty("ElectronWP", "LooseTrackOnly")); 
+    CHECK(iso_tool_->setProperty("MuonWP", "LooseTrackOnly")); 
     CHECK(iso_tool_->initialize());
     Info( APP_NAME, "Isolation tool initialized..." );
 
@@ -205,21 +208,17 @@ bool CPToolsHelper::GetProcessEventsInfo(xAOD::TEvent& event,
     if (!event.retrieveMetaInput(completeCBC, "CutBookkeepers").isSuccess()) 
     {
         Error( APP_NAME, "Failed to retrieve CutBookkeepers from MetaData! Exiting.");
+        return false;
     }
 
-    // First, let's find the smallest cycle number,
-    // i.e., the original first processing step/cycle
-    int minCycle = 10000;
-    for ( auto cbk : *completeCBC ) {
-        if ( minCycle > cbk->cycle() ) { minCycle = cbk->cycle(); }
-    }
-    // Now, let's actually find the right one that contains all the needed info...
     const xAOD::CutBookkeeper* allEventsCBK = 0;
-    for ( auto cbk :  *completeCBC ) {
-        if ( minCycle == cbk->cycle() && cbk->name() == "AllExecutedEvents" ) 
+    int maxCycle = -1;
+    for ( const auto& cbk :  *completeCBC ) {
+        if ( cbk->cycle() > maxCycle && cbk->name() == "AllExecutedEvents" &&
+                cbk->inputStream() == "StreamAOD")
         {
             allEventsCBK = cbk;
-            break;
+            maxCycle = cbk->cycle();
         }
     }
     if(allEventsCBK) {
@@ -227,7 +226,10 @@ bool CPToolsHelper::GetProcessEventsInfo(xAOD::TEvent& event,
         sum_of_weights = allEventsCBK->sumOfEventWeights();
         sum_of_weights_squared = allEventsCBK->sumOfEventWeightsSquared();
         // Info(APP_NAME, "input stream: %s", allEventsCBK->inputStream().c_str());
-    } else { Info( APP_NAME, "No relevent CutBookKeepers found" ); }	
+    } else { 
+        Info( APP_NAME, "No relevent CutBookKeepers found" ); 
+        return false; 
+    }	
 
     return true;
 }
@@ -244,3 +246,4 @@ bool CPToolsHelper::GetProcessEventsInfo(const char* file_name,
     ifile->Close();
     return true;
 }
+

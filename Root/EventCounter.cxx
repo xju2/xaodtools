@@ -195,7 +195,8 @@ double EventCounter::getUtil(int mc_channel_number, std::map<int, double>& dic, 
 
 void EventCounter::printTotalEvents(){
     for(auto& x: total_events_dic_){
-        cout<< x.first <<" : "<< x.second <<" : "<<this->getTotalEventsNoWeight(x.first)<<" : "<<this->getCrossSection(x.first)<< "\n";
+        if(is_mc_) cout<< x.first <<" : "<< x.second <<" : "<<this->getTotalEventsNoWeight(x.first)<<" : "<<this->getCrossSection(x.first)<< "\n";
+        else cout<< x.first <<" : "<< x.second <<" : "<<this->getTotalEventsNoWeight(x.first)<<endl;
     }
 }
 
