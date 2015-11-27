@@ -34,9 +34,7 @@ bool CPToolsHelper::initialize(){
     grl_tool_ = new GoodRunsListSelectionTool("GoodRunsListSelectionTool");
     std::vector<std::string> myvals;
     string maindir(getenv("ROOTCOREBIN"));
-    // myvals.push_back(maindir+"/data/MyXAODTools/data15_13TeV_50ns.xml");
-    // myvals.push_back(maindir+"/data/MyXAODTools/data15_13TeV_25ns_pG2.xml");
-    myvals.push_back(maindir+"/data/MyXAODTools/data15_13TeV_25ns_all2015_3_34fb.xml");
+    myvals.push_back(maindir+"/data/MyXAODTools/data15_13TeV_25ns_all2015_3_32fb.xml");
     CHECK( grl_tool_->setProperty( "GoodRunsListVec", myvals) );
     CHECK( grl_tool_->setProperty("PassThrough", false) );
     CHECK( grl_tool_->initialize() );
