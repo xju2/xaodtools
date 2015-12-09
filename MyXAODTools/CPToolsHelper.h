@@ -16,6 +16,7 @@
 #include "IsolationSelection/IsolationSelectionTool.h"
 #include "ElectronPhotonSelectorTools/AsgElectronLikelihoodTool.h"
 #include "PileupReweighting/PileupReweightingTool.h"
+#include "AsgTools/ToolHandle.h"
 
 #include <string>
 
@@ -72,6 +73,7 @@ private:
     Trig::TrigDecisionTool *m_trigDecisionTool_;
     CP::IsolationSelectionTool* iso_tool_;
     AsgElectronLikelihoodTool* ele_medium_LLH_tool_;
+    // ToolHandle<CP::IPileupReweightingTool> m_prw_tool;
 
 
     bool initialize();

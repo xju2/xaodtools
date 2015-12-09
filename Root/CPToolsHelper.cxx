@@ -70,6 +70,7 @@ bool CPToolsHelper::initialize(){
     ele_medium_LLH_tool_->setProperty("primaryVertexContainer", "PrimaryVertices");
     ele_medium_LLH_tool_->setProperty("ConfigFile","ElectronPhotonSelectorTools/offline/mc15_20150429/ElectronLikelihoodMediumOfflineConfig2015.conf");
     CHECK(ele_medium_LLH_tool_->initialize());
+
     return true;
 }
 
