@@ -19,6 +19,8 @@ public:
     void ClearBranch();
     bool CreateBranch();
     void Fill(const xAOD::Jet& jet);
+public:
+    vector<bool>* jet_isBadTight_;
 private:
     static const char* APP_NAME;
     vector<float>* emF_;
@@ -30,7 +32,6 @@ private:
     vector<float>* negE_;
     vector<float>* avg_larQF_;
     vector<int>*  frac_sampling_max_index_;
-    vector<bool>* jet_isBadTight_;
     vector<float>* jet_timing_;
 
     JetCleaningTool* jetCleaningTool_ ;
