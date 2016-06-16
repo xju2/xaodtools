@@ -35,6 +35,7 @@ bool CPToolsHelper::initialize(){
     std::vector<std::string> myvals;
     string maindir(getenv("ROOTCOREBIN"));
     myvals.push_back(maindir+"/data/MyXAODTools/data15_13TeV_25ns_all2015_3_32fb.xml");
+    myvals.push_back(maindir+"/data/MyXAODTools/data16_13TeV_all.xml");
     CHECK( grl_tool_->setProperty( "GoodRunsListVec", myvals) );
     CHECK( grl_tool_->setProperty("PassThrough", false) );
     CHECK( grl_tool_->initialize() );
@@ -95,9 +96,14 @@ float CPToolsHelper::NewJVT(const xAOD::Jet& jet)
 
 bool CPToolsHelper::PassEventCleaning(const xAOD::EventInfo& ei)
 {
+    // Instructions
+    // https://twiki.cern.ch/twiki/bin/viewauth/Atlas/DataPreparationCheckListForPhysicsAnalysis
     bool bad_tag = (ei.errorState(xAOD::EventInfo::LAr) == xAOD::EventInfo::Error ||
             ei.errorState(xAOD::EventInfo::Tile) == xAOD::EventInfo::Error ||
-            ei.isEventFlagBitSet(xAOD::EventInfo::Core, 18));
+            ei.errorState(xAOD::EventInfo::SCT) == xAOD::EventInfo::Error ||
+            ei.isEventFlagBitSet(xAOD::EventInfo::Core, 18) ||
+            (ei.eventFlags(xAOD::EventInfo::Core) & 0x40000)  // incomplete events
+            );
     return !bad_tag;
 }
 
@@ -208,13 +214,17 @@ bool CPToolsHelper::GetProcessEventsInfo(xAOD::TEvent& event,
     {
         Error( APP_NAME, "Failed to retrieve CutBookkeepers from MetaData! Exiting.");
         return false;
+    } else {
+        Info( APP_NAME, "retrieve CutBookkeepers from MetaData!");
     }
 
     const xAOD::CutBookkeeper* allEventsCBK = 0;
     int maxCycle = -1;
     for ( const auto& cbk :  *completeCBC ) {
-        if ( cbk->cycle() > maxCycle && cbk->name() == "AllExecutedEvents" &&
-                cbk->inputStream() == "StreamAOD")
+        if ( cbk->cycle() > maxCycle &&
+                cbk->name() == "AllExecutedEvents" &&
+                cbk->inputStream() == "StreamAOD"
+           )
         {
             allEventsCBK = cbk;
             maxCycle = cbk->cycle();
