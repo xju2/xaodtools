@@ -6,8 +6,8 @@
 <NamedLumiRange>
 <Name>PHYS_StandardGRL_All_Good_25ns</Name>
 <Version>2.1</Version>
-<Metadata Name="ARQEquivalentQuery">find run data15_13TeV.periodAllYear and dq PHYS_StandardGRL_All_Good_25ns DEFECTS#DetStatus-v75-repro20-01 g</Metadata>
-<Metadata Name="Query">Period: data15_13TeV.AllYear; Defect: PHYS_StandardGRL_All_Good_25ns; Defect tag: DetStatus-v75-repro20-01; Ignoring None</Metadata>
+<Metadata Name="ARQEquivalentQuery">find run data15_13TeV.periodAllYear and dq PHYS_StandardGRL_All_Good_25ns DEFECTS#DetStatus-v79-repro20-02 g</Metadata>
+<Metadata Name="Query">Period: data15_13TeV.AllYear; Defect: PHYS_StandardGRL_All_Good_25ns; Defect tag: DetStatus-v79-repro20-02; Ignoring None</Metadata>
 <Metadata Name="RQTSVNVersion">DQDefects-00-02-02</Metadata>
 <Metadata Name="RunList">276262,276329,276336,276416,276511,276689,276778,276790,276952,276954,278880,278912,278968,279169,279259,279279,279284,279345,279515,279598,279685,279813,279867,279928,279932,279984,280231,280273,280319,280368,280423,280464,280500,280520,280614,280673,280753,280853,280862,280950,280977,281070,281074,281075,281317,281385,281411,282625,282631,282712,282784,282992,283074,283155,283270,283429,283608,283780,284006,284154,284213,284285,284420,284427,284484</Metadata>
 <LumiBlockCollection>
@@ -276,11 +276,11 @@
 <LumiBlockCollection>
 <Run>281074</Run>
 <LBRange Start="163" End="434"/>
-<LBRange Start="436" End="452"/>
+<LBRange Start="436" End="450"/>
 </LumiBlockCollection>
 <LumiBlockCollection>
 <Run>281075</Run>
-<LBRange Start="240" End="248"/>
+<LBRange Start="240" End="246"/>
 </LumiBlockCollection>
 <LumiBlockCollection>
 <Run>281317</Run>
@@ -358,7 +358,7 @@
 <LBRange Start="123" End="163"/>
 <LBRange Start="167" End="213"/>
 <LBRange Start="215" End="325"/>
-<LBRange Start="334" End="418"/>
+<LBRange Start="334" End="417"/>
 </LumiBlockCollection>
 <LumiBlockCollection>
 <Run>283155</Run>
@@ -459,7 +459,7 @@
 <LumiBlockCollection>
 <Run>284427</Run>
 <LBRange Start="128" End="201"/>
-<LBRange Start="203" End="265"/>
+<LBRange Start="203" End="264"/>
 </LumiBlockCollection>
 <LumiBlockCollection>
 <Run>284484</Run>
@@ -473,7 +473,9 @@
 <LBRange Start="179" End="280"/>
 <LBRange Start="282" End="345"/>
 <LBRange Start="347" End="370"/>
-<LBRange Start="376" End="506"/>
+<LBRange Start="376" End="454"/>
+<LBRange Start="459" End="462"/>
+<LBRange Start="465" End="506"/>
 </LumiBlockCollection>
 </NamedLumiRange>
 </LumiRangeCollection>
