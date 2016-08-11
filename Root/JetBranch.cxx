@@ -22,6 +22,7 @@ bool JetBranch::CreateBranch()
     frac_sampling_max_index_ = new vector<int>();
     jet_isBadTight_ = new vector<bool>();
     jet_timing_ = new vector<float>();
+    p4_ = new vector<TLorentzVector>();
 
     jetCleaningTool_ = new JetCleaningTool("JetCleaningToolTight");
     CHECK(jetCleaningTool_->setProperty("CutLevel", "TightBad"));
@@ -41,10 +42,14 @@ JetBranch::~JetBranch(){
     delete frac_sampling_max_index_;
     delete jet_isBadTight_;
     delete jet_timing_;
+    delete p4_;
+
     delete jetCleaningTool_;
 }
 
 void JetBranch::ClearBranch(){
+    total_ = 0;
+
     emF_->clear();
     hecF_->clear();
     larQ_->clear();
@@ -55,10 +60,13 @@ void JetBranch::ClearBranch(){
     avg_larQF_->clear();
     frac_sampling_max_index_->clear();
     jet_isBadTight_->clear();
+    p4_->clear();
+
     jet_timing_->clear();
 }
 
 void JetBranch::AttachBranchToTree(TTree& tree){
+    tree.Branch("n_jets", &total_, "n_jets/I");
     tree.Branch("jet_emf", &emF_);
     tree.Branch("jet_hecf", &hecF_);
     tree.Branch("jet_LArQ", &larQ_);
@@ -70,10 +78,12 @@ void JetBranch::AttachBranchToTree(TTree& tree){
     tree.Branch("jet_fracSamplingMaxIndex", &frac_sampling_max_index_);
     tree.Branch("jet_isBadTight", &jet_isBadTight_);
     tree.Branch("jet_timing", &jet_timing_);
+    tree.Branch("jet_p4", &p4_);
 }
 
 void JetBranch::Fill(const xAOD::Jet& jet) 
 {
+    total_ ++;
     std::vector<float> sumPtTrkvec;
     jet.getAttribute( xAOD::JetAttribute::SumPtTrkPt500, sumPtTrkvec );
     float sumpttrk = 0;
@@ -89,6 +99,7 @@ void JetBranch::Fill(const xAOD::Jet& jet)
     avg_larQF_->push_back(jet.getAttribute<float>(xAOD::JetAttribute::AverageLArQF));
     frac_sampling_max_index_->push_back(jet.getAttribute<int>(xAOD::JetAttribute::FracSamplingMaxIndex));
     jet_timing_->push_back(jet.getAttribute<float>(xAOD::JetAttribute::Timing));
+    p4_->push_back(jet.p4());
 
     jet_isBadTight_->push_back((bool)jetCleaningTool_->keep(jet));
 }

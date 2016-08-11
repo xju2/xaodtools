@@ -37,24 +37,25 @@ public:
     static bool PassEventCleaning(const xAOD::EventInfo& ei);
     static bool HasPrimaryVertex(const xAOD::VertexContainer& vertice, 
             unsigned int n_trks = 2);
-    static bool GetTrackSumPt(const xAOD::Vertex& vertex, 
-            float& sum_px, float& sum_py);
+
     // Track quality
-    static void GetTrackQuality(const xAOD::Electron& el, 
-            const xAOD::EventInfo& ei, 
+    static bool GetTrackSumPt(const xAOD::Vertex& vertex,
+            float& sum_px, float& sum_py);
+    static void GetTrackQuality(const xAOD::Electron& el,
+            const xAOD::EventInfo& ei,
             const xAOD::VertexContainer& vertices,
             float& d0, float& z0, float& zp);
     static void GetTrackQuality(const xAOD::Muon& muon,
-            const xAOD::EventInfo& ei, 
+            const xAOD::EventInfo& ei,
             const xAOD::VertexContainer& vertices,
             float& d0, float& z0, float& zp);
-    static void GetTrackQuality(const xAOD::TrackParticle* track, 
-            const xAOD::EventInfo& ei, 
+    static void GetTrackQuality(const xAOD::TrackParticle* track,
+            const xAOD::EventInfo& ei,
             const xAOD::VertexContainer& vertices,
             float& d0, float& z0, float& zp);
     static const xAOD::Vertex* GetPrimVtx(const xAOD::VertexContainer& vertices);
 
-    static bool GetProcessEventsInfo(const char* file_name, 
+    static bool GetProcessEventsInfo(const char* file_name,
             uint64_t& n_events_processed,
             double& sum_of_weights,
             double& sum_of_weights_squared);
@@ -63,8 +64,8 @@ public:
             double& sum_of_weights,
             double& sum_of_weights_squared);
 
-private:    
-    static const char* APP_NAME; 
+private:
+    static const char* APP_NAME;
     string iso_wp_ ;
 
     GoodRunsListSelectionTool *grl_tool_;

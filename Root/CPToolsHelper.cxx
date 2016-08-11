@@ -101,7 +101,7 @@ bool CPToolsHelper::PassEventCleaning(const xAOD::EventInfo& ei)
     bool bad_tag = (ei.errorState(xAOD::EventInfo::LAr) == xAOD::EventInfo::Error ||
             ei.errorState(xAOD::EventInfo::Tile) == xAOD::EventInfo::Error ||
             ei.errorState(xAOD::EventInfo::SCT) == xAOD::EventInfo::Error ||
-            ei.isEventFlagBitSet(xAOD::EventInfo::Core, 18) ||
+            // ei.isEventFlagBitSet(xAOD::EventInfo::Core, 18) ||
             (ei.eventFlags(xAOD::EventInfo::Core) & 0x40000)  // incomplete events
             );
     return !bad_tag;
