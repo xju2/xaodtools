@@ -95,7 +95,7 @@ void UpsilonBranch::AttachBranchToTree(TTree& MyTree){
     MyTree.Branch("passTrigger", &pass_trigger_, "passTrigger/O");
     MyTree.Branch("m_upsilon", &m_upsilon_, "m_upsilon/F");
     MyTree.Branch("m_4l", &m_4l_, "m_4l/F");
-    MyTree.Branch("event_type", &event_type_, "event_type/I");
+    // MyTree.Branch("event_type", &event_type_, "event_type/I");
 }
 
 void UpsilonBranch::Fill()

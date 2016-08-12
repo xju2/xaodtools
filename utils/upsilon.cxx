@@ -53,8 +53,8 @@
 #include "MyXAODTools/CPToolsHelper.h"
 #include "MyXAODTools/TrackBranch.h"
 #include "MyXAODTools/EventInfoCreator.h"
-#include "MyXAODTools/PhotonBranch.h"
-#include "MyXAODTools/JetBranch.h"
+#include "MyXAODTools/ElectronBranch.h"
+#include "MyXAODTools/MuonBranch.h"
 #include "MyXAODTools/UpsilonBranch.h"
 
 #include <TError.h>
@@ -199,7 +199,6 @@ int main( int argc, char* argv[] )
     CPToolsHelper* cp_tools = new CPToolsHelper();
 
     EventInfoCreator* event_br = new EventInfoCreator(isData);
-    UpsilonBranch* output = new UpsilonBranch();
 
 
     /*record the number of processed events*/
@@ -227,13 +226,22 @@ int main( int argc, char* argv[] )
     string tree_name = "physics";
 
     TTree MyTree(tree_name.c_str(), tree_name.c_str());
+
+    UpsilonBranch* output = new UpsilonBranch();
+    MuonBranch* muon_br = new MuonBranch(); 
+    ElectronBranch* el_br = new ElectronBranch();
+
     event_br->AttachBranchToTree(MyTree);
     output->AttachBranchToTree(MyTree);
+    el_br->AttachBranchToTree(MyTree);
+    muon_br->AttachBranchToTree(MyTree);
 
     for( Long64_t entry = 0; entry < entries; ++entry ) 
     {
         output->ClearBranch();
         event_br->ClearBranch();
+        el_br->ClearBranch();
+        muon_br->ClearBranch();
 
         // Tell the object which entry to look at:
         event.getEntry( entry );
@@ -299,6 +307,7 @@ int main( int argc, char* argv[] )
         {
             if( (bool) dec_signal(**el) && (bool) dec_passOR(**el) ){
                 n_ele ++;
+                el_br->Fill(**el);
             }
         }
 
@@ -311,28 +320,36 @@ int main( int argc, char* argv[] )
         {
             if( (bool) dec_signal(**mu_itr) && (bool) dec_passOR(**mu_itr)) {
                 n_muon ++;
+                muon_br->Fill(**mu_itr);
             }
         }
-        const float UPSILON_LOW = 9E3;
+
+        const float UPSILON_LOW = 8E3;
         const float UPSILON_HI = 12E3;
-        if( n_muon == 4 ) {
+        if( n_muon >= 2 ) {
             output->event_type_ = 0;
             // upsilon decays to two muons
             // loop over muons and reconstruct upsilon
             auto upsilon_mu1 = muons_copy->end();
             auto upsilon_mu2 = muons_copy->end();
-            for(auto mu_itr1 = muons_copy->begin(); mu_itr1 != muons_copy->end(); ++mu_itr1){
+            for(auto mu_itr1 = muons_copy->begin();
+                    mu_itr1 != muons_copy->end(); ++mu_itr1)
+            {
                 if(!dec_signal(**mu_itr1) || !dec_passOR(**mu_itr1)) continue;
                 TLorentzVector& mu_tlv_1 = (*mu_itr1)->p4();
+                // if(mu_tlv_1.Pt() < 5E3) continue;
+
                 float mu_charge_1 = (*mu_itr1)->charge();
 
                 for(auto mu_itr2 = muons_copy->begin(); mu_itr2 != muons_copy->end(); ++mu_itr2){
                     if(!dec_signal(**mu_itr2) || !dec_passOR(**mu_itr2)) continue;
+                    TLorentzVector& mu_tlv_2 = (*mu_itr2)->p4();
+
+                    // if(mu_tlv_2.Pt() < 5E3) continue;
                     float mu_charge_2 = (*mu_itr2)->charge();
                     // opposite charge
                     if(mu_charge_2 * mu_charge_1 > 0) continue;
 
-                    TLorentzVector& mu_tlv_2 = (*mu_itr2)->p4();
                     auto inv_mass = (mu_tlv_1 + mu_tlv_2).M();
                     if (inv_mass > UPSILON_LOW && inv_mass < UPSILON_HI) {
                         output->m_upsilon_ = inv_mass;
@@ -341,32 +358,22 @@ int main( int argc, char* argv[] )
                     }
                 }
             }
-            // invariant mass of four-muons
-            TLorentzVector& mu_tlv = (*(muons_copy->begin()))->p4();
-            for(auto mu_itr = muons_copy->begin()+1; mu_itr != muons_copy->end(); ++mu_itr){
-               mu_tlv += (*mu_itr)->p4();
+            if (upsilon_mu1 != muons_copy->end()) {
+                // only when there's a upsilon candidate, save the information!
+                if (n_muon == 4) {
+                    TLorentzVector mu_tlv = muons_copy->at(0)->p4();
+                    mu_tlv += muons_copy->at(1)->p4();
+                    mu_tlv += muons_copy->at(2)->p4();
+                    mu_tlv += muons_copy->at(3)->p4();
+                    output->m_4l_ = mu_tlv.M();
+                }
+                MyTree.Fill();
             }
-            output->m_4l_ = mu_tlv.M();
-
-        } else if (n_ele == 2 && n_muon == 2) {
-            output->event_type_ = 1;
-            TLorentzVector& el_tlv_1 = electrons_copy->at(0)->p4();
-            TLorentzVector& el_tlv_2 = electrons_copy->at(1)->p4();
-            auto inv_mass = (el_tlv_1 + el_tlv_2).M();
-            if(inv_mass > UPSILON_LOW && inv_mass < UPSILON_HI) {
-                output->m_upsilon_ = inv_mass;
-            }
-            TLorentzVector& mu_tlv_1 = muons_copy->at(0)->p4();
-            TLorentzVector& mu_tlv_2 = muons_copy->at(0)->p4();
-            output->m_4l_ = (el_tlv_1 + el_tlv_2 + mu_tlv_1 + mu_tlv_2).M();
-        } else {
-            // not enough / or more leptons
         }
 
         // The containers created by the shallow copy are owned by you.
         // Remember to delete them
         store.clear();
-        MyTree.Fill();
     }
 
     fOutputFile->cd();
