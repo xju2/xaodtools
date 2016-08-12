@@ -165,6 +165,7 @@ int main( int argc, char* argv[] )
 
     // Configure the SUSYObjDef instance
     ST::ISUSYObjDef_xAODTool::DataSource data_source = isData ? ST::ISUSYObjDef_xAODTool::Data : ST::ISUSYObjDef_xAODTool::FullSim;
+    CHECK( objTool.setProperty("DataSource", data_source) );
 
     // general configuration
     string maindir(getenv("ROOTCOREBIN"));
@@ -266,7 +267,7 @@ int main( int argc, char* argv[] )
         // if(ei->eventNumber() != 620) continue;
         // cout<< "reading 620!"<<endl;
 
-        for(auto kv : output.trigger_map_)
+        for(auto kv : output->trigger_map_)
         {
             if(objTool.IsTrigPassed(kv.first.c_str())) {
                 output->pass_trigger_ = kv.second = true;
@@ -294,6 +295,7 @@ int main( int argc, char* argv[] )
         // Jets
         xAOD::JetContainer* jets_copy = NULL;
         xAOD::ShallowAuxContainer* jets_copyaux = NULL;
+        CHECK( objTool.GetJets(jets_copy, jets_copyaux, true) );
         // no jet cleaning
         // no overlap removal
         CHECK( objTool.OverlapRemoval(electrons_copy, muons_copy,
@@ -336,14 +338,14 @@ int main( int argc, char* argv[] )
                     mu_itr1 != muons_copy->end(); ++mu_itr1)
             {
                 if(!dec_signal(**mu_itr1) || !dec_passOR(**mu_itr1)) continue;
-                TLorentzVector& mu_tlv_1 = (*mu_itr1)->p4();
+                const TLorentzVector& mu_tlv_1 = (*mu_itr1)->p4();
                 // if(mu_tlv_1.Pt() < 5E3) continue;
 
                 float mu_charge_1 = (*mu_itr1)->charge();
 
                 for(auto mu_itr2 = muons_copy->begin(); mu_itr2 != muons_copy->end(); ++mu_itr2){
                     if(!dec_signal(**mu_itr2) || !dec_passOR(**mu_itr2)) continue;
-                    TLorentzVector& mu_tlv_2 = (*mu_itr2)->p4();
+                    const TLorentzVector& mu_tlv_2 = (*mu_itr2)->p4();
 
                     // if(mu_tlv_2.Pt() < 5E3) continue;
                     float mu_charge_2 = (*mu_itr2)->charge();
