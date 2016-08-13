@@ -79,8 +79,7 @@ int main( int argc, char* argv[] )
 {
     // gErrorIgnoreLevel = kError;
 
-    if (argc > 1 && string(argv[1]) == "help")
-    {
+    if (argc > 1 && string(argv[1]) == "help") {
         cout << argv[0] << " toberun.txt number_evts isData=1 debug=0" << endl;
         exit(0);
     }
@@ -101,14 +100,14 @@ int main( int argc, char* argv[] )
     uint64_t total_evts_pro = 0;
     double sum_of_evt_w = 0;
     double sum_of_evt_w_sq = 0;
-    while ( input_file>>name_file ){ 
+    while ( input_file>>name_file ) {
         uint64_t n_events_process = 0;
         double sum_of_evt_weights = 0;
         double sum_of_evt_weight_sqd = 0;
-        CHECK(CPToolsHelper::GetProcessEventsInfo(name_file.Data(), 
-                    n_events_process,
-                    sum_of_evt_weights,
-                    sum_of_evt_weight_sqd));
+        // CHECK(CPToolsHelper::GetProcessEventsInfo(name_file.Data(), 
+        //             n_events_process,
+        //             sum_of_evt_weights,
+        //             sum_of_evt_weight_sqd));
         total_evts_pro += n_events_process;
         sum_of_evt_w += sum_of_evt_weights;
         sum_of_evt_w_sq += sum_of_evt_weight_sqd;
@@ -203,6 +202,7 @@ int main( int argc, char* argv[] )
 
 
     /*record the number of processed events*/
+    /*****
     auto tree = new TTree("associate","associate");
     event_br->AttachMiniToTree(*tree);
     tree->Branch("nEventsProcessed", &total_evts_pro, "nEventsProcessed/l");
@@ -222,6 +222,7 @@ int main( int argc, char* argv[] )
     }
     fOutputFile->cd();
     tree ->Write();
+    *****/
 
     // Fill physics tree
     string tree_name = "physics";
@@ -236,7 +237,10 @@ int main( int argc, char* argv[] )
     output->AttachBranchToTree(MyTree);
     el_br->AttachBranchToTree(MyTree);
     muon_br->AttachBranchToTree(MyTree);
-
+    
+    TH1F* h_cutflow = new TH1F("h_cutflow", "cut flow", 101, -0.5, 100.5);
+    
+    const float UPSILON_MASS = 9.46E3;
     for( Long64_t entry = 0; entry < entries; ++entry ) 
     {
         output->ClearBranch();
@@ -244,24 +248,29 @@ int main( int argc, char* argv[] )
         el_br->ClearBranch();
         muon_br->ClearBranch();
 
+        h_cutflow->Fill(0);
+
         // Tell the object which entry to look at:
         event.getEntry( entry );
 
         const xAOD::EventInfo* ei = 0;
         CHECK( event.retrieve( ei, "EventInfo" ) );
+        CHECK(objTool.ApplyPRWTool());
 
         event_br->Fill(*ei);
 
-        if(entry == 0){
-            cout << "Dumping trigger info" << endl;
-            auto chainGroup = objTool.GetTrigChainGroup("HLT_.*");
-            for (auto& trig : chainGroup->getListOfTriggers())
-                cout << " " << trig << endl;
-        }
+        // if(entry == 0){
+        //     cout << "Dumping trigger info" << endl;
+        //     auto chainGroup = objTool.GetTrigChainGroup("HLT_.*");
+        //     for (auto& trig : chainGroup->getListOfTriggers())
+        //         cout << " " << trig << endl;
+        // }
 
 
         if(! cp_tools->PassGRL(*ei)) continue;
+        h_cutflow->Fill(1);
         if(! cp_tools->PassEventCleaning(*ei)) continue;
+        h_cutflow->Fill(2);
         // Info(APP_NAME, "In event: %d", (int)ei->eventNumber());
 
         // if(ei->eventNumber() != 620) continue;
@@ -280,12 +289,15 @@ int main( int argc, char* argv[] )
         const xAOD::VertexContainer* vertice = 0;
         CHECK( event.retrieve(vertice, "PrimaryVertices") );
         if(! cp_tools->HasPrimaryVertex(*vertice, 1)) continue;
+        h_cutflow->Fill(3);
 
         /*get physics objects*/
         // Electrons
+        /****
         xAOD::ElectronContainer* electrons_copy = NULL;
         xAOD::ShallowAuxContainer* electrons_copyaux = NULL;
         CHECK( objTool.GetElectrons(electrons_copy, electrons_copyaux, true) );
+        */
 
         // Muons
         xAOD::MuonContainer* muons_copy = NULL;
@@ -293,17 +305,22 @@ int main( int argc, char* argv[] )
         CHECK( objTool.GetMuons(muons_copy, muons_copyaux, true) );
 
         // Jets
+        /***
         xAOD::JetContainer* jets_copy = NULL;
         xAOD::ShallowAuxContainer* jets_copyaux = NULL;
         CHECK( objTool.GetJets(jets_copy, jets_copyaux, true) );
+        ***/
         // no jet cleaning
         // no overlap removal
+        /**
         CHECK( objTool.OverlapRemoval(electrons_copy, muons_copy,
                     jets_copy) );
+         ***/
 
         //////////////////////
         // Electron's selection
         ///////////////////////
+        /**
         int n_ele = 0;
         for(auto el = electrons_copy->begin(); el != electrons_copy->end(); el++)
         {
@@ -312,6 +329,7 @@ int main( int argc, char* argv[] )
                 el_br->Fill(**el);
             }
         }
+        ***/
 
         ///////////////////
         // Muon's Selection
@@ -320,7 +338,9 @@ int main( int argc, char* argv[] )
         for(auto mu_itr = muons_copy->begin();
                 mu_itr != muons_copy->end(); ++mu_itr)
         {
-            if( (bool) dec_signal(**mu_itr) && (bool) dec_passOR(**mu_itr)) {
+            // if( (bool) dec_signal(**mu_itr) && (bool) dec_passOR(**mu_itr))
+            if( (bool) dec_baseline(**mu_itr) )
+            {
                 n_muon ++;
                 muon_br->Fill(**mu_itr);
             }
@@ -329,6 +349,7 @@ int main( int argc, char* argv[] )
         const float UPSILON_LOW = 8E3;
         const float UPSILON_HI = 12E3;
         if( n_muon >= 2 ) {
+            h_cutflow->Fill(4);
             output->event_type_ = 0;
             // upsilon decays to two muons
             // loop over muons and reconstruct upsilon
@@ -337,14 +358,16 @@ int main( int argc, char* argv[] )
             for(auto mu_itr1 = muons_copy->begin();
                     mu_itr1 != muons_copy->end(); ++mu_itr1)
             {
-                if(!dec_signal(**mu_itr1) || !dec_passOR(**mu_itr1)) continue;
+                // if(!dec_signal(**mu_itr1) || !dec_passOR(**mu_itr1)) continue;
+                if(!dec_baseline(**mu_itr1)) continue;
                 const TLorentzVector& mu_tlv_1 = (*mu_itr1)->p4();
                 // if(mu_tlv_1.Pt() < 5E3) continue;
 
                 float mu_charge_1 = (*mu_itr1)->charge();
 
-                for(auto mu_itr2 = muons_copy->begin(); mu_itr2 != muons_copy->end(); ++mu_itr2){
-                    if(!dec_signal(**mu_itr2) || !dec_passOR(**mu_itr2)) continue;
+                for(auto mu_itr2 = mu_itr1 + 1; mu_itr2 != muons_copy->end(); ++mu_itr2){
+                    // if(!dec_signal(**mu_itr2) || !dec_passOR(**mu_itr2)) continue;
+                    if(!dec_baseline(**mu_itr2)) continue;
                     const TLorentzVector& mu_tlv_2 = (*mu_itr2)->p4();
 
                     // if(mu_tlv_2.Pt() < 5E3) continue;
@@ -353,7 +376,8 @@ int main( int argc, char* argv[] )
                     if(mu_charge_2 * mu_charge_1 > 0) continue;
 
                     auto inv_mass = (mu_tlv_1 + mu_tlv_2).M();
-                    if (inv_mass > UPSILON_LOW && inv_mass < UPSILON_HI) {
+                    if (inv_mass > UPSILON_LOW && inv_mass < UPSILON_HI &&
+                            (fabs(inv_mass - UPSILON_MASS) < fabs(output->m_upsilon_ - UPSILON_MASS))) {
                         output->m_upsilon_ = inv_mass;
                         upsilon_mu1 = mu_itr1;
                         upsilon_mu2 = mu_itr2;
@@ -363,12 +387,14 @@ int main( int argc, char* argv[] )
             if (upsilon_mu1 != muons_copy->end()) {
                 // only when there's a upsilon candidate, save the information!
                 if (n_muon == 4) {
-                    TLorentzVector mu_tlv = muons_copy->at(0)->p4();
-                    mu_tlv += muons_copy->at(1)->p4();
-                    mu_tlv += muons_copy->at(2)->p4();
-                    mu_tlv += muons_copy->at(3)->p4();
+                    TLorentzVector mu_tlv;
+                    for(auto mu_itr = muons_copy->begin(); mu_itr != muons_copy->end(); ++mu_itr){
+                        if(!dec_baseline(**mu_itr)) continue;
+                        mu_tlv += (*mu_itr)->p4();
+                    }
                     output->m_4l_ = mu_tlv.M();
                 }
+                h_cutflow->Fill(5);
                 MyTree.Fill();
             }
         }
@@ -379,6 +405,7 @@ int main( int argc, char* argv[] )
     }
 
     fOutputFile->cd();
+    h_cutflow->Write();
     MyTree.Write();
 
     fOutputFile->cd();

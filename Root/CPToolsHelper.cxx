@@ -220,10 +220,11 @@ bool CPToolsHelper::GetProcessEventsInfo(xAOD::TEvent& event,
 
     const xAOD::CutBookkeeper* allEventsCBK = 0;
     int maxCycle = -1;
-    for ( const auto& cbk :  *completeCBC ) {
-        if ( cbk->cycle() > maxCycle &&
-                cbk->name() == "AllExecutedEvents" &&
-                cbk->inputStream() == "StreamAOD"
+    for ( auto cbk :  *completeCBC ) {
+        if(!cbk) continue;
+        if ( cbk->name() == "AllExecutedEvents" &&
+             cbk->inputStream() == "StreamAOD" && 
+             cbk->cycle() > maxCycle 
            )
         {
             allEventsCBK = cbk;
@@ -255,4 +256,3 @@ bool CPToolsHelper::GetProcessEventsInfo(const char* file_name,
     ifile->Close();
     return true;
 }
-

@@ -77,7 +77,7 @@ void UpsilonBranch::ClearBranch(){
     }
     pass_trigger_ = false;
     m_upsilon_ = 0;
-    m_4l_ = 0;
+    m_4l_ = -9999;
     event_type_ = -1;
 }
 
@@ -93,8 +93,8 @@ void UpsilonBranch::AttachBranchToTree(TTree& MyTree){
     }
 
     MyTree.Branch("passTrigger", &pass_trigger_, "passTrigger/O");
-    MyTree.Branch("m_upsilon", &m_upsilon_, "m_upsilon/F");
-    MyTree.Branch("m_4l", &m_4l_, "m_4l/F");
+    MyTree.Branch("mUpsilon", &m_upsilon_, "m_upsilon/F");
+    MyTree.Branch("m4l", &m_4l_, "m_4l/F");
     // MyTree.Branch("event_type", &event_type_, "event_type/I");
 }
 
