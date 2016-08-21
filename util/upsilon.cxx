@@ -50,6 +50,12 @@
 #include "PATInterfaces/SystematicRegistry.h"
 #include "PATInterfaces/SystematicCode.h"
 
+/** Vertexing
+#include "TrkVertexFitterInterfaces/IVertexFitter.h"
+#include "TrkVKalVrtFitter/TrkVKalVrtFitter.h"
+#include "CLHEP/Units/SystemOfUnits.h"
+***/
+
 #include "MyXAODTools/CPToolsHelper.h"
 #include "MyXAODTools/TrackBranch.h"
 #include "MyXAODTools/EventInfoCreator.h"
@@ -191,6 +197,10 @@ int main( int argc, char* argv[] )
     std::cout << " INITIALIZED SUSYTOOLS " << std::endl;
     // end of SUSYTools
     ////////////////////////////////////////////
+    
+    // vertexing stuff
+    // ToolHandle < Trk::IVertexFitter > m_iVertexFitter;
+    // Trk::TrkVKalVrtFitter* m_VKVFitter = new Trk::TrkVKalVrtFitter();
 
 
     TFile *fOutputFile = new TFile( "reduced_ntup.root", "recreate" );
@@ -388,11 +398,37 @@ int main( int argc, char* argv[] )
                 // only when there's a upsilon candidate, save the information!
                 if (n_muon == 4) {
                     TLorentzVector mu_tlv;
+                    TLorentzVector mu_tlv_34;
+                    // vector<const xAOD::TrackParticle*> inputTracks(0);
+                    // vector<ElementLink<xAOD::TrackParticleContainer> > inputTrackLinks(0);
                     for(auto mu_itr = muons_copy->begin(); mu_itr != muons_copy->end(); ++mu_itr){
                         if(!dec_baseline(**mu_itr)) continue;
                         mu_tlv += (*mu_itr)->p4();
+                        if(mu_itr != upsilon_mu1 && mu_itr != upsilon_mu2) {
+                            mu_tlv_34 += (*mu_itr)->p4();
+                        }
+
+                        // const xAOD::TrackParticle* tp = (*mu_itr)->trackParticle(xAOD::Muon::InnerDetectorTrackParticle);
+                        // if(tp) {
+                            // inputTracks.push_back(tp);
+                        // }
                     }
+                    /****
+                    if(inputTracks.size() >= 3){ // at least three tracks
+                        Amg::Vector3D appVertex;
+                        m_VKVFitter->setMomCovCalc(0); //No total momentum and its covariance matrix
+                        if(m_VKVFitter->VKalVrtFitFast(inputTracks,appVertex).isSuccess()) {
+                            m_VKVFitter->setMomCovCalc(1);  //Total momentum and its covariance matrix are calculated
+                            const Trk::Vertex startingPoint(appVertex);
+                            xAOD::Vertex *myVxCandidate(0);
+                            myVxCandidate = m_VKVFitter->fit(inputTracks,startingPoint);
+                            vtx4l_chi2ndf_  = myVxCandidate->chiSquared()/myVxCandidate->numberDoF();
+                            myVxCandidate->clearTracks();
+                        }
+                    }
+                    ***/
                     output->m_4l_ = mu_tlv.M();
+                    output->m34_ = mu_tlv_34.M();
                 }
                 h_cutflow->Fill(5);
                 MyTree.Fill();

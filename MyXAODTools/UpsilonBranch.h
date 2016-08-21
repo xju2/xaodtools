@@ -29,7 +29,8 @@ public:
     int event_type_;
     float m_upsilon_;
     float m_4l_;
-
+    float vtx4l_chi2ndf_;
+    float m34_;
 };
 
 #endif

@@ -79,6 +79,8 @@ void UpsilonBranch::ClearBranch(){
     m_upsilon_ = 0;
     m_4l_ = -9999;
     event_type_ = -1;
+    vtx4l_chi2ndf_ = -9999;
+    m34_ = -9999;
 }
 
 void UpsilonBranch::AttachBranchToTree(TTree& MyTree){
@@ -96,6 +98,8 @@ void UpsilonBranch::AttachBranchToTree(TTree& MyTree){
     MyTree.Branch("mUpsilon", &m_upsilon_, "m_upsilon/F");
     MyTree.Branch("m4l", &m_4l_, "m_4l/F");
     // MyTree.Branch("event_type", &event_type_, "event_type/I");
+    MyTree.Branch("vtx4l_chi2ndf", &vtx4l_chi2ndf_, "vtx4l_chi2ndf/F");
+    MyTree.Branch("m34", &m34_, "m34/F");
 }
 
 void UpsilonBranch::Fill()
