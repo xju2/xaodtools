@@ -11,8 +11,9 @@ if not hasattr(ROOT, "myText"):
 
 def make_hists():
     tree = ROOT.TChain("physics", "physics")
-    tree.Add("data16.merged.p2689.root")
-    tree.Add("data16.merged.p2667.root")
+    #tree.Add("data16.merged.p2689.root")
+    #tree.Add("data16.merged.p2667.root")
+    tree.Add("merged_bphy4.root")
     nentries = tree.GetEntries()
     print "total entries:",nentries
 
@@ -33,7 +34,7 @@ def make_hists():
     for ientry in xrange(nentries):
         tree.GetEntry(ientry)
         mU = tree.mUpsilon/1E3
-        m4l = tree.m4l/1E3
+        m4l = tree.m4l
         if tree.n_muon != 4:
             continue
         # require a jpsi

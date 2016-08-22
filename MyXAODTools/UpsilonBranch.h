@@ -31,6 +31,8 @@ public:
     float m_4l_;
     float vtx4l_chi2ndf_;
     float m34_;
+    bool same_vertex_;
+    int n_bphy4_quad_;
 };
 
 #endif

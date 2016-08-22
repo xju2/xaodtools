@@ -76,6 +76,7 @@ static SG::AuxElement::Decorator<char> dec_cosmic("cosmic");
 static SG::AuxElement::Decorator<double> dec_effscalefact("effscalefact");
 static SG::AuxElement::Decorator<char> dec_isol("isol");
 static SG::AuxElement::Decorator<char> dec_tightBad("tightBad");
+static SG::AuxElement::Decorator<int> dec_muonIndex("BPHY4MuonIndex");
 
 bool descend_on_pt(xAOD::IParticle* p1, xAOD::IParticle* p2){
     return p1->pt() > p2->pt();
@@ -249,6 +250,17 @@ int main( int argc, char* argv[] )
     muon_br->AttachBranchToTree(MyTree);
     
     TH1F* h_cutflow = new TH1F("h_cutflow", "cut flow", 101, -0.5, 100.5);
+
+    // Set Branches
+    vector<float>* br_muon_energyloss = NULL;
+    vector<float>* br_muon_etcone30 = NULL;
+    vector<float>* br_muon_ptvarcone30 = NULL;
+    vector<string>* br_bphy4quads_combinationCode = NULL;
+    fc->SetBranchAddress("MuonsAuxDyn.EnergyLoss", &br_muon_energyloss);
+    fc->SetBranchAddress("MuonsAuxDyn.etcone30", &br_muon_etcone30);
+    fc->SetBranchAddress("MuonsAuxDyn.ptvarcone30", &br_muon_ptvarcone30);
+
+    // fc->SetBranchAddress("BPHY4QuadsAuxDyn.CombinationCode", &br_bphy4quads_combinationCode);
     
     const float UPSILON_MASS = 9.46E3;
     for( Long64_t entry = 0; entry < entries; ++entry ) 
@@ -261,6 +273,7 @@ int main( int argc, char* argv[] )
         h_cutflow->Fill(0);
 
         // Tell the object which entry to look at:
+        fc->GetEntry( entry );
         event.getEntry( entry );
 
         const xAOD::EventInfo* ei = 0;
@@ -300,6 +313,8 @@ int main( int argc, char* argv[] )
         CHECK( event.retrieve(vertice, "PrimaryVertices") );
         if(! cp_tools->HasPrimaryVertex(*vertice, 1)) continue;
         h_cutflow->Fill(3);
+
+        const xAOD::Vertex* pv = CPToolsHelper::GetPrimVtx(*vertice);
 
         /*get physics objects*/
         // Electrons
@@ -345,6 +360,9 @@ int main( int argc, char* argv[] )
         // Muon's Selection
         ///////////////////
         int n_muon = 0;
+        int imuon = 0;
+        if(do_debug)
+            cout <<"processing: "<< ei->runNumber() << " " << ei->eventNumber() << endl;
         for(auto mu_itr = muons_copy->begin();
                 mu_itr != muons_copy->end(); ++mu_itr)
         {
@@ -352,8 +370,22 @@ int main( int argc, char* argv[] )
             if( (bool) dec_baseline(**mu_itr) )
             {
                 n_muon ++;
-                muon_br->Fill(**mu_itr);
+                muon_br->Fill(**mu_itr, ei, pv);
+                int muIndex = (*mu_itr)->auxdataConst<int>("BPHY4MuonIndex");
+                
+                if(do_debug){
+                    cout << "Type: " << (*mu_itr)->muonType() << endl;
+                    cout << "Index: " << muIndex << endl;
+                    cout << "pT: " << (*mu_itr)->p4().Pt()/1E3 << endl;
+                    cout << "Energy loss: " << br_muon_energyloss->at(imuon) << endl;
+                    cout << "ETcone30: " << br_muon_etcone30->at(imuon) << endl;
+                    cout << "pTvarcone30: " << br_muon_ptvarcone30->at(imuon) << endl;
+                }
+                muon_br->eloss_->push_back(br_muon_energyloss->at(imuon));
+                muon_br->etcone30_->push_back(br_muon_etcone30->at(imuon));
+                muon_br->ptvarcone30_->push_back(br_muon_ptvarcone30->at(imuon));
             }
+            imuon ++;
         }
 
         const float UPSILON_LOW = 8E3;
@@ -394,41 +426,115 @@ int main( int argc, char* argv[] )
                     }
                 }
             }
+
             if (upsilon_mu1 != muons_copy->end()) {
                 // only when there's a upsilon candidate, save the information!
-                if (n_muon == 4) {
-                    TLorentzVector mu_tlv;
-                    TLorentzVector mu_tlv_34;
-                    // vector<const xAOD::TrackParticle*> inputTracks(0);
-                    // vector<ElementLink<xAOD::TrackParticleContainer> > inputTrackLinks(0);
-                    for(auto mu_itr = muons_copy->begin(); mu_itr != muons_copy->end(); ++mu_itr){
-                        if(!dec_baseline(**mu_itr)) continue;
-                        mu_tlv += (*mu_itr)->p4();
-                        if(mu_itr != upsilon_mu1 && mu_itr != upsilon_mu2) {
-                            mu_tlv_34 += (*mu_itr)->p4();
-                        }
+                if (n_muon >= 4) {
+                    
+                    // require the second two muons to be opposite charge
+                    vector<xAOD::Muon*> muon_quad;
+                    muon_quad.push_back(*upsilon_mu1);
+                    muon_quad.push_back(*upsilon_mu2);
 
-                        // const xAOD::TrackParticle* tp = (*mu_itr)->trackParticle(xAOD::Muon::InnerDetectorTrackParticle);
-                        // if(tp) {
-                            // inputTracks.push_back(tp);
-                        // }
-                    }
-                    /****
-                    if(inputTracks.size() >= 3){ // at least three tracks
-                        Amg::Vector3D appVertex;
-                        m_VKVFitter->setMomCovCalc(0); //No total momentum and its covariance matrix
-                        if(m_VKVFitter->VKalVrtFitFast(inputTracks,appVertex).isSuccess()) {
-                            m_VKVFitter->setMomCovCalc(1);  //Total momentum and its covariance matrix are calculated
-                            const Trk::Vertex startingPoint(appVertex);
-                            xAOD::Vertex *myVxCandidate(0);
-                            myVxCandidate = m_VKVFitter->fit(inputTracks,startingPoint);
-                            vtx4l_chi2ndf_  = myVxCandidate->chiSquared()/myVxCandidate->numberDoF();
-                            myVxCandidate->clearTracks();
+                    float mass34_can = -900E3;
+                    for(auto mu_itr3 = muons_copy->begin(); mu_itr3 != muons_copy->end(); ++mu_itr3)
+                    {
+                        if(mu_itr3 == upsilon_mu1 || mu_itr3 == upsilon_mu2) continue;
+                        if(!dec_baseline(**mu_itr3)) continue;
+                        float mu_charge_3 = (*mu_itr3)->charge();
+
+                        for(auto mu_itr4 = mu_itr3+1; mu_itr4 != muons_copy->end(); ++mu_itr4){
+                            if(mu_itr4 == upsilon_mu1 || mu_itr4 == upsilon_mu2 || mu_itr4 == mu_itr3) continue;
+                            if(!dec_baseline(**mu_itr4)) continue;
+                            float mu_charge_4 = (*mu_itr4)->charge();
+
+                            if(mu_charge_3 * mu_charge_4 > 0) continue;
+                        
+                            float m4l = (float) ((*upsilon_mu1)->p4() + (*upsilon_mu2)->p4() + (*mu_itr3)->p4() + (*mu_itr4)->p4()).M()/1E3;
+                            float m34 = (float) ((*mu_itr3)->p4() + (*mu_itr4)->p4()).M()/1E3;
+                            if (m34 < 9.2 && m34 > mass34_can) {
+                                output->m_4l_ = m4l;
+                                output->m34_ = mass34_can = m34;
+                                if(muon_quad.size() > 2){
+                                    muon_quad[2] = *mu_itr3;
+                                    muon_quad[3] = *mu_itr4;
+                                } else {
+                                    muon_quad.push_back(*mu_itr3);
+                                    muon_quad.push_back(*mu_itr4);
+                                }
+                            }
+
                         }
                     }
-                    ***/
-                    output->m_4l_ = mu_tlv.M();
-                    output->m34_ = mu_tlv_34.M();
+
+                    if(muon_quad.size() == 4)
+                    {
+                        // vertex fitting
+                        vector<const xAOD::TrackParticle*> inputTracks(0);
+                        // vector<ElementLink<xAOD::TrackParticleContainer> > inputTrackLinks(0);
+                        for(auto muon : muon_quad){
+                            const xAOD::TrackParticle* tp = muon->trackParticle(xAOD::Muon::InnerDetectorTrackParticle);
+                            if(tp) { inputTracks.push_back(tp); }
+                        }
+                        unsigned int nTracks = inputTracks.size();
+
+                        const xAOD::VertexContainer* fourMuonsVertexCont = 0;
+                        if (event.contains<xAOD::VertexContainer>("BPHY4Quads")) {
+                            CHECK(event.retrieve(fourMuonsVertexCont, "BPHY4Quads"));
+
+                            const xAOD::Vertex* vert = 0;
+                            output->n_bphy4_quad_ = fourMuonsVertexCont->size();
+
+                            int iquads = 0;
+                            float min_chi2 = 900E3;
+                            for (const auto v: *fourMuonsVertexCont) 
+                            {
+                                if(!v) continue;
+                                float chi2 = (float) v->chiSquared()/v->numberDoF();
+                                // if(v->nTrackParticles() != nTracks) continue;
+                                // if(do_debug) cout << "combination code: " << br_bphy4quads_combinationCode->at(iquads) << endl;
+
+                                set<const xAOD::TrackParticle*> vtxTrks;
+                                for(unsigned int i = 0; i < v->nTrackParticles(); ++i) {
+                                    vtxTrks.insert(v->trackParticle(i));
+                                }
+
+                                unsigned int nMatch = 0;
+                                for(unsigned int i = 0; i < inputTracks.size(); i++){
+                                    if(vtxTrks.find(inputTracks.at(i)) != vtxTrks.end()) {
+                                        nMatch ++;
+                                    }
+                                }
+                                if(nMatch == nTracks && chi2 < min_chi2){
+                                    min_chi2 = chi2;
+                                    vert = v;
+                                    // break;
+                                }
+                            }
+                            if(vert) {
+                                if(do_debug) cout<<"vertex: " << vert->chiSquared() << " NDOF:" << vert->numberDoF() << endl;
+                                output->vtx4l_chi2ndf_  = (float) vert->chiSquared()/vert->numberDoF();
+                            }
+                        }
+                        // Loop over the primary vertices
+                        for(const auto v: *vertice){
+                            if(!v) continue;
+
+                            set<const xAOD::TrackParticle*> vtxTrks;
+                            for(unsigned int i = 0; i < v->nTrackParticles(); ++i) {
+                                vtxTrks.insert(v->trackParticle(i));
+                            }
+
+                            unsigned int nMatch = 0;
+                            for(unsigned int i = 0; i < inputTracks.size(); i++){
+                                if(vtxTrks.find(inputTracks.at(i)) != vtxTrks.end()) nMatch ++;
+                            }
+                            if(nMatch == nTracks){
+                                output->same_vertex_ = true;
+                                break;
+                            }
+                        }
+                    }
                 }
                 h_cutflow->Fill(5);
                 MyTree.Fill();

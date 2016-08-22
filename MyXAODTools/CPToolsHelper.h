@@ -69,7 +69,7 @@ private:
     string iso_wp_ ;
 
     GoodRunsListSelectionTool *grl_tool_;
-    JetVertexTaggerTool* pjvtag_tool_; 
+    JetVertexTaggerTool* pjvtag_tool_;
     TrigConf::xAODConfigTool *m_trigConfigTool_;
     Trig::TrigDecisionTool *m_trigDecisionTool_;
     CP::IsolationSelectionTool* iso_tool_;
