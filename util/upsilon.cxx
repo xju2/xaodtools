@@ -299,9 +299,11 @@ int main( int argc, char* argv[] )
         // if(ei->eventNumber() != 620) continue;
         // cout<< "reading 620!"<<endl;
 
-        for(auto kv : output->trigger_map_)
+        for(auto& kv : output->trigger_map_)
         {
-            if(objTool.IsTrigPassed(kv.first.c_str())) {
+            if(objTool.IsTrigPassed(kv.first.c_str())) 
+            {
+                // Info(APP_NAME, "Trigger %s is fired", kv.first.c_str());
                 output->pass_trigger_ = kv.second = true;
             }
         }
@@ -472,7 +474,7 @@ int main( int argc, char* argv[] )
                         // vertex fitting
                         vector<const xAOD::TrackParticle*> inputTracks(0);
                         // vector<ElementLink<xAOD::TrackParticleContainer> > inputTrackLinks(0);
-                        for(auto muon : muon_quad){
+                        for(auto& muon : muon_quad){
                             const xAOD::TrackParticle* tp = muon->trackParticle(xAOD::Muon::InnerDetectorTrackParticle);
                             if(tp) { inputTracks.push_back(tp); }
                         }
@@ -487,7 +489,7 @@ int main( int argc, char* argv[] )
 
                             int iquads = 0;
                             float min_chi2 = 900E3;
-                            for (const auto v: *fourMuonsVertexCont) 
+                            for (const auto& v: *fourMuonsVertexCont) 
                             {
                                 if(!v) continue;
                                 float chi2 = (float) v->chiSquared()/v->numberDoF();
@@ -517,7 +519,7 @@ int main( int argc, char* argv[] )
                             }
                         }
                         // Loop over the primary vertices
-                        for(const auto v: *vertice){
+                        for(const auto& v: *vertice){
                             if(!v) continue;
 
                             set<const xAOD::TrackParticle*> vtxTrks;
