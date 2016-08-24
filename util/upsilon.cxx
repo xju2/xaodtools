@@ -389,6 +389,12 @@ int main( int argc, char* argv[] )
             }
             imuon ++;
         }
+        // reject events with less than four muons!
+        // otherwise too many events to handle with
+        if (n_muon < 4) {
+            store.clear();
+            continue;
+        }
 
         const float UPSILON_LOW = 8E3;
         const float UPSILON_HI = 12E3;
@@ -454,7 +460,8 @@ int main( int argc, char* argv[] )
                         
                             float m4l = (float) ((*upsilon_mu1)->p4() + (*upsilon_mu2)->p4() + (*mu_itr3)->p4() + (*mu_itr4)->p4()).M()/1E3;
                             float m34 = (float) ((*mu_itr3)->p4() + (*mu_itr4)->p4()).M()/1E3;
-                            if (m34 < 9.2 && m34 > mass34_can) {
+                            if (m34 > mass34_can) 
+                            { // select the most energetic ones
                                 output->m_4l_ = m4l;
                                 output->m34_ = mass34_can = m34;
                                 if(muon_quad.size() > 2){
