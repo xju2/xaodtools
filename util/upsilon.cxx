@@ -111,10 +111,10 @@ int main( int argc, char* argv[] )
         uint64_t n_events_process = 0;
         double sum_of_evt_weights = 0;
         double sum_of_evt_weight_sqd = 0;
-        // CHECK(CPToolsHelper::GetProcessEventsInfo(name_file.Data(), 
-        //             n_events_process,
-        //             sum_of_evt_weights,
-        //             sum_of_evt_weight_sqd));
+        CHECK(CPToolsHelper::GetProcessEventsInfo(name_file.Data(), 
+                    n_events_process,
+                    sum_of_evt_weights,
+                    sum_of_evt_weight_sqd));
         total_evts_pro += n_events_process;
         sum_of_evt_w += sum_of_evt_weights;
         sum_of_evt_w_sq += sum_of_evt_weight_sqd;

@@ -250,7 +250,7 @@ bool CPToolsHelper::GetProcessEventsInfo(const char* file_name,
         double& sum_of_weights_squared)
 {
     TFile* ifile = TFile::Open(file_name, "READ");
-    xAOD::TEvent event( xAOD::TEvent::kBranchAccess );
+    xAOD::TEvent event( xAOD::TEvent::kClassAccess );
     CHECK( event.readFrom( ifile ) );
     CHECK( GetProcessEventsInfo(event, n_events_processed, sum_of_weights, sum_of_weights_squared));
     ifile->Close();
