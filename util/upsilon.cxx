@@ -305,6 +305,8 @@ int main( int argc, char* argv[] )
             {
                 // Info(APP_NAME, "Trigger %s is fired", kv.first.c_str());
                 output->pass_trigger_ = kv.second = true;
+            } else {
+                kv.second = false;
             }
         }
 

@@ -121,7 +121,7 @@ int AnalysisBase::process(Long64_t ientry)
             if(m_debug) Info(APP_NAME, "fired the trigger %s", kv.first.c_str());
             pass_trigger_ = kv.second = true;
         } else {
-            pass_trigger_ = kv.second = false;
+            kv.second = false;
         }
         if(m_debug){
             Info(APP_NAME, "%s trigger %d %d", kv.first.c_str(),

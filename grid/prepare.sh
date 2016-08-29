@@ -22,6 +22,7 @@ cd ${griddir}
 mkdir bin; 
 
 cp ${ROOTCOREBIN}/bin/x86_64-slc6-gcc49-opt/upsilon bin/
+cp ${ROOTCOREBIN}/bin/x86_64-slc6-gcc49-opt/analysis bin/
 
 tar -czf hello.tar bin/ RootCore/ 
 rm -rf  bin/ RootCore/ 
