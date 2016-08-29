@@ -9,10 +9,13 @@
 #include "xAODTracking/TrackParticle.h"
 #include "xAODBase/IParticle.h"
 
+#include "CPAnalysisExamples/errorcheck.h"
+#include "SUSYTools/SUSYObjDef_xAOD.h"
+
 #include "GoodRunsLists/GoodRunsListSelectionTool.h"
-#include "JetMomentTools/JetVertexTaggerTool.h"
-#include "TrigConfxAOD/xAODConfigTool.h"
-#include "TrigDecisionTool/TrigDecisionTool.h"
+// #include "JetMomentTools/JetVertexTaggerTool.h"
+// #include "TrigConfxAOD/xAODConfigTool.h"
+// #include "TrigDecisionTool/TrigDecisionTool.h"
 #include "IsolationSelection/IsolationSelectionTool.h"
 #include "ElectronPhotonSelectorTools/AsgElectronLikelihoodTool.h"
 #include "PileupReweighting/PileupReweightingTool.h"
@@ -29,7 +32,7 @@ public:
     bool PassGRL(const xAOD::EventInfo& ei);
     bool PassGRL(int run_number, int lumi_block);
     float NewJVT(const xAOD::Jet& jet);
-    bool PassTrigger(const string& trig_name);
+
     bool PassIsolation(const xAOD::Muon& muon);
     bool PassIsolation(const xAOD::Electron& electron);
     bool PassEleMediumLLH(const xAOD::Electron& electron);
@@ -59,19 +62,23 @@ public:
             uint64_t& n_events_processed,
             double& sum_of_weights,
             double& sum_of_weights_squared);
+
     static bool GetProcessEventsInfo(xAOD::TEvent& event,
             uint64_t& n_events_processed,
             double& sum_of_weights,
             double& sum_of_weights_squared);
 
+    static bool SaveProcessedEvents(
+            TTree& tree, const xAOD::EventInfo& ei,
+            uint64_t total_evts_pro, double sum_of_evt_w,
+            double sum_of_evt_w_sq);
+
+    static ST::SUSYObjDef_xAOD* GetSUSYTools(bool is_data, const char* config_name);
 private:
     static const char* APP_NAME;
     string iso_wp_ ;
 
     GoodRunsListSelectionTool *grl_tool_;
-    JetVertexTaggerTool* pjvtag_tool_;
-    TrigConf::xAODConfigTool *m_trigConfigTool_;
-    Trig::TrigDecisionTool *m_trigDecisionTool_;
     CP::IsolationSelectionTool* iso_tool_;
     AsgElectronLikelihoodTool* ele_medium_LLH_tool_;
     // ToolHandle<CP::IPileupReweightingTool> m_prw_tool;

@@ -2,13 +2,6 @@
 #include <stdlib.h>
 
 EventInfoCreator::EventInfoCreator(){
-    is_data_ = false;
-    mc_weights_ = new vector<float>();
-}
-
-EventInfoCreator::EventInfoCreator(bool is_data):
-    is_data_(is_data)
-{
     mc_weights_ = new vector<float>();
 }
 

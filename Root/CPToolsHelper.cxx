@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <TTree.h>
 
 #include "CPAnalysisExamples/errorcheck.h"
 #include "xAODTracking/TrackParticle.h"
@@ -22,9 +23,6 @@ CPToolsHelper::CPToolsHelper(){
 
 CPToolsHelper::~CPToolsHelper(){
     delete grl_tool_; 
-    delete pjvtag_tool_;
-    delete m_trigConfigTool_;
-    delete m_trigDecisionTool_;
     if(iso_tool_) delete iso_tool_;
     delete ele_medium_LLH_tool_;
 }
@@ -40,22 +38,6 @@ bool CPToolsHelper::initialize(){
     CHECK( grl_tool_->setProperty("PassThrough", false) );
     CHECK( grl_tool_->initialize() );
     Info( APP_NAME, "GRL tool initialized... " );
-
-    // JVT
-    pjvtag_tool_ = new JetVertexTaggerTool("jvtag");
-    CHECK(pjvtag_tool_->setProperty("JVTFileName", "JetMomentTools/JVTlikelihood_20140805.root"));
-    CHECK(pjvtag_tool_->initialize());
-    Info( APP_NAME, "JVT tool initialized... " );
-
-    // Trigger
-    m_trigConfigTool_ = new TrigConf::xAODConfigTool("xAODConfigTool"); // gives us access to the meta-data
-    CHECK( m_trigConfigTool_->initialize() );
-    ToolHandle< TrigConf::ITrigConfigTool > trigConfigHandle( m_trigConfigTool_ );
-    m_trigDecisionTool_ = new Trig::TrigDecisionTool("TrigDecisionTool");
-    m_trigDecisionTool_->setProperty( "ConfigTool", trigConfigHandle );
-    m_trigDecisionTool_->setProperty( "TrigDecisionKey", "xTrigDecision" );
-    CHECK( m_trigDecisionTool_->initialize() );
-    Info( APP_NAME, "Trigger decision tool initialized..." );
 
     // Isolation tool
     iso_tool_ = new CP::IsolationSelectionTool("iso_tool");
@@ -89,11 +71,6 @@ bool CPToolsHelper::PassGRL(int run_number, int lumi_block){
     return grl_tool_->passRunLB(run_number, lumi_block);
 }
 
-float CPToolsHelper::NewJVT(const xAOD::Jet& jet)
-{
-    return pjvtag_tool_->updateJvt(jet);
-}
-
 bool CPToolsHelper::PassEventCleaning(const xAOD::EventInfo& ei)
 {
     // Instructions
@@ -119,10 +96,6 @@ bool CPToolsHelper::HasPrimaryVertex(const xAOD::VertexContainer& vertice, unsig
     return passVertex;
 }
 
-bool CPToolsHelper::PassTrigger(const string& trig_name)
-{
-    return m_trigDecisionTool_->isPassed(trig_name); 
-}
 
 bool CPToolsHelper::PassIsolation(const xAOD::Muon& muon){
     return iso_tool_->accept(muon);
@@ -255,4 +228,66 @@ bool CPToolsHelper::GetProcessEventsInfo(const char* file_name,
     CHECK( GetProcessEventsInfo(event, n_events_processed, sum_of_weights, sum_of_weights_squared));
     ifile->Close();
     return true;
+}
+
+bool CPToolsHelper::SaveProcessedEvents(
+        TTree& tree, const xAOD::EventInfo& ei,
+        uint64_t total_evts_pro, double sum_of_evt_w,
+        double sum_of_evt_w_sq)
+{
+    tree.Branch("nEventsProcessed", &total_evts_pro, "nEventsProcessed/l");
+    tree.Branch("nSumEventWeights", &sum_of_evt_w, "nSumEventWeights/D");
+    tree.Branch("nSumEventWeightsSquared", &sum_of_evt_w_sq, 
+            "nSumEventWeightsSquared/D");
+    int run_number_ = -1;
+    int event_number_ = -1;
+    int mc_channel_number_ = -1;
+    tree.Branch("RunNumber", &run_number_, "RunNumber/I");
+    tree.Branch("EventNumber", &event_number_, "EventNumber/I");
+    tree.Branch("mc_channel_number", &mc_channel_number_, "mc_channel_number/I");
+
+    run_number_ = ei.runNumber();
+    event_number_ = ei.eventNumber();
+    bool is_data = true;
+    if(ei.eventType(xAOD::EventInfo::IS_SIMULATION)) 
+    {
+        mc_channel_number_= ei.mcChannelNumber();
+        is_data = false;
+    }
+    tree.Fill();
+    return is_data;
+}
+ST::SUSYObjDef_xAOD* CPToolsHelper::GetSUSYTools(bool isData, const char* config_name)
+{
+    // create SUSYTools and config it
+    ST::SUSYObjDef_xAOD* objTool = new ST::SUSYObjDef_xAOD("SUSYObjDef_Upsilon");
+    objTool->msg().setLevel(MSG::ERROR);   // MSG::VERBOSE
+
+    // Configure the SUSYObjDef instance
+    ST::ISUSYObjDef_xAODTool::DataSource data_source = isData ? ST::ISUSYObjDef_xAODTool::Data : ST::ISUSYObjDef_xAODTool::FullSim;
+    if(! objTool->setProperty("DataSource", data_source) ) return NULL;
+
+    // general configuration
+    string maindir(getenv("ROOTCOREBIN"));
+    // string config_file = Form("%s/data/MyXAODTools/upsilon.conf", maindir.c_str());
+    if(! objTool->setProperty("ConfigFile", config_name) ) return NULL;
+
+    // pileup reweight
+    vector<string> prw_conf;
+    prw_conf.push_back(maindir+"/data/MyXAODTools/mc15c.prw.root");
+    if(! objTool->setProperty("PRWConfigFiles", prw_conf) ) return NULL;
+
+    vector<string> prw_lumicalc;
+    prw_lumicalc.push_back(maindir+"/data/MyXAODTools/ilumicalc_histograms_None_276262-284484_final_20.7.root");
+    prw_lumicalc.push_back(maindir+"/data/MyXAODTools/ilumicalc_histograms_None_297730-303892.root");
+    if(! objTool->setProperty("PRWLumiCalcFiles", prw_lumicalc) ) return NULL;
+
+    if( objTool->initialize() != StatusCode::SUCCESS){
+        Error( APP_NAME, "Cannot intialize SUSYObjDef_xAOD..." );
+        Error( APP_NAME, "Exiting... " );
+        return NULL;
+    }else{
+        Info( APP_NAME, "SUSYObjDef_xAOD initialized... " );
+    }
+    return objTool;
 }

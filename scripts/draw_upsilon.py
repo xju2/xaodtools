@@ -35,7 +35,7 @@ def make_hists(file_names, out_name):
     tree.SetBranchStatus("*", 0)
     tree.SetBranchStatus("mUpsilon", 1)
     tree.SetBranchStatus("m4l", 1)
-    tree.SetBranchStatus("m4l_fitted", 1)
+    #tree.SetBranchStatus("m4l_fitted", 1)
     tree.SetBranchStatus("m34", 1)
     tree.SetBranchStatus("n_muon", 1)
     tree.SetBranchStatus("vtx4l_chi2ndf", 1);
@@ -47,11 +47,12 @@ def make_hists(file_names, out_name):
         tree.GetEntry(ientry)
         #has_4l = tree.n_muon > 3 and tree.m4l > 0
             #and tree.vtx4l_chi2ndf < chi2_cut and tree.vtx4l_chi2ndf > 0
-        m4l = tree.m4l_fitted/1E3
+        m4l = tree.m4l
 
-        if tree.n_muon < 4 or m4l <= 0 or tree.vtx4l_chi2ndf > chi2_cut or tree.vtx4l_chi2ndf < 0:
-        #if tree.n_muon < 4 or tree.m4l <= 0:
+        if tree.n_muon < 4 or m4l <= 0 or tree.vtx4l_chi2ndf > chi2_cut or tree.vtx4l_chi2ndf < 0 or tree.m34 > 9.2 :
             continue
+        #if tree.m34 < 2.8 or tree.m34 > 3.2:
+        #    continue
         mU = tree.mUpsilon/1E3
 
         h_upsilon.Fill(mU)

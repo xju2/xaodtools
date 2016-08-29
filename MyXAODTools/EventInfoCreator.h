@@ -12,9 +12,8 @@ using namespace std;
 class EventInfoCreator
 {
 
-public: 
+public:
     EventInfoCreator();
-    EventInfoCreator(bool is_data);
     virtual ~EventInfoCreator();
     // add full set of branches
     void AttachBranchToTree(TTree& tree);
@@ -24,8 +23,6 @@ public:
     void ClearBranch();
 
 private:
-    bool is_data_;
-
     int run_number_;
     int event_number_;
     int mc_channel_number_;

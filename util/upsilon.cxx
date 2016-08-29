@@ -209,7 +209,7 @@ int main( int argc, char* argv[] )
     // GRL, JVT and other tools are moved to MyXAODTools
     CPToolsHelper* cp_tools = new CPToolsHelper();
 
-    EventInfoCreator* event_br = new EventInfoCreator(isData);
+    EventInfoCreator* event_br = new EventInfoCreator();
 
 
     /*record the number of processed events*/
@@ -564,6 +564,10 @@ int main( int argc, char* argv[] )
     Info( APP_NAME, "finished analysis; Cleaning..." );
 
     delete cp_tools;
+    delete event_br;
+    delete output;
+    delete el_br;
+    delete muon_br;
 
     Info( APP_NAME, "Successfully finished analysis; Exitting..." );
     return 1;
