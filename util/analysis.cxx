@@ -55,22 +55,6 @@
 #include <TError.h>
 using namespace std;
 
-static SG::AuxElement::Decorator<double> dec_dphi_MET("dphi_MET");
-static SG::AuxElement::Decorator<char> dec_baseline("baseline");
-static SG::AuxElement::Decorator<char> dec_signal("signal");
-static SG::AuxElement::Decorator<char> dec_passOR("passOR");
-static SG::AuxElement::Decorator<char> dec_bad("bad");
-static SG::AuxElement::Decorator<char> dec_bjet("bjet");
-static SG::AuxElement::Decorator<char> dec_cosmic("cosmic");
-static SG::AuxElement::Decorator<double> dec_effscalefact("effscalefact");
-static SG::AuxElement::Decorator<char> dec_isol("isol");
-static SG::AuxElement::Decorator<char> dec_tightBad("tightBad");
-static SG::AuxElement::Decorator<int> dec_muonIndex("BPHY4MuonIndex");
-
-bool descend_on_pt(xAOD::IParticle* p1, xAOD::IParticle* p2){
-    return p1->pt() > p2->pt();
-}
-
 int main( int argc, char* argv[] )
 {
     // gErrorIgnoreLevel = kError;

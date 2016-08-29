@@ -5,6 +5,7 @@
 #include <iostream>
 
 #include <TString.h>
+#include <TVector2.h>
 
 using namespace MyXAODTools;
 using namespace std;
@@ -29,4 +30,11 @@ TChain* Helper::loader(const char* inFile_name, const char* chain_name)
     cout << "total events: " << chain->GetEntries() << " in " << ncounter << " files." << endl;
     input.close();
     return chain;
+}
+
+float MyXAODTools::delta_r(float eta1, float phi1, float eta2, float phi2)
+{
+    double dphi = fabs(TVector2::Phi_mpi_pi( TVector2::Phi_mpi_pi(phi1) - TVector2::Phi_mpi_pi(phi2) ));
+    double deta = eta1 - eta2;
+    return sqrt(deta * deta + dphi * dphi);
 }

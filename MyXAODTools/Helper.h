@@ -8,5 +8,6 @@ namespace MyXAODTools{
     namespace Helper{
         TChain* loader(const char* inFile_name, const char* chain_name = "physics");
     }
+    float delta_r(float eta1, float phi1, float eta2, float phi2);
 }
 #endif

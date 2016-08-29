@@ -19,6 +19,12 @@
 #include "MyXAODTools/MuonBranch.h"
 #include "MyXAODTools/JetBranch.h"
 
+static SG::AuxElement::Decorator<char> dec_baseline("baseline");
+static SG::AuxElement::Decorator<char> dec_signal("signal");
+static SG::AuxElement::Decorator<char> dec_passOR("passOR");
+static SG::AuxElement::Decorator<char> dec_bad("bad");
+static SG::AuxElement::Decorator<char> dec_bjet("bjet");
+
 class AnalysisBase{
 
 public:
@@ -33,6 +39,9 @@ public:
 
     bool SaveProcessedInfo(uint64_t total_evts, double sum_of_weight, double sum_of_w_sq);
     void GetSUSYTool(const char* config=NULL);
+    static bool descend_on_pt(xAOD::IParticle* p1, xAOD::IParticle* p2){
+        return p1->pt() > p2->pt();
+    }
 
     // bookings of tree
     virtual void AttachBranchToTree();
@@ -55,12 +64,14 @@ protected:
     const xAOD::VertexContainer* vertice;
     const xAOD::Vertex* pv;
 
-    // tools
-    CPToolsHelper* cp_tools;
+    // tools for branch booking
     EventInfoCreator* event_br;
     MuonBranch* muon_br;
     ElectronBranch* el_br;
     JetBranch* jet_br;
+
+    // tools for CP recommendations
+    CPToolsHelper* cp_tools;
     ST::SUSYObjDef_xAOD* m_objTool;
 
     // output setup
@@ -70,5 +81,6 @@ protected:
 
     // output branches
     bool pass_trigger_;
+
 };
 #endif

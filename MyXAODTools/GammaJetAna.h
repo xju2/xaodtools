@@ -22,7 +22,10 @@ public:
     int process(Long64_t ientry); // main program
 
 private:
-    int event_type_;
+    const float LEADING_PHOTON_CUT;
+    const float LEADING_JET_CUT;
+
+    float m_mass;
 };
 
 #endif
