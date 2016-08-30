@@ -145,11 +145,11 @@ int main( int argc, char* argv[] )
     if (isData) {
         cout <<"You are running data, congratuations" << endl;
     }
-    if(do_debug) ana->SetVerbose();
 
     ana->SetEvent(&event); // don't change the order with following commands
     ana->SaveProcessedInfo(total_evts_pro, sum_of_evt_w, sum_of_evt_w_sq);
     ana->GetSUSYTool();
+    if(do_debug) ana->SetVerbose();
 
     for( Long64_t entry = 0; entry < entries; ++entry )
     {

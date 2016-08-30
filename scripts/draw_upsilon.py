@@ -11,7 +11,6 @@ if not hasattr(ROOT, "myText"):
     ROOT.gROOT.LoadMacro("/afs/cern.ch/user/x/xju/tool/loader.c")
 
 
-chi2_cut = 10
 def make_hists(file_names, out_name):
     tree = ROOT.TChain("physics", "physics")
     for file_ in file_names:
@@ -43,16 +42,16 @@ def make_hists(file_names, out_name):
     #tree.SetBranchStatus("mu_p4", 1)
 
 
+    chi2_cut = 10
+    out_mass = ""
     for ientry in xrange(nentries):
         tree.GetEntry(ientry)
-        #has_4l = tree.n_muon > 3 and tree.m4l > 0
-            #and tree.vtx4l_chi2ndf < chi2_cut and tree.vtx4l_chi2ndf > 0
+
         m4l = tree.m4l
 
-        if tree.n_muon < 4 or m4l <= 0 or tree.vtx4l_chi2ndf > chi2_cut or tree.vtx4l_chi2ndf < 0 or tree.m34 > 9.2 :
+        if tree.n_muon < 4 or m4l <= 0 or tree.vtx4l_chi2ndf > chi2_cut or tree.vtx4l_chi2ndf < 0 or tree.m34 > 9.2:
             continue
-        #if tree.m34 < 2.8 or tree.m34 > 3.2:
-        #    continue
+
         mU = tree.mUpsilon/1E3
 
         h_upsilon.Fill(mU)
@@ -62,9 +61,11 @@ def make_hists(file_names, out_name):
             h_jpsi.Fill(tree.m34)
             if mU < 9:
                 h_m4l_LHS.Fill(m4l)
+            #elif mU >= 9.2 and mU < 9.7:
             elif mU >= 9 and mU < 9.8:
                 h_m4l.Fill(m4l)
-            elif mU >= 9.8 and mU < 10.8:
+                out_mass += str(m4l)+" \n"
+            elif mU >= 9.7 and mU < 10.6:
                 h_m4l_RHS_U1.Fill(m4l)
             else:
                 h_m4l_RHS_U2.Fill(m4l)
@@ -78,6 +79,9 @@ def make_hists(file_names, out_name):
     h_m4l_RHS_U2.Write()
     h_jpsi.Write()
     fout.Close()
+
+    with open("m4lcan_13TeV.txt", 'w') as f:
+        f.write(out_mass);
 
     #return out_name
 
@@ -96,16 +100,16 @@ def draw(file_name, post_fix):
     h1.GetYaxis().SetTitle("Events / {:.0f} MeV".format(50*n_rebin))
     h1.Draw("EP")
     ROOT.myText(x_pos, y_pos, 1, "Entries: {:.0f}".format(h1.Integral()))
-    canvas.SaveAs("mUpsilon_"+post_fix+"_"+str(chi2_cut)+".pdf")
+    canvas.SaveAs("mUpsilon_"+post_fix+".pdf")
 
     h6 = f1.Get("h_jpsi")
     h6.Rebin(n_rebin)
     h6.GetYaxis().SetTitle("Events / {:.0f} MeV".format(100*n_rebin))
     h6.Draw("EP")
     ROOT.myText(x_pos, y_pos, 1, "Entries: {:.0f}".format(h6.Integral()))
-    canvas.SaveAs("mJpsi_"+post_fix+"_"+str(chi2_cut)+".pdf")
+    canvas.SaveAs("mJpsi_"+post_fix+".pdf")
 
-    m4l_bin_width= 50 
+    m4l_bin_width= 50
     n_rebin_4l = 4
     m4l_xlow = 16
     m4l_xhi = 21
@@ -117,7 +121,7 @@ def draw(file_name, post_fix):
     h2.GetXaxis().SetRangeUser(m4l_xlow, m4l_xhi)
     h2.Draw("EP")
     ROOT.myText(x_pos, y_pos, 1, "Entries: {:.0f}".format(h2.Integral()))
-    canvas.SaveAs("m4l_LHS_"+post_fix+"_"+str(chi2_cut)+".pdf")
+    canvas.SaveAs("m4l_LHS_"+post_fix+".pdf")
 
     h3 = f1.Get("h_m4l_RHS_U1")
     h3.Rebin(n_rebin_4l)
@@ -125,7 +129,7 @@ def draw(file_name, post_fix):
     h3.GetXaxis().SetRangeUser(m4l_xlow, m4l_xhi)
     h3.Draw("EP")
     ROOT.myText(x_pos, y_pos, 1, "Entries: {:.0f}".format(h3.Integral()))
-    canvas.SaveAs("m4l_RHS_U1_"+post_fix+"_"+str(chi2_cut)+".pdf")
+    canvas.SaveAs("m4l_RHS_U1_"+post_fix+".pdf")
 
     h4 = f1.Get("h_m4l_RHS_U2")
     h4.Rebin(n_rebin_4l)
@@ -133,7 +137,7 @@ def draw(file_name, post_fix):
     h4.GetXaxis().SetRangeUser(m4l_xlow, m4l_xhi)
     h4.Draw("EP")
     ROOT.myText(x_pos, y_pos, 1, "Entries: {:.0f}".format(h4.Integral()))
-    canvas.SaveAs("m4l_RHS_U2_"+post_fix+"_"+str(chi2_cut)+".pdf")
+    canvas.SaveAs("m4l_RHS_U2_"+post_fix+".pdf")
 
     h5 = f1.Get("h_m4l")
     h5.Rebin(n_rebin_4l)
@@ -141,7 +145,7 @@ def draw(file_name, post_fix):
     h5.GetXaxis().SetRangeUser(m4l_xlow, m4l_xhi)
     h5.Draw("EP")
     ROOT.myText(x_pos, y_pos, 1, "Entries: {:.0f}".format(h5.Integral()))
-    canvas.SaveAs("m4l_"+post_fix+"_"+str(chi2_cut)+".pdf")
+    canvas.SaveAs("m4l_"+post_fix+".pdf")
 
 
 if __name__ == "__main__":

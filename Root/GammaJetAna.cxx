@@ -67,17 +67,20 @@ int GammaJetAna::process(Long64_t ientry)
     xAOD::ShallowAuxContainer* ph_copyaxu = NULL;
     CHECK( m_objTool->GetPhotons(ph_copy, ph_copyaxu, true) );
     sort(ph_copy->begin(), ph_copy->end(), descend_on_pt);
+    if(m_debug) Info(APP_NAME, "Got photons");
 
     // Get Electrons
     xAOD::ElectronContainer* el_copy = NULL;
     xAOD::ShallowAuxContainer* el_copyaux = NULL;
     CHECK( m_objTool->GetElectrons(el_copy, el_copyaux, true) );
+    if(m_debug) Info(APP_NAME, "Got Electrons");
 
     // Get Jets
     xAOD::JetContainer* jets_copy = NULL;
     xAOD::ShallowAuxContainer* jets_copyaux = NULL;
     CHECK( m_objTool->GetJets(jets_copy, jets_copyaux, true) );
     sort(jets_copy->begin(), jets_copy->end(), descend_on_pt);
+    if(m_debug) Info(APP_NAME, "Got Jets");
 
     // find leading good photon
     vector<xAOD::Photon*> good_photons;
@@ -90,6 +93,7 @@ int GammaJetAna::process(Long64_t ientry)
         }
     }
     if(leading_ph_id == ph_copy->end()) return 2;
+    if(m_debug) Info(APP_NAME, "Got leading photon");
 
     // find leading good jet
     auto leading_jet_id = jets_copy->end();

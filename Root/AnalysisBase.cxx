@@ -139,4 +139,7 @@ int AnalysisBase::process(Long64_t ientry)
 
 void AnalysisBase::SetVerbose(){
     m_debug = true;
+    if(m_objTool) {
+        m_objTool->setProperty("DebugMode", m_debug).ignore();
+    }
 }
