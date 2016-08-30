@@ -127,6 +127,7 @@ class VFitZmmOnAOD : public AthAlgorithm {
    std::vector<int>* mu_type_;
    std::vector<float>* mu_d0_;
    std::vector<float>* mu_z0_sintheta_;
+   std::vector<float>* mu_z0_;
    std::vector<float>* mu_d0_sig_;
    std::vector<float>* mu_eloss_;
    std::vector<float>* mu_etcone30_;

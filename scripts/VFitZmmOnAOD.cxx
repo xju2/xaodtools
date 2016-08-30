@@ -24,6 +24,7 @@
 
 // vertex
 #include "VxVertex/VxContainer.h"   
+#include "VxVertex/VxCandidate.h"   
 #include "VxVertex/RecVertex.h"
 #include "VxVertex/VxTrackAtVertex.h"
 
@@ -165,6 +166,7 @@ StatusCode VFitZmmOnAOD::initialize() {
   mu_type_ = new std::vector<int>;
   mu_d0_ = new std::vector<float>;
   mu_z0_sintheta_ = new std::vector<float>;
+  mu_z0_ = new std::vector<float>;
   mu_d0_sig_ = new std::vector<float>;
   mu_eloss_ = new std::vector<float>;
   mu_etcone30_ = new std::vector<float>;
@@ -233,6 +235,7 @@ StatusCode VFitZmmOnAOD::initialize() {
   m_tree_Zll->Branch("mu_type", &mu_type_);
   m_tree_Zll->Branch("mu_d0", &mu_d0_);
   m_tree_Zll->Branch("mu_z0_sintheta", &mu_z0_sintheta_);
+  m_tree_Zll->Branch("mu_z0", &mu_z0_);
   m_tree_Zll->Branch("mu_d0_sig", &mu_d0_sig_);
   m_tree_Zll->Branch("mu_eloss", &mu_eloss_);
   m_tree_Zll->Branch("mu_etcone30", &mu_etcone30_);
@@ -324,6 +327,7 @@ StatusCode VFitZmmOnAOD::initEvent() {
   mu_type_->clear();
   mu_d0_->clear();
   mu_z0_sintheta_->clear();
+  mu_z0_->clear();
   mu_d0_sig_->clear();
   mu_eloss_->clear();
   mu_etcone30_->clear();
@@ -336,6 +340,17 @@ StatusCode VFitZmmOnAOD::initEvent() {
   m34_ = -9999;
   same_vertex_ = false;
   m_4l_fitted_ = -9999;
+
+  n_combined_muons_ = 0;
+  m_index_1_ = -1;
+  m_index_2_ = -1;
+  m_index_3_ = -1;
+  m_index_4_ = -1;
+
+  m_pvID_1_ = -1;
+  m_pvID_2_ = -1;
+  m_pvID_3_ = -1;
+  m_pvID_4_ = -1;
 
 
   //
@@ -480,7 +495,9 @@ StatusCode VFitZmmOnAOD::zmm_on_aod() {
          if(aMeasPer){
              float d0 = aMeasPer->parameters()[Trk::d0];
              mu_d0_->push_back(d0);
-             float z0_sintheta = aMeasPer->parameters()[Trk::z0] * tlv.Theta();
+             float z0 = aMeasPer->parameters()[Trk::z0];
+             mu_z0_->push_back(z0);
+             float z0_sintheta = z0 * tlv.Theta();
              mu_z0_sintheta_->push_back(z0_sintheta);
              const Trk::ErrorMatrix& theErrorMatrix = aMeasPer->localErrorMatrix();
              float d0_error = (theErrorMatrix.covariance())[Trk::d0][Trk::d0];
@@ -509,7 +526,6 @@ StatusCode VFitZmmOnAOD::zmm_on_aod() {
   this->buildFourMuons( *good_muons );
 
   return StatusCode::SUCCESS;
-
 }
 
 // muon selection function
@@ -818,7 +834,7 @@ void VFitZmmOnAOD::buildFourMuons(const MuonVect& muons)
     vtx4l_chi2ndf_ = min_chi2_ndf_4muons;
     if(has_neutral_muons) m_cutFlow->Fill(3);
     if(has_two_onia) m_cutFlow->Fill(4);
-    if(m_index_1_ >= 0){ 
+    if(m_index_1_ >= 0){
         m_pvID_1_ = this->matchPV( *(muons.at(m_index_1_)) );
         m_pvID_2_ = this->matchPV( *(muons.at(m_index_2_)) );
         m_pvID_3_ = this->matchPV( *(muons.at(m_index_3_)) );
@@ -888,23 +904,57 @@ int VFitZmmOnAOD::matchPV(const Analysis::Muon& muon)
     int index_pv = -1;
     int res = -1;
     float min_dr = 1E6;
+
+    const Rec::TrackParticle* track = muon.inDetTrackParticle();
+    // const Rec::TrackParticle* track = muon.track();
+    const Trk::MeasuredPerigee* aMeasPer = track->measuredPerigee();
+    const Trk::VxCandidate* muon_vxCan = track->reconstructedVertex();
+    
+    if(!aMeasPer){
+        ATH_MSG_INFO("cannot find measuredPerigee() on ID: ");
+        aMeasPer = muon.track()->measuredPerigee();
+        if(!aMeasPer){
+            ATH_MSG_INFO("cannot find measuredPerigee() on Muon: ");
+            return res;
+        }
+    }
+    // ATH_MSG_INFO("From Muon, d0: " << aMeasPer->parameters()[Trk::d0] << "; z0: " << aMeasPer->parameters()[Trk::z0]);
+    float mu_d0 = -1;
+    float mu_z0 = -1;
+    if(muon_vxCan){
+    // ATH_MSG_INFO("From Muon, d0: " << muon_vxCan->recVertex().position()[Trk::d0] << "; z0: " << muon_vxCan->recVertex().position()[Trk::z0] );
+        mu_d0 = muon_vxCan->recVertex().position()[Trk::d0];
+        mu_z0 = muon_vxCan->recVertex().position()[Trk::z0];
+    }
+
     for(VxContainer::const_iterator vtxItr = vxCont->begin();
             vtxItr != vxCont->end(); ++ vtxItr)
     {
         index_pv ++;
         const std::vector<Trk::VxTrackAtVertex*>* vtxTracks = (*vtxItr)->vxTrackAtVertex();
         unsigned int nTracks = vtxTracks->size();
-
-        const Rec::TrackParticle* track = muon.inDetTrackParticle();
-        // const Rec::TrackParticle* track = muon.track();
-        const Trk::MeasuredPerigee* aMeasPer = track->measuredPerigee();
-        
+        float vxt_d0 = (*vtxItr)->recVertex().position()[Trk::d0];
+        float vxt_z0 = (*vtxItr)->recVertex().position()[Trk::z0];
+        if (fabs(vxt_d0 - mu_d0) < 1E-5 && fabs(vxt_z0 - mu_z0) < 1E-5) {
+            ATH_MSG_INFO("found a match: " << index_pv);
+            res = index_pv;
+            break;
+        }
+        // ATH_MSG_INFO("From VxContainer, d0: " << (*vtxItr)->recVertex().position()[Trk::d0] << "; z0: " << (*vtxItr)->recVertex().position()[Trk::z0] );
+        // ATH_MSG_INFO("number of tracks: " << nTracks);
+        // ATH_MSG_INFO("From VxContainer, d0: " << (*vtxItr)->recVertex().position()[Trk::d0] << "; z0: " << (*vtxItr)->recVertex().position()[Trk::z0] );
+       /*** 
         float min_dr_track = 9E6;
         for(unsigned int j = 0; j < nTracks; j++){
             // const Trk::TrackParameters* para = dynamic_cast<const Trk::TrackParameters*>(vtxTracks->at(j)->perigeeAtVertex());
-            const Trk::ParametersBase* para = vtxTracks->at(j)->perigeeAtVertex();
-            // const Trk::ParametersBase* para = vtxTracks->at(j)->origTrack();
-            if (para && aMeasPer){
+            // const Trk::ParametersBase* para = vtxTracks->at(j)->perigeeAtVertex();
+            const Trk::ParametersBase* para = vtxTracks->at(j)->initialPerigee();
+            if(!para) {
+                // ATH_MSG_INFO("cannot find perigeeAtVertex(): ");
+                ATH_MSG_INFO("cannot find initialPerigee(): ");
+                continue;
+            }
+            if (para){
                 //float d0_diff = para->parameters()[Trk::d0] - aMeasPer->parameters()[Trk::d0];
                 //float z0_diff = para->parameters()[Trk::z0] - aMeasPer->parameters()[Trk::z0];
                 float d0_diff = para->position()[Trk::d0] - aMeasPer->parameters()[Trk::d0];
@@ -912,6 +962,8 @@ int VFitZmmOnAOD::matchPV(const Analysis::Muon& muon)
                 float dr = sqrt(d0_diff*d0_diff + z0_diff*z0_diff);
                 if( dr < min_dr_track){
                     min_dr_track = dr;
+                    // ATH_MSG_INFO("d0: " << para->position()[Trk::d0] << "; z0: " << para->position()[Trk::z0];
+                    // ATH_MSG_INFO("DR: " << dr);
                 }
             }
         }
@@ -919,6 +971,7 @@ int VFitZmmOnAOD::matchPV(const Analysis::Muon& muon)
             min_dr = min_dr_track;
             res = index_pv;
         }
+        ****/
     }
     return res;
 }
