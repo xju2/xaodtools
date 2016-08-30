@@ -76,12 +76,13 @@ class VFitZmmOnAOD : public AthAlgorithm {
   float VkVrtFit(const Analysis::Muon& muon1, const Analysis::Muon& muon2);
   void buildFourMuons(const MuonVect& muons);
   bool passOniaCuts(
-          const Analysis::Muon& muon1,
-          const Analysis::Muon& muon2,
-          const Analysis::Muon& muon3,
-          const Analysis::Muon& muon4,
-          float& m_light, float& m_heavy
-          );
+    const Analysis::Muon& muon1,
+    const Analysis::Muon& muon2,
+    const Analysis::Muon& muon3,
+    const Analysis::Muon& muon4,
+    float& m_light, float& m_heavy,
+    float& chi2_onia1, float& chi2_onia2
+    );
 
   int matchPV(const Analysis::Muon& muon1);
 
@@ -149,6 +150,8 @@ class VFitZmmOnAOD : public AthAlgorithm {
    int m_pvID_2_;
    int m_pvID_3_;
    int m_pvID_4_;
+   float m_chi2_onia1;
+   float m_chi2_onia2;
 
 
   /// variables to store Event Info stuff

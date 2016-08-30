@@ -189,6 +189,9 @@ StatusCode VFitZmmOnAOD::initialize() {
   m_pvID_3_ = -1;
   m_pvID_4_ = -1;
 
+  m_chi2_onia1 = -1;
+  m_chi2_onia2 = -1;
+
 
   //
   // event info variables
@@ -259,6 +262,9 @@ StatusCode VFitZmmOnAOD::initialize() {
   m_tree_Zll->Branch("pvID_3", &m_pvID_3_, "pvID_3/I");
   m_tree_Zll->Branch("pvID_4", &m_pvID_4_, "pvID_4/I");
 
+  m_tree_Zll->Branch("chi2_onia1", &m_chi2_onia1, "chi2_onia1/F");
+  m_tree_Zll->Branch("chi2_onia2", &m_chi2_onia2, "chi2_onia2/F");
+
   // the histograms
   m_cutFlow = new TH1F("cutFlow", "cut flow", 20, 0.5, 20.5);
   sc = m_thistSvc->regHist("/AANT/Muon/cutFlow", m_cutFlow);
@@ -284,10 +290,10 @@ StatusCode VFitZmmOnAOD::initialize() {
   sc = m_thistSvc->regHist("/AANT/Muon/Muon_charge", m_aod_muon_charge);
 
   m_chi2_fit_12 = new TH1F("chi2_fit_12", "chi2 fit for 1 and 2",
-          50, 0, 10);
+          100, -3, 17);
   sc = m_thistSvc->regHist("/AANT/Muon/chi2_fit_12", m_chi2_fit_12);
   m_chi2_fit_34 = new TH1F("chi2_fit_34", "chi2 fit for 3 and 4",
-          50, 0, 10);
+          100, -3, 17);
   sc = m_thistSvc->regHist("/AANT/Muon/chi2_fit_34", m_chi2_fit_34);
 
 
@@ -351,6 +357,9 @@ StatusCode VFitZmmOnAOD::initEvent() {
   m_pvID_2_ = -1;
   m_pvID_3_ = -1;
   m_pvID_4_ = -1;
+
+  m_chi2_onia1 = -1;
+  m_chi2_onia2 = -1;
 
 
   //
@@ -748,7 +757,6 @@ void VFitZmmOnAOD::buildFourMuons(const MuonVect& muons)
             int id_3 = -1;
             for( MuonVect::const_iterator muonItr3  = muons.begin();
                     muonItr3 != muons.end(); ++muonItr3) {
-
                 id_3 ++;
                 if(muonItr3 == muonItr1 || muonItr3 == muonItr2) continue;
                 if( (*muonItr3)->charge() < 0) continue;
@@ -756,7 +764,6 @@ void VFitZmmOnAOD::buildFourMuons(const MuonVect& muons)
                 int id_4 = -1;
                 for( MuonVect::const_iterator muonItr4  = muons.begin();
                         muonItr4 != muons.end(); ++muonItr4) {
-
                     id_4 ++;
                     if(muonItr4 == muonItr1 || muonItr4 == muonItr2 || muonItr4 == muonItr3) continue;
                     if( (*muonItr4)->charge() > 0) continue;
@@ -777,8 +784,24 @@ void VFitZmmOnAOD::buildFourMuons(const MuonVect& muons)
                     float m_light_can2 = -1;
                     float m_heavy_can1 = -1;
                     float m_heavy_can2 = -1;
-                    bool pass_comb1 = this->passOniaCuts( (**muonItr1), (**muonItr2), (**muonItr3), (**muonItr4), m_light_can1, m_heavy_can1);
-                    bool pass_comb2 = this->passOniaCuts( (**muonItr1), (**muonItr3), (**muonItr2), (**muonItr4), m_light_can2, m_heavy_can2);
+
+                    float m_chi2_onia1_can1 = -1;
+                    float m_chi2_onia1_can2 = -1;
+                    float m_chi2_onia2_can1 = -1;
+                    float m_chi2_onia2_can2 = -1;
+
+                    bool pass_comb1 = this->passOniaCuts( 
+                                        (**muonItr1), (**muonItr2), 
+                                        (**muonItr3), (**muonItr4),
+                                        m_light_can1, m_heavy_can1,
+                                        m_chi2_onia1_can1, m_chi2_onia2_can1
+                                        );
+                    bool pass_comb2 = this->passOniaCuts(
+                                         (**muonItr1), (**muonItr3),
+                                         (**muonItr2), (**muonItr4),
+                                         m_light_can2, m_heavy_can2,
+                                         m_chi2_onia1_can2, m_chi2_onia2_can2
+                                         );
                     if(!pass_comb1 && !pass_comb2) continue;
 
                     TLorentzVector tlv_1 = this->getLorentzVector( (**muonItr1) );
@@ -805,10 +828,14 @@ void VFitZmmOnAOD::buildFourMuons(const MuonVect& muons)
                     if(pass_comb1 && pass_comb2) {
                         m_upsilon_ = (m_heavy_can1 > m_heavy_can2)?m_heavy_can1:m_heavy_can2;
                         m34_ = (m_heavy_can1 > m_heavy_can2)?m_light_can1:m_light_can2;
-                        m_index_1_ = (m_heavy_can1 > m_heavy_can2)?id_1:id_3;
-                        m_index_2_ = (m_heavy_can1 > m_heavy_can2)?id_2:id_4;
-                        m_index_3_ = (m_heavy_can1 > m_heavy_can2)?id_3:id_1;
-                        m_index_4_ = (m_heavy_can1 > m_heavy_can2)?id_4:id_2;
+                        m_index_1_ = id_1;
+                        m_index_2_ = (m_heavy_can1 > m_heavy_can2)?id_2:id_3;
+                        m_index_3_ = (m_heavy_can1 > m_heavy_can2)?id_3:id_2;
+                        m_index_4_ = id_4;
+
+                        m_chi2_onia1 = (m_heavy_can1 > m_heavy_can2)?m_chi2_onia1_can1:m_chi2_onia1_can2;
+                        m_chi2_onia2 = (m_heavy_can1 > m_heavy_can2)?m_chi2_onia2_can1:m_chi2_onia2_can2;
+
                     }else if(pass_comb1) {
                         m_upsilon_ = m_heavy_can1;
                         m34_ = m_light_can1;
@@ -816,13 +843,17 @@ void VFitZmmOnAOD::buildFourMuons(const MuonVect& muons)
                         m_index_2_ = id_2;
                         m_index_3_ = id_3;
                         m_index_4_ = id_4;
+                        m_chi2_onia1 = m_chi2_onia1_can1;
+                        m_chi2_onia2 = m_chi2_onia2_can1;
                     }else if(pass_comb2) {
                         m_upsilon_ = m_heavy_can2;
                         m34_ = m_light_can2;
-                        m_index_1_ = id_3;
-                        m_index_2_ = id_4;
-                        m_index_3_ = id_1;
-                        m_index_4_ = id_2;
+                        m_index_1_ = id_1;
+                        m_index_2_ = id_3;
+                        m_index_3_ = id_2;
+                        m_index_4_ = id_4;
+                        m_chi2_onia1 = m_chi2_onia1_can2;
+                        m_chi2_onia2 = m_chi2_onia2_can2;
                     }else {
                         ;
                     }
@@ -842,14 +873,19 @@ void VFitZmmOnAOD::buildFourMuons(const MuonVect& muons)
     }
 }
 
-bool VFitZmmOnAOD::passOniaCuts(const Analysis::Muon& muon1, const Analysis::Muon& muon2, const Analysis::Muon& muon3, const Analysis::Muon& muon4,
-        float& m_light, float& m_heavy)
+bool VFitZmmOnAOD::passOniaCuts(
+    const Analysis::Muon& muon1, const Analysis::Muon& muon2,
+    const Analysis::Muon& muon3, const Analysis::Muon& muon4,
+    float& m_light, float& m_heavy,
+    float& chi2_ndf_1, float& chi2_ndf_2 
+    )
 {
-    float chi2_ndf_1 = VkVrtFit( muon1, muon2 );
-    float chi2_ndf_2 = VkVrtFit( muon3, muon4 );
+    chi2_ndf_1 = VkVrtFit( muon1, muon2 );
+    chi2_ndf_2 = VkVrtFit( muon3, muon4 );
     m_chi2_fit_12->Fill(chi2_ndf_1);
     m_chi2_fit_34->Fill(chi2_ndf_2);
-    if(chi2_ndf_1 >= 3 || chi2_ndf_2 >=3 ) return false;
+
+    // if(chi2_ndf_1 >= 3 || chi2_ndf_2 >=3 ) return false;
 
     const Rec::TrackParticle* id_track_1 = muon1.inDetTrackParticle();
     const Rec::TrackParticle* id_track_2 = muon2.inDetTrackParticle();
@@ -869,7 +905,7 @@ bool VFitZmmOnAOD::passOniaCuts(const Analysis::Muon& muon1, const Analysis::Muo
     float m_onia2 = -999;
 
     if(id_track_1 && id_track_1->pt() > ONIA_ONE_PT_CUT &&\
-            id_track_2 && id_track_2->pt() > ONIA_ONE_PT_CUT)
+       id_track_2 && id_track_2->pt() > ONIA_ONE_PT_CUT)
     {
         m_onia1 = m_12;
         if (id_track_3 && id_track_3->pt() > ONIA_TWO_PT_CUT &&\
@@ -880,11 +916,11 @@ bool VFitZmmOnAOD::passOniaCuts(const Analysis::Muon& muon1, const Analysis::Muo
     }
 
     if (id_track_3 && id_track_3->pt() > ONIA_ONE_PT_CUT &&\
-            id_track_4 && id_track_4->pt() > ONIA_ONE_PT_CUT && m_34 > m_onia1) 
+        id_track_4 && id_track_4->pt() > ONIA_ONE_PT_CUT && m_34 > m_onia1) 
     {
         if(m_onia1 < 0){
             if(id_track_1 && id_track_1->pt() > ONIA_TWO_PT_CUT &&\
-                    id_track_2 && id_track_2->pt() > ONIA_TWO_PT_CUT){
+               id_track_2 && id_track_2->pt() > ONIA_TWO_PT_CUT){
                 m_onia2 = m_12;
             }
         } else {
@@ -900,39 +936,22 @@ bool VFitZmmOnAOD::passOniaCuts(const Analysis::Muon& muon1, const Analysis::Muo
 
 int VFitZmmOnAOD::matchPV(const Analysis::Muon& muon)
 {
-    // require  PV association.
-    int index_pv = -1;
+    // return the index of the primary vertex that matches the vertex associated with the ID track of the muon
     int res = -1;
-    float min_dr = 1E6;
 
     const Rec::TrackParticle* track = muon.inDetTrackParticle();
-    // const Rec::TrackParticle* track = muon.track();
-    const Trk::MeasuredPerigee* aMeasPer = track->measuredPerigee();
+    if(!track) return res;
     const Trk::VxCandidate* muon_vxCan = track->reconstructedVertex();
+    if(!muon_vxCan) return res;
     
-    if(!aMeasPer){
-        ATH_MSG_INFO("cannot find measuredPerigee() on ID: ");
-        aMeasPer = muon.track()->measuredPerigee();
-        if(!aMeasPer){
-            ATH_MSG_INFO("cannot find measuredPerigee() on Muon: ");
-            return res;
-        }
-    }
-    // ATH_MSG_INFO("From Muon, d0: " << aMeasPer->parameters()[Trk::d0] << "; z0: " << aMeasPer->parameters()[Trk::z0]);
-    float mu_d0 = -1;
-    float mu_z0 = -1;
-    if(muon_vxCan){
-    // ATH_MSG_INFO("From Muon, d0: " << muon_vxCan->recVertex().position()[Trk::d0] << "; z0: " << muon_vxCan->recVertex().position()[Trk::z0] );
-        mu_d0 = muon_vxCan->recVertex().position()[Trk::d0];
-        mu_z0 = muon_vxCan->recVertex().position()[Trk::z0];
-    }
+    float mu_d0 = muon_vxCan->recVertex().position()[Trk::d0];
+    float mu_z0 = muon_vxCan->recVertex().position()[Trk::z0];
 
+    int index_pv = -1;
     for(VxContainer::const_iterator vtxItr = vxCont->begin();
             vtxItr != vxCont->end(); ++ vtxItr)
     {
         index_pv ++;
-        const std::vector<Trk::VxTrackAtVertex*>* vtxTracks = (*vtxItr)->vxTrackAtVertex();
-        unsigned int nTracks = vtxTracks->size();
         float vxt_d0 = (*vtxItr)->recVertex().position()[Trk::d0];
         float vxt_z0 = (*vtxItr)->recVertex().position()[Trk::z0];
         if (fabs(vxt_d0 - mu_d0) < 1E-5 && fabs(vxt_z0 - mu_z0) < 1E-5) {
@@ -940,38 +959,6 @@ int VFitZmmOnAOD::matchPV(const Analysis::Muon& muon)
             res = index_pv;
             break;
         }
-        // ATH_MSG_INFO("From VxContainer, d0: " << (*vtxItr)->recVertex().position()[Trk::d0] << "; z0: " << (*vtxItr)->recVertex().position()[Trk::z0] );
-        // ATH_MSG_INFO("number of tracks: " << nTracks);
-        // ATH_MSG_INFO("From VxContainer, d0: " << (*vtxItr)->recVertex().position()[Trk::d0] << "; z0: " << (*vtxItr)->recVertex().position()[Trk::z0] );
-       /*** 
-        float min_dr_track = 9E6;
-        for(unsigned int j = 0; j < nTracks; j++){
-            // const Trk::TrackParameters* para = dynamic_cast<const Trk::TrackParameters*>(vtxTracks->at(j)->perigeeAtVertex());
-            // const Trk::ParametersBase* para = vtxTracks->at(j)->perigeeAtVertex();
-            const Trk::ParametersBase* para = vtxTracks->at(j)->initialPerigee();
-            if(!para) {
-                // ATH_MSG_INFO("cannot find perigeeAtVertex(): ");
-                ATH_MSG_INFO("cannot find initialPerigee(): ");
-                continue;
-            }
-            if (para){
-                //float d0_diff = para->parameters()[Trk::d0] - aMeasPer->parameters()[Trk::d0];
-                //float z0_diff = para->parameters()[Trk::z0] - aMeasPer->parameters()[Trk::z0];
-                float d0_diff = para->position()[Trk::d0] - aMeasPer->parameters()[Trk::d0];
-                float z0_diff = para->position()[Trk::z0] - aMeasPer->parameters()[Trk::z0];
-                float dr = sqrt(d0_diff*d0_diff + z0_diff*z0_diff);
-                if( dr < min_dr_track){
-                    min_dr_track = dr;
-                    // ATH_MSG_INFO("d0: " << para->position()[Trk::d0] << "; z0: " << para->position()[Trk::z0];
-                    // ATH_MSG_INFO("DR: " << dr);
-                }
-            }
-        }
-        if(min_dr_track < min_dr){
-            min_dr = min_dr_track;
-            res = index_pv;
-        }
-        ****/
     }
     return res;
 }
