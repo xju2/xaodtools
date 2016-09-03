@@ -19,8 +19,8 @@ def make_hists(file_names, out_name):
     nentries = tree.GetEntries()
     print "total entries:",nentries
 
-    h_upsilon = ROOT.TH1F("h_upsilon", "upsilon mass;m_{#varUpsilon} [GeV];Events / 50 MeV", 80, 8, 12)
-    h_jpsi = ROOT.TH1F("h_jpsi", "jpsi mass;m_{#mu+#mu} [GeV];Events / 100 MeV", 100, 1, 11)
+    h_upsilon = ROOT.TH1F("h_upsilon", "upsilon mass;m_{#varUpsilon} [GeV];Events / 50 MeV", 400, 1, 21)
+    h_jpsi = ROOT.TH1F("h_jpsi", "jpsi mass;m_{#mu+#mu} [GeV];Events / 100 MeV", 200, 1, 21)
 
     nbins_4l = 400
     low_4l = 10
@@ -41,28 +41,45 @@ def make_hists(file_names, out_name):
     #tree.SetBranchStatus("passTrigger", 1);
     #tree.SetBranchStatus("mu_p4", 1)
 
+    tree.SetBranchStatus("pvID1", 1);
+    tree.SetBranchStatus("pvID2", 1);
+    tree.SetBranchStatus("pvID3", 1);
+    tree.SetBranchStatus("pvID4", 1);
+
 
     chi2_cut = 10
     out_mass = ""
     for ientry in xrange(nentries):
         tree.GetEntry(ientry)
 
-        m4l = tree.m4l
+        m4l = tree.m4l/1E3
+        m34 = tree.m34/1E3
+        mU = tree.mUpsilon/1E3
+        #if m34 > mU:
+        #    tmp = mU
+        #    mU = m34
+        #    m34 = tmp
 
-        if tree.n_muon < 4 or m4l <= 0 or tree.vtx4l_chi2ndf > chi2_cut or tree.vtx4l_chi2ndf < 0 or tree.m34 > 9.2:
+        #if tree.n_muon < 4 or m4l <= 0 or tree.vtx4l_chi2ndf > chi2_cut or tree.vtx4l_chi2ndf < 0 or tree.m34 > 9.2:
+        #    continue
+        if m4l <= 0 or m34 < 2 or m34 > 20:
             continue
 
-        mU = tree.mUpsilon/1E3
+        pass_vertex = (tree.pvID1 == tree.pvID2 and (tree.pvID3 == tree.pvID2 or tree.pvID4 == tree.pvID2))
+        #pass_vertex = tree.pvID1 == tree.pvID2 and tree.pvID3 == tree.pvID4 and tree.pvID3 == tree.pvID2
+        if not pass_vertex:
+            continue
+
 
         h_upsilon.Fill(mU)
         #m4l = tree.m4l
 
         if True:
-            h_jpsi.Fill(tree.m34)
+            h_jpsi.Fill(m34)
             if mU < 9:
                 h_m4l_LHS.Fill(m4l)
-            #elif mU >= 9.2 and mU < 9.7:
-            elif mU >= 9 and mU < 9.8:
+            elif mU >= 9.2 and mU < 9.7:
+            #elif mU >= 9 and mU < 9.8:
                 h_m4l.Fill(m4l)
                 out_mass += str(m4l)+" \n"
             elif mU >= 9.7 and mU < 10.6:
@@ -94,25 +111,36 @@ def draw(file_name, post_fix):
     y_pos = 0.85
     n_rebin = 1
 
-
+    upsilon_low = 8
+    upsilon_hi = 12
     h1 = f1.Get("h_upsilon")
     h1.Rebin(n_rebin)
     h1.GetYaxis().SetTitle("Events / {:.0f} MeV".format(50*n_rebin))
+    h1.GetXaxis().SetRangeUser(upsilon_low, upsilon_hi)
     h1.Draw("EP")
     ROOT.myText(x_pos, y_pos, 1, "Entries: {:.0f}".format(h1.Integral()))
     canvas.SaveAs("mUpsilon_"+post_fix+".pdf")
 
+    jspi_low = 1
+    jspi_hi = 15
+    #orignal
+    h1.GetXaxis().SetRangeUser(jspi_low, jspi_hi)
+    h1.Draw("EP")
+    ROOT.myText(x_pos, y_pos, 1, "Entries: {:.0f}".format(h1.Integral()))
+    canvas.SaveAs("mUpsilon_Full_"+post_fix+".pdf")
+
     h6 = f1.Get("h_jpsi")
     h6.Rebin(n_rebin)
     h6.GetYaxis().SetTitle("Events / {:.0f} MeV".format(100*n_rebin))
+    h6.GetXaxis().SetRangeUser(jspi_low, jspi_hi)
     h6.Draw("EP")
     ROOT.myText(x_pos, y_pos, 1, "Entries: {:.0f}".format(h6.Integral()))
     canvas.SaveAs("mJpsi_"+post_fix+".pdf")
 
     m4l_bin_width= 50
     n_rebin_4l = 4
-    m4l_xlow = 16
-    m4l_xhi = 21
+    m4l_xlow = 15
+    m4l_xhi = 25
     m4l_yaxis = m4l_bin_width * n_rebin_4l
 
     h2 = f1.Get("h_m4l_LHS")
@@ -149,8 +177,9 @@ def draw(file_name, post_fix):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 4:
         print sys.argv[0], "make/draw file_index,file2 out_name"
+        exit(1)
 
     base_name = "/afs/cern.ch/user/x/xju/work/upsilon/run/data12_v1/split_and_merge/merged_"
     #input_files = [base_name+x+".root" for x in string.ascii_lowercase]

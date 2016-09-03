@@ -29,6 +29,7 @@
 #include "muonEvent/Muon.h"
 
 #include "TrkVKalVrtFitter/TrkVKalVrtFitter.h"
+#include "VxVertex/VxCandidate.h"   
 
 #include <string>
 #include <vector>
@@ -70,11 +71,29 @@ class VFitZmmOnAOD : public AthAlgorithm {
   /// add event info to ntuple
   StatusCode addEventInfo();
 
-  bool passMuon(const Analysis::Muon& muon);
+  bool passMuon(const Analysis::Muon& muon, bool* blayer=NULL);
   TLorentzVector getLorentzVector(const Analysis::Muon& muon);
-  float VkVrtFit(const MuonVect& muons);
-  float VkVrtFit(const Analysis::Muon& muon1, const Analysis::Muon& muon2);
+  TLorentzVector* getTrackLorentzV(const Analysis::Muon& muon);
+
+  Trk::VxCandidate* VkVrtFit(const MuonVect& muons,
+          HepLorentzVector* fitted_momentum=NULL
+          );
+  Trk::VxCandidate* VkVrtFit(
+          const Analysis::Muon& muon1,
+          const Analysis::Muon& muon2,
+          HepLorentzVector* fitted_momentum=NULL
+          );
+
   void buildFourMuons(const MuonVect& muons);
+  void buildTwoMuons(const MuonVect& muons);
+  void fillOniaInfo(const Analysis::Muon& muon1, const Analysis::Muon& muon2);
+  void fillQuadInfo(
+          const Analysis::Muon& muon1,
+          const Analysis::Muon& muon2,
+          const Analysis::Muon& muon3,
+          const Analysis::Muon& muon4
+          );
+
   bool passOniaCuts(
     const Analysis::Muon& muon1,
     const Analysis::Muon& muon2,
@@ -85,6 +104,7 @@ class VFitZmmOnAOD : public AthAlgorithm {
     );
 
   int matchPV(const Analysis::Muon& muon1);
+  float getChi2(Trk::VxCandidate* vx_can);
 
  private:
 
@@ -100,6 +120,7 @@ class VFitZmmOnAOD : public AthAlgorithm {
    // for handling Trk::TrkVKalVrtFitter
    ToolHandle<Trk::IVertexFitter> m_ToolIVrtFitter;
    ToolHandle<Trk::ITrkVKalVrtFitter> m_VKVrtFitter;
+   // ToolHandle<Trk::TrkVKalVrtFitter> m_VKVrtFitter;
 
    /// the AOD muon container to retrieve
    std::string m_muonContainerName;
@@ -119,40 +140,89 @@ class VFitZmmOnAOD : public AthAlgorithm {
    int n_muon;
    std::vector<int>* mu_author_;
    std::vector<float>* mu_pt_;
-   std::vector<float>* mu_track_pt_;
    std::vector<float>* mu_eta_;
    std::vector<float>* mu_phi_;
    std::vector<float>* mu_e_;
 
+   std::vector<float>* mu_track_pt_;
+   std::vector<float>* mu_track_eta_;
+   std::vector<float>* mu_track_phi_;
+   std::vector<float>* mu_track_e_;
+
    std::vector<float>* mu_charge_;
    std::vector<int>* mu_type_;
    std::vector<float>* mu_d0_;
+   std::vector<float>* mu_d0_pv;
    std::vector<float>* mu_z0_sintheta_;
    std::vector<float>* mu_z0_;
+   std::vector<float>* mu_z0_pv;
    std::vector<float>* mu_d0_sig_;
    std::vector<float>* mu_eloss_;
    std::vector<float>* mu_etcone30_;
    std::vector<float>* mu_ptcone30_;
+   std::vector<int>* mu_pvID;
+   std::vector<bool>* mu_blayer_;
+
+   // Onia information
+   int m_n_onia;
+   std::vector<int>* m_onia_muon1id;
+   std::vector<int>* m_onia_muon2id;
+   std::vector<float>* m_onia_charge;
+
+   std::vector<float>* m_onia_pt_fitted;
+   std::vector<float>* m_onia_eta_fitted;
+   std::vector<float>* m_onia_phi_fitted;
+   std::vector<float>* m_onia_mass_fitted;
+   std::vector<float>* m_onia_x;
+   std::vector<float>* m_onia_y;
+   std::vector<float>* m_onia_z;
+   std::vector<float>* m_onia_chi2;
+
+   //std::vector<float>* m_onia_pt_cst;
+   //std::vector<float>* m_onia_eta_cst;
+   //std::vector<float>* m_onia_phi_cst;
+   //std::vector<float>* m_onia_mass_cst;
+
+   std::vector<float>* m_onia_mass;
+   std::vector<float>* m_onia_pt;
+   std::vector<float>* m_onia_eta;
+   std::vector<float>* m_onia_phi;
+
+   std::vector<float>* m_onia_track_mass;
+   std::vector<float>* m_onia_track_pt;
+   std::vector<float>* m_onia_track_eta;
+   std::vector<float>* m_onia_track_phi;
+
+   bool has_upsilon;
 
    // upsilon information
-   float m_upsilon_;
-   float m_4l_;
-   float vtx4l_chi2ndf_;
-   float m34_;
-   bool same_vertex_;
-   float m_4l_fitted_;
-   int n_combined_muons_;
-   int m_index_1_;
-   int m_index_2_;
-   int m_index_3_;
-   int m_index_4_;
-   int m_pvID_1_;
-   int m_pvID_2_;
-   int m_pvID_3_;
-   int m_pvID_4_;
-   float m_chi2_onia1;
-   float m_chi2_onia2;
+   int m_n_quad;
+    std::vector<float>* m_quad_charge;
+    std::vector<float>* m_quad_chi2;
+    std::vector<float>* m_quad_x;
+    std::vector<float>* m_quad_y;
+    std::vector<float>* m_quad_z;
 
+    std::vector<int>* m_quad_nCombined;
+    std::vector<int>* m_quad_id1;
+    std::vector<int>* m_quad_id2;
+    std::vector<int>* m_quad_id3;
+    std::vector<int>* m_quad_id4;
+
+    std::vector<float>* m_quad_mass;
+    std::vector<float>* m_quad_pt;
+    std::vector<float>* m_quad_eta;
+    std::vector<float>* m_quad_phi;
+
+    std::vector<float>* m_quad_track_mass;
+    std::vector<float>* m_quad_track_pt;
+    std::vector<float>* m_quad_track_eta;
+    std::vector<float>* m_quad_track_phi;
+
+    std::vector<float>* m_quad_fitted_mass;
+    std::vector<float>* m_quad_fitted_pt;
+    std::vector<float>* m_quad_fitted_eta;
+    std::vector<float>* m_quad_fitted_phi;
 
   /// variables to store Event Info stuff
 

@@ -160,38 +160,79 @@ StatusCode VFitZmmOnAOD::initialize() {
   mu_eta_ = new std::vector<float>;
   mu_phi_ = new std::vector<float>;
   mu_e_ = new std::vector<float>;
+
   mu_track_pt_ = new std::vector<float>();
+  mu_track_eta_ = new std::vector<float>();
+  mu_track_phi_ = new std::vector<float>();
+  mu_track_e_ = new std::vector<float>();
 
   mu_charge_ = new std::vector<float>;
   mu_type_ = new std::vector<int>;
   mu_d0_ = new std::vector<float>;
+  mu_d0_pv = new std::vector<float>;
   mu_z0_sintheta_ = new std::vector<float>;
   mu_z0_ = new std::vector<float>;
+  mu_z0_pv = new std::vector<float>;
   mu_d0_sig_ = new std::vector<float>;
   mu_eloss_ = new std::vector<float>;
   mu_etcone30_ = new std::vector<float>;
   mu_ptcone30_ = new std::vector<float>;
+  mu_pvID = new std::vector<int>;
+  mu_blayer_ = new std::vector<bool>;
 
-  m_upsilon_ = 0;
-  m_4l_ = -9999;
-  vtx4l_chi2ndf_ = -9999;
-  m34_ = -9999;
-  same_vertex_ = false;
-  m_4l_fitted_ = -9999;
-  n_combined_muons_ = 0;
-  m_index_1_ = -1;
-  m_index_2_ = -1;
-  m_index_3_ = -1;
-  m_index_4_ = -1;
+  // Onia information
+  m_onia_muon1id = new std::vector<int>;
+  m_onia_muon2id = new std::vector<int>;
+  m_onia_charge = new std::vector<float>;
 
-  m_pvID_1_ = -1;
-  m_pvID_2_ = -1;
-  m_pvID_3_ = -1;
-  m_pvID_4_ = -1;
+  m_onia_pt_fitted = new std::vector<float>;
+  m_onia_eta_fitted = new std::vector<float>;
+  m_onia_phi_fitted = new std::vector<float>;
+  m_onia_mass_fitted = new std::vector<float>;
+  m_onia_x = new std::vector<float>;
+  m_onia_y = new std::vector<float>;
+  m_onia_z = new std::vector<float>;
+  m_onia_chi2 = new std::vector<float>;
 
-  m_chi2_onia1 = -1;
-  m_chi2_onia2 = -1;
+  m_onia_mass   = new std::vector<float>;
+  m_onia_pt     = new std::vector<float>;
+  m_onia_eta    = new std::vector<float>;
+  m_onia_phi    = new std::vector<float>;
 
+  m_onia_track_mass   = new std::vector<float>;
+  m_onia_track_pt     = new std::vector<float>;
+  m_onia_track_eta    = new std::vector<float>;
+  m_onia_track_phi    = new std::vector<float>;
+
+  has_upsilon = false;
+
+  // upsilon information
+  m_quad_charge = new std::vector<float>;
+  m_quad_chi2 = new std::vector<float>;
+  m_quad_x      = new std::vector<float>;
+  m_quad_y      = new std::vector<float>;
+  m_quad_z      = new std::vector<float>;
+
+  m_quad_nCombined = new std::vector<int>;
+  m_quad_id1 = new std::vector<int>;
+  m_quad_id2 = new std::vector<int>;
+  m_quad_id3 = new std::vector<int>;
+  m_quad_id4 = new std::vector<int>;
+
+  m_quad_mass   = new std::vector<float>;
+  m_quad_pt     = new std::vector<float>;
+  m_quad_eta    = new std::vector<float>;
+  m_quad_phi    = new std::vector<float>;
+
+  m_quad_track_mass   = new std::vector<float>;
+  m_quad_track_pt     = new std::vector<float>;
+  m_quad_track_eta    = new std::vector<float>;
+  m_quad_track_phi    = new std::vector<float>;
+
+  m_quad_fitted_mass   = new std::vector<float>;
+  m_quad_fitted_pt     = new std::vector<float>;
+  m_quad_fitted_eta    = new std::vector<float>;
+  m_quad_fitted_phi    = new std::vector<float>;
 
   //
   // event info variables
@@ -230,40 +271,82 @@ StatusCode VFitZmmOnAOD::initialize() {
   m_tree_Zll->Branch("n_muon", &n_muon, "n_muon/I");
   m_tree_Zll->Branch("mu_author", &mu_author_);
   m_tree_Zll->Branch("mu_pt", &mu_pt_);
-  m_tree_Zll->Branch("mu_track_pt", &mu_track_pt_);
   m_tree_Zll->Branch("mu_eta", &mu_eta_);
   m_tree_Zll->Branch("mu_phi", &mu_phi_);
   m_tree_Zll->Branch("mu_e", &mu_e_);
+
+  m_tree_Zll->Branch("mu_track_pt", &mu_track_pt_);
+  m_tree_Zll->Branch("mu_track_eta", &mu_track_eta_);
+  m_tree_Zll->Branch("mu_track_phi", &mu_track_phi_);
+  m_tree_Zll->Branch("mu_track_e", &mu_track_e_);
+
   m_tree_Zll->Branch("mu_charge", &mu_charge_);
   m_tree_Zll->Branch("mu_type", &mu_type_);
   m_tree_Zll->Branch("mu_d0", &mu_d0_);
+  m_tree_Zll->Branch("mu_d0_pv", &mu_d0_pv);
   m_tree_Zll->Branch("mu_z0_sintheta", &mu_z0_sintheta_);
   m_tree_Zll->Branch("mu_z0", &mu_z0_);
+  m_tree_Zll->Branch("mu_z0_pv", &mu_z0_pv);
   m_tree_Zll->Branch("mu_d0_sig", &mu_d0_sig_);
   m_tree_Zll->Branch("mu_eloss", &mu_eloss_);
   m_tree_Zll->Branch("mu_etcone30", &mu_etcone30_);
   m_tree_Zll->Branch("mu_ptvarcone30", &mu_ptcone30_);
+  m_tree_Zll->Branch("mu_pvID", &mu_pvID);
+  m_tree_Zll->Branch("mu_blayer", &mu_blayer_);
 
+  // Onia information
+  m_tree_Zll->Branch("n_onia", &m_n_onia, "n_onia/I");
+  m_tree_Zll->Branch("onia_id1", &m_onia_muon1id);
+  m_tree_Zll->Branch("onia_id2", &m_onia_muon2id);
+  m_tree_Zll->Branch("onia_charge", &m_onia_charge);
 
-  m_tree_Zll->Branch("mUpsilon", &m_upsilon_, "mUpsilon/F");
-  m_tree_Zll->Branch("m4l", &m_4l_, "m4l/F");
-  m_tree_Zll->Branch("m4l_fitted", &m_4l_fitted_, "m4l_fitted/F");
-  m_tree_Zll->Branch("vtx4l_chi2ndf", &vtx4l_chi2ndf_, "vtx4l_chi2ndf/F");
-  m_tree_Zll->Branch("m34", &m34_, "m34/F");
-  m_tree_Zll->Branch("same_vertex", &same_vertex_, "same_vertex/O");
-  m_tree_Zll->Branch("n_combined_muons", &n_combined_muons_, "n_combined_muons/I");
+  m_tree_Zll->Branch("onia_fitted_pt", &m_onia_pt_fitted);
+  m_tree_Zll->Branch("onia_fitted_eta", &m_onia_eta_fitted);
+  m_tree_Zll->Branch("onia_fitted_phi", &m_onia_phi_fitted);
+  m_tree_Zll->Branch("onia_fitted_mass", &m_onia_mass_fitted);
 
-  m_tree_Zll->Branch("index_1", &m_index_1_, "index_1/I");
-  m_tree_Zll->Branch("index_2", &m_index_2_, "index_2/I");
-  m_tree_Zll->Branch("index_3", &m_index_3_, "index_3/I");
-  m_tree_Zll->Branch("index_4", &m_index_4_, "index_4/I");
-  m_tree_Zll->Branch("pvID_1", &m_pvID_1_, "pvID_1/I");
-  m_tree_Zll->Branch("pvID_2", &m_pvID_2_, "pvID_2/I");
-  m_tree_Zll->Branch("pvID_3", &m_pvID_3_, "pvID_3/I");
-  m_tree_Zll->Branch("pvID_4", &m_pvID_4_, "pvID_4/I");
+  m_tree_Zll->Branch("onia_x", &m_onia_x);
+  m_tree_Zll->Branch("onia_y", &m_onia_y);
+  m_tree_Zll->Branch("onia_z", &m_onia_z);
+  m_tree_Zll->Branch("onia_chi2", &m_onia_chi2);
 
-  m_tree_Zll->Branch("chi2_onia1", &m_chi2_onia1, "chi2_onia1/F");
-  m_tree_Zll->Branch("chi2_onia2", &m_chi2_onia2, "chi2_onia2/F");
+  m_tree_Zll->Branch("onia_mass", &m_onia_mass);
+  m_tree_Zll->Branch("onia_pt", &m_onia_pt);
+  m_tree_Zll->Branch("onia_eta", &m_onia_eta);
+  m_tree_Zll->Branch("onia_phi", &m_onia_phi);
+
+  m_tree_Zll->Branch("onia_track_mass", &m_onia_track_mass);
+  m_tree_Zll->Branch("onia_track_pt", &m_onia_track_pt);
+  m_tree_Zll->Branch("onia_track_eta", &m_onia_track_eta);
+  m_tree_Zll->Branch("onia_track_phi", &m_onia_track_phi);
+
+  //m_tree_Zll->Branch("has_upsilon", &has_upsilon, "has_upsilon/O");
+
+  // upsilon 
+  m_tree_Zll->Branch("n_quad", &m_n_quad, "n_quad/I");
+  m_tree_Zll->Branch("quad_charge", &m_quad_charge);
+  m_tree_Zll->Branch("quad_chi2", &m_quad_chi2);
+  m_tree_Zll->Branch("quad_x", &m_quad_x);
+  m_tree_Zll->Branch("quad_y", &m_quad_y);
+  m_tree_Zll->Branch("quad_z", &m_quad_z);
+  m_tree_Zll->Branch("quad_nCombined", &m_quad_nCombined);
+  m_tree_Zll->Branch("quad_id1", &m_quad_id1);
+  m_tree_Zll->Branch("quad_id2", &m_quad_id2);
+  m_tree_Zll->Branch("quad_id3", &m_quad_id3);
+  m_tree_Zll->Branch("quad_id4", &m_quad_id4);
+
+  m_tree_Zll->Branch("quad_mass", &m_quad_mass);
+  m_tree_Zll->Branch("quad_pt", &m_quad_pt);
+  m_tree_Zll->Branch("quad_eta", &m_quad_eta);
+  m_tree_Zll->Branch("quad_phi", &m_quad_phi);
+  m_tree_Zll->Branch("quad_track_mass", &m_quad_track_mass);
+  m_tree_Zll->Branch("quad_track_pt", &m_quad_track_pt);
+  m_tree_Zll->Branch("quad_track_eta", &m_quad_track_eta);
+  m_tree_Zll->Branch("quad_track_phi", &m_quad_track_phi);
+  m_tree_Zll->Branch("quad_fitted_mass", &m_quad_fitted_mass);
+  m_tree_Zll->Branch("quad_fitted_pt", &m_quad_fitted_pt);
+  m_tree_Zll->Branch("quad_fitted_eta", &m_quad_fitted_eta);
+  m_tree_Zll->Branch("quad_fitted_phi", &m_quad_fitted_phi);
 
   // the histograms
   m_cutFlow = new TH1F("cutFlow", "cut flow", 20, 0.5, 20.5);
@@ -325,42 +408,83 @@ StatusCode VFitZmmOnAOD::initEvent() {
   n_muon = 0;
   mu_author_->clear();
   mu_pt_->clear();
-  mu_track_pt_->clear();
   mu_eta_->clear();
   mu_phi_->clear();
   mu_e_->clear();
+
+  mu_track_pt_->clear();
+  mu_track_eta_->clear();
+  mu_track_phi_->clear();
+  mu_track_e_->clear();
+
   mu_charge_->clear();
   mu_type_->clear();
   mu_d0_->clear();
+  mu_d0_pv->clear();
   mu_z0_sintheta_->clear();
   mu_z0_->clear();
+  mu_z0_pv->clear();
   mu_d0_sig_->clear();
   mu_eloss_->clear();
   mu_etcone30_->clear();
   mu_ptcone30_->clear();
+  mu_pvID->clear();
+  mu_blayer_->clear();
 
+  // Onia information
+  m_n_onia = 0;
+  m_onia_muon1id->clear();
+  m_onia_muon2id->clear();
+  m_onia_charge ->clear();
 
-  m_upsilon_ = 0;
-  m_4l_ = -9999;
-  vtx4l_chi2ndf_ = -9999;
-  m34_ = -9999;
-  same_vertex_ = false;
-  m_4l_fitted_ = -9999;
+  m_onia_pt_fitted->clear();
+  m_onia_eta_fitted->clear();
+  m_onia_phi_fitted->clear();
+  m_onia_mass_fitted->clear();
+  m_onia_x->clear();
+  m_onia_y->clear();
+  m_onia_z->clear();
+  m_onia_chi2->clear();
 
-  n_combined_muons_ = 0;
-  m_index_1_ = -1;
-  m_index_2_ = -1;
-  m_index_3_ = -1;
-  m_index_4_ = -1;
+  m_onia_mass->clear();
+  m_onia_pt->clear();
+  m_onia_eta->clear();
+  m_onia_phi->clear();
+  m_onia_track_mass->clear();
+  m_onia_track_pt->clear();
+  m_onia_track_eta->clear();
+  m_onia_track_phi->clear();
 
-  m_pvID_1_ = -1;
-  m_pvID_2_ = -1;
-  m_pvID_3_ = -1;
-  m_pvID_4_ = -1;
+  has_upsilon = false;
 
-  m_chi2_onia1 = -1;
-  m_chi2_onia2 = -1;
+  // 
+  m_n_quad = 0;
+  m_quad_charge->clear();
+  m_quad_chi2->clear();
+  m_quad_x->clear();
+  m_quad_y->clear();
+  m_quad_z->clear();
 
+  m_quad_nCombined->clear();
+  m_quad_id1->clear();
+  m_quad_id2->clear();
+  m_quad_id3->clear();
+  m_quad_id4->clear();
+
+  m_quad_mass->clear();
+  m_quad_pt->clear();
+  m_quad_eta->clear();
+  m_quad_phi->clear();
+
+  m_quad_track_mass->clear();
+  m_quad_track_pt->clear();
+  m_quad_track_eta->clear();
+  m_quad_track_phi->clear();
+
+  m_quad_fitted_mass->clear();
+  m_quad_fitted_pt->clear();
+  m_quad_fitted_eta->clear();
+  m_quad_fitted_phi->clear();
 
   //
   m_runNumber=0;
@@ -461,14 +585,18 @@ StatusCode VFitZmmOnAOD::zmm_on_aod() {
   int imuon=0;
 
   MuonVect*  good_muons = new MuonVect();
-  for (; muonItr != muonItrE; ++muonItr) {
+  int n_pos = 0;
+  int n_neg = 0;
+  for (; muonItr != muonItrE; ++muonItr) 
+  {
      imuon++;
      TLorentzVector tlv = this->getLorentzVector( (**muonItr) );
 
      float charge = (*muonItr)->charge();
+     bool passBLayer = false;
 
      // apply selections
-     if( !this->passMuon(**muonItr) ) continue;
+     if( !this->passMuon(**muonItr, &passBLayer) ) continue;
      m_muons_cutFlow->Fill(3);
      if( !(*muonItr)->isCombinedMuon() and\
          !(*muonItr)->isSegmentTaggedMuon()){
@@ -477,12 +605,15 @@ StatusCode VFitZmmOnAOD::zmm_on_aod() {
      m_muons_cutFlow->Fill(4);
      // charge of ID track and muon
      const Rec::TrackParticle* id_track = (*muonItr)->inDetTrackParticle();
-     bool consitent_charge = false;
-     if(id_track){
-        consitent_charge = id_track->charge() == charge;
-     }
+
+     bool consitent_charge = (id_track->charge() == charge);
      if(!consitent_charge) continue;
      m_muons_cutFlow->Fill(5);
+     if(charge < 0) {
+         n_neg ++;
+     } else {
+         n_pos ++;
+     }
 
      good_muons->push_back( (*muonItr) );
      // Fill muon variables
@@ -513,25 +644,37 @@ StatusCode VFitZmmOnAOD::zmm_on_aod() {
              mu_d0_sig_->push_back( d0/sqrt(d0_error) );
          }
      }
-     float track_pt = -999;
-     if(id_track) track_pt = id_track->pt();
+
+     // d0 w.r.t primary vertex
+     float   track_pt   = id_track->pt();
+     float   track_eta  = id_track->eta();
+     float   track_phi  = id_track->phi();
+     float   track_e    = id_track->e();
      mu_track_pt_->push_back(track_pt);
+     mu_track_eta_->push_back(track_eta);
+     mu_track_phi_->push_back(track_phi);
+     mu_track_e_->push_back(track_e);
 
      mu_eloss_->push_back( (*muonItr)->energyLoss().first );
      mu_etcone30_->push_back( (*muonItr)->parameter(MuonParameters::etcone30) );
      mu_ptcone30_->push_back( (*muonItr)->parameter(MuonParameters::ptcone30) );
+     mu_pvID->push_back( this->matchPV( (**muonItr) ) );
+     mu_blayer_->push_back(passBLayer);
 
      m_aod_muon_charge->Fill( (*muonItr)->charge() );
      m_aod_muon_pt->Fill( (*muonItr)->pt(), 1.);
      m_aod_muon_eta->Fill( (*muonItr)->eta(), 1.);
      m_aod_muon_chi2->Fill( (*muonItr)->matchChi2OverDoF(), 1.);
      ATH_MSG_DEBUG("imuon=" <<imuon<< ", AthenaBarCode=" << (*muonItr)->getAthenaBarCode());
-
   }
+
   // remove event with less than four muons
   if(n_muon < 4) return StatusCode::FAILURE;
+  bool has_neutral_track = (n_pos >= 2 && n_neg >=2);
+  if(!has_neutral_track) return StatusCode::FAILURE;
   m_cutFlow->Fill(2);
 
+  this->buildTwoMuons( *good_muons );
   this->buildFourMuons( *good_muons );
 
   return StatusCode::SUCCESS;
@@ -548,7 +691,7 @@ bool selectMuon(VFitZmmOnAOD *self, const MuonVect &ll)
     return (test1 && test2 && test3);
 }
 
-bool VFitZmmOnAOD::passMuon(const Analysis::Muon& muon)
+bool VFitZmmOnAOD::passMuon(const Analysis::Muon& muon, bool* bLayer)
 {
     m_muons_cutFlow->Fill(1);
     bool result = muon.pt() > this->m_etMuonCut && fabs(muon.eta()) < this->m_etaMuonCut;
@@ -558,6 +701,7 @@ bool VFitZmmOnAOD::passMuon(const Analysis::Muon& muon)
     // add track quality cuts
     const Rec::TrackParticle* id_track = muon.inDetTrackParticle();
     if(!id_track) return false;
+    if(fabs(id_track->eta()) > 2.5) return false;
 
     const Trk::TrackSummary* trkSummary = id_track->trackSummary();
     if(!trkSummary) return false;
@@ -573,7 +717,8 @@ bool VFitZmmOnAOD::passMuon(const Analysis::Muon& muon)
     int n_pixelDeadSensor = trkSummary->get(Trk::numberOfPixelDeadSensors);
     int n_sctDeadSenesor = trkSummary->get(Trk::numberOfSCTDeadSensors);
 
-    // passBLayer = (!expectedBLayerHits || n_blayerHits > 0); // donot apply blayer fornow
+    bool passBLayer = (!expectedBLayerHits || n_blayerHits > 0); // donot apply blayer fornow
+    if(!bLayer) *bLayer = passBLayer;
     result &= (n_pixHits + n_pixelDeadSensor) > 1;
     result &= (n_sctHits + n_sctDeadSenesor) >= 6;
     result &= (n_pixelHoles + n_sctHoles) < 3;
@@ -600,6 +745,21 @@ TLorentzVector VFitZmmOnAOD::getLorentzVector(const Analysis::Muon& muon) {
     return tlv;
 }
 
+TLorentzVector* VFitZmmOnAOD::getTrackLorentzV(const Analysis::Muon& muon) 
+{
+    const Rec::TrackParticle* id_track = muon.inDetTrackParticle();
+    if(id_track){
+        float pT  = id_track->pt();
+        float eta = id_track->eta();
+        float phi = id_track->phi(); 
+        float energy = id_track->e(); 
+        TLorentzVector* tlv = new TLorentzVector;
+        tlv->SetPtEtaPhiE(pT, eta, phi, energy);
+        return tlv;
+    } else {
+        return NULL;
+    }
+}
 ///
 StatusCode VFitZmmOnAOD::addEventInfo() {
 
@@ -678,7 +838,8 @@ StatusCode VFitZmmOnAOD::addEventInfo() {
 
 }
 
-float VFitZmmOnAOD::VkVrtFit(const MuonVect& muons)
+Trk::VxCandidate* VFitZmmOnAOD::VkVrtFit(
+        const MuonVect& muons, HepLorentzVector* momentum)
 {
     std::vector<const Rec::TrackParticle *> myTracks;
     std::vector<const Trk::TrackParticleBase *> myTrackBases;
@@ -687,44 +848,71 @@ float VFitZmmOnAOD::VkVrtFit(const MuonVect& muons)
     Trk::RecVertex primaryVtx = *primVtx;
 
     Hep3Vector  primVtxPos(primVtx->position().x(), primVtx->position().y(), primVtx->position().z());
+
+    std::vector<int> indices;
+    int index = 1;
     for(MuonVect::const_iterator mu_itr = muons.begin();
             mu_itr != muons.end(); ++ mu_itr) {
-        const Rec::TrackParticle* tp = (*mu_itr)->track();
+        // const Rec::TrackParticle* tp = (*mu_itr)->track(); //Use ID track
+        const Rec::TrackParticle* tp = (*mu_itr)->inDetTrackParticle(); //Use ID track
         if(tp) {
             myTracks.push_back(tp);
             myTrackBases.push_back(tp);
             myMuonMasses.push_back(mMuon);
+            indices.push_back(index);
+            index++;
         }
     }
 
     // vertex contrained to the primary vertex
-    m_VKVrtFitter->setVertexForConstraint(primaryVtx);
+    //m_VKVrtFitter->setVertexForConstraint(primaryVtx);
     m_VKVrtFitter->setMassInputParticles(myMuonMasses);
 
     // define variables returned by the vertex fit
-    Hep3Vector retVtxPos;
-    HepLorentzVector   retMom4;
-    long int retQ = 0;
+    Hep3Vector appVertex;
+    m_VKVrtFitter->setMomCovCalc(0);  // No total momentum and its covariance matrix
+    StatusCode sc = m_VKVrtFitter->VKalVrtFitFast(myTrackBases, appVertex);
+    if (sc.isFailure()) {
+        std::cout << "Warning from VKaVrt - fast fit failed!" << std::endl;
+    }
+    m_VKVrtFitter->setApproximateVertex(appVertex.x(),appVertex.y(),appVertex.z()); /*Use as starting point*/
+
+    Hep3Vector finalVertex;
+    // HepLorentzVector   momentum;
+    long int charge = 0;
+    double  fitChi2_vk=0.;
     std::vector<double> errMatrix,chi2PerTrk; // Fit error matrix and chi2 per track
     std::vector< std::vector<double> > trkAtVrt; // "True" tracks passing through vertex [phi, theta, q/pt*sin(theta)]
-    double  fitChi2_vk=0.;
+    m_VKVrtFitter->setMomCovCalc(1);  /* Total momentum and its covariance matrix are calculated*/
 
-    StatusCode sc = m_VKVrtFitter->VKalVrtFit(myTrackBases, retVtxPos,retMom4,retQ,errMatrix,chi2PerTrk,trkAtVrt,fitChi2_vk);
-    int dof = m_VKVrtFitter->VKalGetNDOF();
+    if (momentum == NULL) {
+        HepLorentzVector   momentum;
+        sc = m_VKVrtFitter->VKalVrtFit(myTrackBases, finalVertex, momentum, charge,errMatrix,chi2PerTrk,trkAtVrt,fitChi2_vk);
+    } else {
+        sc = m_VKVrtFitter->VKalVrtFit(myTrackBases, finalVertex, *momentum, charge,errMatrix,chi2PerTrk,trkAtVrt,fitChi2_vk);
+    }
+    //int dof = m_VKVrtFitter->VKalGetNDOF();
 
     if (sc.isSuccess()) {
-        return fitChi2_vk/dof;
+        Trk::TrkVKalVrtFitter* m_VKVFitter = dynamic_cast<Trk::TrkVKalVrtFitter*>(& (*m_VKVrtFitter));
+        if(m_VKVFitter){
+            return m_VKVFitter->makeVxCandidate(myTrackBases, finalVertex, errMatrix, chi2PerTrk, trkAtVrt, fitChi2_vk);
+        } else {
+            return NULL;
+        }
+        // return fitChi2_vk/dof;
     } else {
-        return -1;
+        return NULL;
     }
 }
 
-float VFitZmmOnAOD::VkVrtFit(const Analysis::Muon& muon1, const Analysis::Muon& muon2)
+Trk::VxCandidate* VFitZmmOnAOD::VkVrtFit(const Analysis::Muon& muon1, const Analysis::Muon& muon2,
+        HepLorentzVector* momentum)
 {
     MuonVect* muons = new MuonVect;
     muons->push_back(&muon1);
     muons->push_back(&muon2);
-    float results = this->VkVrtFit(*muons);
+    Trk::VxCandidate* results = this->VkVrtFit(*muons, momentum);
     delete muons;
 
     return results;
@@ -732,160 +920,60 @@ float VFitZmmOnAOD::VkVrtFit(const Analysis::Muon& muon1, const Analysis::Muon& 
 
 void VFitZmmOnAOD::buildFourMuons(const MuonVect& muons)
 {
-    // ATH_MSG_INFO("Building four muons");
+    for(int i = 0; i < (int) muons.size(); ++i) {
+        const Analysis::Muon* muon1 = dynamic_cast<const Analysis::Muon*>( muons.at(i) );
 
-    // require the charge of muons to be: - + + -
-    bool has_neutral_muons = false;
-    bool has_two_onia = false;
-    float min_chi2_ndf_4muons = 9E6;
+        for(int j=i+1; j < (int) muons.size(); j++){
+            const Analysis::Muon* muon2 = dynamic_cast<const Analysis::Muon*>( muons.at(j) );
 
-    int id_1 = -1;
-    for( MuonVect::const_iterator muonItr1  = muons.begin();
-            muonItr1 != muons.end(); ++muonItr1) {
-        id_1 ++;
-        float mu_charge_1 = (*muonItr1)->charge();
-        if(mu_charge_1 > 0) continue;
+            for( int k=j+1; k < (int) muons.size(); ++k){
+                const Analysis::Muon* muon3 = dynamic_cast<const Analysis::Muon*>( muons.at(k) );
 
-        int id_2 = -1;
-        for( MuonVect::const_iterator muonItr2  = muons.begin();
-                muonItr2 != muons.end(); ++muonItr2) {
-            id_2 ++;
-            if(muonItr2 == muonItr1) continue;
-            float mu_charge_2 = (*muonItr2)->charge();
-            if(mu_charge_2 < 0) continue;
-
-            int id_3 = -1;
-            for( MuonVect::const_iterator muonItr3  = muons.begin();
-                    muonItr3 != muons.end(); ++muonItr3) {
-                id_3 ++;
-                if(muonItr3 == muonItr1 || muonItr3 == muonItr2) continue;
-                if( (*muonItr3)->charge() < 0) continue;
-
-                int id_4 = -1;
-                for( MuonVect::const_iterator muonItr4  = muons.begin();
-                        muonItr4 != muons.end(); ++muonItr4) {
-                    id_4 ++;
-                    if(muonItr4 == muonItr1 || muonItr4 == muonItr2 || muonItr4 == muonItr3) continue;
-                    if( (*muonItr4)->charge() > 0) continue;
+                for(int l=k+1; l < (int) muons.size(); ++l){
+                    const Analysis::Muon* muon4 = dynamic_cast<const Analysis::Muon*>( muons.at(l) );
+                    if( (muon1->charge() + muon2->charge() + muon3->charge() + muon4->charge()) != 0) continue;
                     // so far we have four neutral tracks
 
                     // require at least three combined muons
                     int n_combined = 0;
-                    if( (*muonItr1)->isCombinedMuon() ) n_combined ++;
-                    if( (*muonItr2)->isCombinedMuon() ) n_combined ++;
-                    if( (*muonItr3)->isCombinedMuon() ) n_combined ++;
-                    if( (*muonItr4)->isCombinedMuon() ) n_combined ++;
-                    if(n_combined < 3) continue;
-                    has_neutral_muons = true;
-                    n_combined_muons_ = n_combined;
+                    if( muon1->isCombinedMuon() ) n_combined ++;
+                    if( muon2->isCombinedMuon() ) n_combined ++;
+                    if( muon3->isCombinedMuon() ) n_combined ++;
+                    if( muon4->isCombinedMuon() ) n_combined ++;
+                    // if(n_combined < 3) continue;
 
-                    // start to build Onia(1,2), Onia(3,4), Onia(1,3) and Onia(2, 4)
-                    float m_light_can1 = -1;
-                    float m_light_can2 = -1;
-                    float m_heavy_can1 = -1;
-                    float m_heavy_can2 = -1;
-
-                    float m_chi2_onia1_can1 = -1;
-                    float m_chi2_onia1_can2 = -1;
-                    float m_chi2_onia2_can1 = -1;
-                    float m_chi2_onia2_can2 = -1;
-
-                    bool pass_comb1 = this->passOniaCuts( 
-                                        (**muonItr1), (**muonItr2), 
-                                        (**muonItr3), (**muonItr4),
-                                        m_light_can1, m_heavy_can1,
-                                        m_chi2_onia1_can1, m_chi2_onia2_can1
-                                        );
-                    bool pass_comb2 = this->passOniaCuts(
-                                         (**muonItr1), (**muonItr3),
-                                         (**muonItr2), (**muonItr4),
-                                         m_light_can2, m_heavy_can2,
-                                         m_chi2_onia1_can2, m_chi2_onia2_can2
-                                         );
-                    if(!pass_comb1 && !pass_comb2) continue;
-
-                    TLorentzVector tlv_1 = this->getLorentzVector( (**muonItr1) );
-                    TLorentzVector tlv_2 = this->getLorentzVector( (**muonItr2) );
-                    TLorentzVector tlv_3 = this->getLorentzVector( (**muonItr3) );
-                    TLorentzVector tlv_4 = this->getLorentzVector( (**muonItr4) );
-                    m_4l_ = (tlv_1 + tlv_2 + tlv_3 + tlv_4).M();
-
-                    has_two_onia = true;
-
-                    MuonVect* muons_can = new MuonVect;
-                    muons_can->push_back( (*muonItr1) );
-                    muons_can->push_back( (*muonItr2) );
-                    muons_can->push_back( (*muonItr3) );
-                    muons_can->push_back( (*muonItr4) );
-
-                    float chi2_ndf_4muons = this->VkVrtFit( *muons_can );
-                    if(chi2_ndf_4muons >= min_chi2_ndf_4muons) {
-                        continue;
-                    } else {
-                        vtx4l_chi2ndf_ = min_chi2_ndf_4muons = chi2_ndf_4muons;
-                    }
-
-                    if(pass_comb1 && pass_comb2) {
-                        m_upsilon_ = (m_heavy_can1 > m_heavy_can2)?m_heavy_can1:m_heavy_can2;
-                        m34_ = (m_heavy_can1 > m_heavy_can2)?m_light_can1:m_light_can2;
-                        m_index_1_ = id_1;
-                        m_index_2_ = (m_heavy_can1 > m_heavy_can2)?id_2:id_3;
-                        m_index_3_ = (m_heavy_can1 > m_heavy_can2)?id_3:id_2;
-                        m_index_4_ = id_4;
-
-                        m_chi2_onia1 = (m_heavy_can1 > m_heavy_can2)?m_chi2_onia1_can1:m_chi2_onia1_can2;
-                        m_chi2_onia2 = (m_heavy_can1 > m_heavy_can2)?m_chi2_onia2_can1:m_chi2_onia2_can2;
-
-                    }else if(pass_comb1) {
-                        m_upsilon_ = m_heavy_can1;
-                        m34_ = m_light_can1;
-                        m_index_1_ = id_1;
-                        m_index_2_ = id_2;
-                        m_index_3_ = id_3;
-                        m_index_4_ = id_4;
-                        m_chi2_onia1 = m_chi2_onia1_can1;
-                        m_chi2_onia2 = m_chi2_onia2_can1;
-                    }else if(pass_comb2) {
-                        m_upsilon_ = m_heavy_can2;
-                        m34_ = m_light_can2;
-                        m_index_1_ = id_1;
-                        m_index_2_ = id_3;
-                        m_index_3_ = id_2;
-                        m_index_4_ = id_4;
-                        m_chi2_onia1 = m_chi2_onia1_can2;
-                        m_chi2_onia2 = m_chi2_onia2_can2;
-                    }else {
-                        ;
-                    }
+                    m_quad_nCombined->push_back(n_combined);
+                    this->fillQuadInfo(*muon1, *muon2, *muon3, *muon4);
+                    m_quad_id1->push_back(i);
+                    m_quad_id2->push_back(j);
+                    m_quad_id3->push_back(k);
+                    m_quad_id4->push_back(l);
                 }
             }
-
         }
-    }
-    vtx4l_chi2ndf_ = min_chi2_ndf_4muons;
-    if(has_neutral_muons) m_cutFlow->Fill(3);
-    if(has_two_onia) m_cutFlow->Fill(4);
-    if(m_index_1_ >= 0){
-        m_pvID_1_ = this->matchPV( *(muons.at(m_index_1_)) );
-        m_pvID_2_ = this->matchPV( *(muons.at(m_index_2_)) );
-        m_pvID_3_ = this->matchPV( *(muons.at(m_index_3_)) );
-        m_pvID_4_ = this->matchPV( *(muons.at(m_index_4_)) );
     }
 }
 
 bool VFitZmmOnAOD::passOniaCuts(
-    const Analysis::Muon& muon1, const Analysis::Muon& muon2,
-    const Analysis::Muon& muon3, const Analysis::Muon& muon4,
-    float& m_light, float& m_heavy,
-    float& chi2_ndf_1, float& chi2_ndf_2 
-    )
+        const Analysis::Muon& muon1, const Analysis::Muon& muon2,
+        const Analysis::Muon& muon3, const Analysis::Muon& muon4,
+        float& m_light, float& m_heavy,
+        float& chi2_ndf_1, float& chi2_ndf_2 
+        )
 {
-    chi2_ndf_1 = VkVrtFit( muon1, muon2 );
-    chi2_ndf_2 = VkVrtFit( muon3, muon4 );
+    Trk::VxCandidate* vx_can1 = VkVrtFit(muon1, muon2);
+    chi2_ndf_1= getChi2( vx_can1 );
+    if (vx_can1) delete vx_can1;
+
+    Trk::VxCandidate* vx_can2 = VkVrtFit(muon3, muon4);
+    chi2_ndf_2= getChi2( vx_can2 );
+    if (vx_can2) delete vx_can2;
+
     m_chi2_fit_12->Fill(chi2_ndf_1);
     m_chi2_fit_34->Fill(chi2_ndf_2);
 
-    // if(chi2_ndf_1 >= 3 || chi2_ndf_2 >=3 ) return false;
+    if(chi2_ndf_1 == -1 || chi2_ndf_2 == -1 || chi2_ndf_1 >= 3 || chi2_ndf_2 >=3 ) 
+        return false;
 
     const Rec::TrackParticle* id_track_1 = muon1.inDetTrackParticle();
     const Rec::TrackParticle* id_track_2 = muon2.inDetTrackParticle();
@@ -905,7 +993,7 @@ bool VFitZmmOnAOD::passOniaCuts(
     float m_onia2 = -999;
 
     if(id_track_1 && id_track_1->pt() > ONIA_ONE_PT_CUT &&\
-       id_track_2 && id_track_2->pt() > ONIA_ONE_PT_CUT)
+            id_track_2 && id_track_2->pt() > ONIA_ONE_PT_CUT)
     {
         m_onia1 = m_12;
         if (id_track_3 && id_track_3->pt() > ONIA_TWO_PT_CUT &&\
@@ -916,11 +1004,11 @@ bool VFitZmmOnAOD::passOniaCuts(
     }
 
     if (id_track_3 && id_track_3->pt() > ONIA_ONE_PT_CUT &&\
-        id_track_4 && id_track_4->pt() > ONIA_ONE_PT_CUT && m_34 > m_onia1) 
+            id_track_4 && id_track_4->pt() > ONIA_ONE_PT_CUT && m_34 > m_onia1) 
     {
         if(m_onia1 < 0){
             if(id_track_1 && id_track_1->pt() > ONIA_TWO_PT_CUT &&\
-               id_track_2 && id_track_2->pt() > ONIA_TWO_PT_CUT){
+                    id_track_2 && id_track_2->pt() > ONIA_TWO_PT_CUT){
                 m_onia2 = m_12;
             }
         } else {
@@ -943,7 +1031,7 @@ int VFitZmmOnAOD::matchPV(const Analysis::Muon& muon)
     if(!track) return res;
     const Trk::VxCandidate* muon_vxCan = track->reconstructedVertex();
     if(!muon_vxCan) return res;
-    
+
     float mu_d0 = muon_vxCan->recVertex().position()[Trk::d0];
     float mu_z0 = muon_vxCan->recVertex().position()[Trk::z0];
 
@@ -955,10 +1043,140 @@ int VFitZmmOnAOD::matchPV(const Analysis::Muon& muon)
         float vxt_d0 = (*vtxItr)->recVertex().position()[Trk::d0];
         float vxt_z0 = (*vtxItr)->recVertex().position()[Trk::z0];
         if (fabs(vxt_d0 - mu_d0) < 1E-5 && fabs(vxt_z0 - mu_z0) < 1E-5) {
-            ATH_MSG_INFO("found a match: " << index_pv);
+            // ATH_MSG_INFO("found a match: " << index_pv);
             res = index_pv;
             break;
         }
     }
     return res;
+}
+
+void VFitZmmOnAOD::buildTwoMuons(const MuonVect& muons)
+{
+    for(int i = 0; i < (int) muons.size(); i++) {
+        const Analysis::Muon* muon1 = dynamic_cast<const Analysis::Muon*>( muons.at(i) );
+        float mu_charge_1 = muon1->charge();
+        for(int j = i+1; j < (int) muons.size(); ++j) {
+            const Analysis::Muon* muon2 = dynamic_cast<const Analysis::Muon*>( muons.at(j) );
+            float mu_charge_2 = muon2->charge();
+            if( (mu_charge_1 + mu_charge_2 ) != 0) continue;
+            this->fillOniaInfo(*muon1, *muon2);
+            m_onia_muon1id->push_back(i);
+            m_onia_muon2id->push_back(j);
+        }
+    }
+}
+
+void VFitZmmOnAOD::fillOniaInfo(
+        const Analysis::Muon& muon1,
+        const Analysis::Muon& muon2
+        )
+{
+    m_n_onia ++;
+    m_onia_charge->push_back(muon1.charge() + muon2.charge());
+
+    HepLorentzVector* momentum = new HepLorentzVector();
+    Trk::VxCandidate* vx_can = this->VkVrtFit(muon1, muon2, momentum);
+    m_onia_chi2->push_back( getChi2( vx_can ) );
+    if(vx_can){ 
+        m_onia_x->push_back( vx_can->recVertex().position()[0] );
+        m_onia_y->push_back( vx_can->recVertex().position()[1] );
+        m_onia_z->push_back( vx_can->recVertex().position()[2] );
+
+        m_onia_pt_fitted->push_back(momentum->perp());
+        m_onia_eta_fitted->push_back(momentum->pseudoRapidity());
+        m_onia_phi_fitted->push_back(momentum->phi());
+        m_onia_mass_fitted->push_back(momentum->m());
+        delete vx_can;
+    }
+    delete momentum;
+
+    // four-momentum from combined measurement 
+    TLorentzVector tlv1 = this->getLorentzVector(muon1);
+    TLorentzVector tlv2 = this->getLorentzVector(muon2);
+    TLorentzVector tlv_total = (tlv1 + tlv2);
+    m_onia_pt->push_back( tlv_total.Pt() );
+    m_onia_eta->push_back( tlv_total.Eta() );
+    m_onia_phi->push_back( tlv_total.Phi() );
+    m_onia_mass->push_back( tlv_total.M() );
+
+    // four-momentum from track particle
+    TLorentzVector* track_tlv1 = this->getTrackLorentzV(muon1);
+    TLorentzVector* track_tlv2 = this->getTrackLorentzV(muon2);
+    TLorentzVector track_tlv_total = (*track_tlv1 + *track_tlv2);
+    m_onia_track_pt->push_back( track_tlv_total.Pt() );
+    m_onia_track_eta->push_back( track_tlv_total.Eta() );
+    m_onia_track_phi->push_back( track_tlv_total.Phi() );
+    m_onia_track_mass->push_back( track_tlv_total.M() );
+    delete track_tlv1;
+    delete track_tlv2;
+
+}
+
+float VFitZmmOnAOD::getChi2(Trk::VxCandidate* vx_can)
+{
+    float res = -1;
+    if(vx_can) {
+        const Trk::FitQuality& fitQuality = vx_can->recVertex().fitQuality();
+        res = fitQuality.chiSquared()/fitQuality.numberDoF();
+    }
+    return res;
+}
+
+void VFitZmmOnAOD::fillQuadInfo(
+        const Analysis::Muon& muon1,
+        const Analysis::Muon& muon2,
+        const Analysis::Muon& muon3,
+        const Analysis::Muon& muon4)
+{
+    m_n_quad ++;
+    m_quad_charge->push_back(muon1.charge() + muon2.charge() + muon3.charge() + muon4.charge());
+    HepLorentzVector* momentum = new HepLorentzVector();
+    MuonVect* muons_can = new MuonVect;
+    muons_can->push_back( &muon1 );
+    muons_can->push_back( &muon2 );
+    muons_can->push_back( &muon3 );
+    muons_can->push_back( &muon4 );
+
+    Trk::VxCandidate* vx_can = this->VkVrtFit( *muons_can, momentum);
+    m_quad_chi2->push_back( getChi2( vx_can ) );
+    if(vx_can){
+        m_quad_x->push_back( vx_can->recVertex().position()[0] );
+        m_quad_y->push_back( vx_can->recVertex().position()[1] );
+        m_quad_z->push_back( vx_can->recVertex().position()[2] );
+
+        m_quad_fitted_pt->push_back(momentum->perp());
+        m_quad_fitted_eta->push_back(momentum->pseudoRapidity());
+        m_quad_fitted_phi->push_back(momentum->phi());
+        m_quad_fitted_mass->push_back(momentum->m());
+        delete vx_can;
+    }
+    delete momentum;
+    delete muons_can;
+
+    // four-momentum from combined measurement 
+    TLorentzVector tlv1 = this->getLorentzVector(muon1) ;
+    TLorentzVector tlv2 = this->getLorentzVector(muon2) ;
+    TLorentzVector tlv3 = this->getLorentzVector(muon3) ;
+    TLorentzVector tlv4 = this->getLorentzVector(muon4) ;
+    TLorentzVector tlv_total = (tlv1 + tlv2 + tlv3 + tlv4);
+    m_quad_pt->push_back( tlv_total.Pt() );
+    m_quad_eta->push_back( tlv_total.Eta() );
+    m_quad_phi->push_back( tlv_total.Phi() );
+    m_quad_mass->push_back( tlv_total.M() );
+
+    // four-momentum from track particle
+    TLorentzVector* track_tlv1 = this->getTrackLorentzV(muon1);
+    TLorentzVector* track_tlv2 = this->getTrackLorentzV(muon2);
+    TLorentzVector* track_tlv3 = this->getTrackLorentzV(muon3);
+    TLorentzVector* track_tlv4 = this->getTrackLorentzV(muon4);
+    TLorentzVector track_tlv_total = (*track_tlv1 + *track_tlv2 + *track_tlv3 + *track_tlv4);
+    m_quad_track_pt->push_back( track_tlv_total.Pt() );
+    m_quad_track_eta->push_back( track_tlv_total.Eta() );
+    m_quad_track_phi->push_back( track_tlv_total.Phi() );
+    m_quad_track_mass->push_back( track_tlv_total.M() );
+    delete track_tlv1;
+    delete track_tlv2;
+    delete track_tlv3;
+    delete track_tlv4;
 }
