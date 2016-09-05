@@ -4,103 +4,254 @@ import ROOT
 import sys
 ROOT.gROOT.SetBatch()
 import string
+import math
+from array import array
 
 import AtlasStyle
 if not hasattr(ROOT, "myText"):
     ROOT.gROOT.LoadMacro("/afs/cern.ch/user/x/xju/tool/AtlasUtils.C")
     ROOT.gROOT.LoadMacro("/afs/cern.ch/user/x/xju/tool/loader.c")
 
+class BLSana:
+    def __init__(self, out_name):
+        print "start to work"
+        self.out_name = out_name
 
-def make_hists(file_names, out_name):
-    tree = ROOT.TChain("physics", "physics")
-    for file_ in file_names:
-        tree.Add(file_)
+    def book_tree(self):
+        self.out_tree = ROOT.TTree("bls", "bls")
 
-    nentries = tree.GetEntries()
-    print "total entries:",nentries
+        self.m4l = array('f', [0])
+        self.m4l_track = array('f', [0])
+        self.m4l_fitted = array('f', [0])
+        self.m12 = array('f', [0])
+        self.m34 = array('f', [0])
+        self.dis_v1_x = array('f', [0])
+        self.dis_v2_x = array('f', [0])
+        self.x_dis = array('f', [0])
+        self.x_chi2 = array('f', [0])
 
-    h_upsilon = ROOT.TH1F("h_upsilon", "upsilon mass;m_{#varUpsilon} [GeV];Events / 50 MeV", 400, 1, 21)
-    h_jpsi = ROOT.TH1F("h_jpsi", "jpsi mass;m_{#mu+#mu} [GeV];Events / 100 MeV", 200, 1, 21)
+        self.out_tree.Branch("m4l_fitted", self.m4l_fitted, "m4l_fitted/F")
+        self.out_tree.Branch("m4l_track", self.m4l_track, "m4l_track/F")
+        self.out_tree.Branch("m4l", self.m4l, "m4l/F")
+        self.out_tree.Branch("m12", self.m12, "m12/F")
+        self.out_tree.Branch("m34", self.m34, "m34/F")
+        self.out_tree.Branch("dis_v1_x", self.dis_v1_x, "dis_v1_x/F")
+        self.out_tree.Branch("dis_v2_x", self.dis_v2_x, "dis_v2_x/F")
+        self.out_tree.Branch("x_dis", self.x_dis, "x_dis/F")
+        self.out_tree.Branch("x_chi2", self.x_chi2, "x_chi2/F")
 
-    nbins_4l = 400
-    low_4l = 10
-    hi_4l = 30
-    h_m4l = ROOT.TH1F("h_m4l", "m4l;m_{#varUpsilon+#mu+#mu} [GeV];Events / 50 MeV", nbins_4l, low_4l, hi_4l)
-    h_m4l_LHS = ROOT.TH1F("h_m4l_LHS", "m4l LHS;LHS m_{#varUpsilon+#mu+#mu} [GeV];Events / 200 MeV", nbins_4l, low_4l, hi_4l)
-    h_m4l_RHS_U1 = ROOT.TH1F("h_m4l_RHS_U1", "m4l RHS;RHS U1 m_{#varUpsilon+#mu+#mu} [GeV];Events / 200 MeV", nbins_4l, low_4l, hi_4l)
-    h_m4l_RHS_U2 = ROOT.TH1F("h_m4l_RHS_U2", "m4l RHS;RHS U2 m_{#varUpsilon+#mu+#mu} [GeV];Events / 200 MeV", nbins_4l, low_4l, hi_4l)
+    def book_hists(self):
+        self.h_upsilon = ROOT.TH1F("h_upsilon", "upsilon mass;m_{#varUpsilon} [GeV];Events / 50 MeV", 400, 1, 21)
+        self.h_jpsi = ROOT.TH1F("h_jpsi", "jpsi mass;m_{#mu+#mu} [GeV];Events / 100 MeV", 200, 1, 21)
 
-    ## disable branches
-    tree.SetBranchStatus("*", 0)
-    tree.SetBranchStatus("mUpsilon", 1)
-    tree.SetBranchStatus("m4l", 1)
-    #tree.SetBranchStatus("m4l_fitted", 1)
-    tree.SetBranchStatus("m34", 1)
-    tree.SetBranchStatus("n_muon", 1)
-    tree.SetBranchStatus("vtx4l_chi2ndf", 1);
-    #tree.SetBranchStatus("passTrigger", 1);
-    #tree.SetBranchStatus("mu_p4", 1)
+        nbins_4l = 400
+        low_4l = 10
+        hi_4l = 30
+        self.h_m4l = ROOT.TH1F("h_m4l", "m4l;m_{#varUpsilon+#mu+#mu} [GeV];Events / 50 MeV", nbins_4l, low_4l, hi_4l)
+        self.h_m4l_LHS = ROOT.TH1F("h_m4l_LHS", "m4l LHS;LHS m_{#varUpsilon+#mu+#mu} [GeV];Events / 200 MeV", nbins_4l, low_4l, hi_4l)
+        self.h_m4l_RHS_U1 = ROOT.TH1F("h_m4l_RHS_U1", "m4l RHS;RHS U1 m_{#varUpsilon+#mu+#mu} [GeV];Events / 200 MeV", nbins_4l, low_4l, hi_4l)
+        self.h_m4l_RHS_U2 = ROOT.TH1F("h_m4l_RHS_U2", "m4l RHS;RHS U2 m_{#varUpsilon+#mu+#mu} [GeV];Events / 200 MeV", nbins_4l, low_4l, hi_4l)
 
-    tree.SetBranchStatus("pvID1", 1);
-    tree.SetBranchStatus("pvID2", 1);
-    tree.SetBranchStatus("pvID3", 1);
-    tree.SetBranchStatus("pvID4", 1);
+        # quad properties
+        self.h_dis_v1_quad = ROOT.TH1F("h_dis_v1_quad", ";D(v1,x);", 20, 0, 20)
+        self.h_dis_v2_quad = ROOT.TH1F("h_dis_v2_quad", ";D(v2,x);", 20, 0, 20)
+        self.h_dis_quad = ROOT.TH1F("h_dis_quad", ";D(4l);", 20, 0, 20)
+        self.h_chi_quad = ROOT.TH1F("h_chi2_quad",  ";Quad #chi^{2};", 900, 0, 9E6)
+
+    def fill_hists(self, file_names):
+        tree = ROOT.TChain("physics", "physics")
+        for file_ in file_names:
+            tree.Add(file_)
+
+        nentries = tree.GetEntries()
+        print "total entries:",nentries
+
+        ## disable branches
+        tree.SetBranchStatus("*", 0)
+        tree.SetBranchStatus("onia_fitted_mass", 1);
+        tree.SetBranchStatus("onia_chi2", 1);
+        tree.SetBranchStatus("onia_id1", 1);
+        tree.SetBranchStatus("onia_id2", 1);
+        tree.SetBranchStatus("quad_fitted_mass", 1);
+        tree.SetBranchStatus("quad_track_mass", 1);
+        tree.SetBranchStatus("quad_mass", 1);
+        tree.SetBranchStatus("mu_track_pt", 1);
+        tree.SetBranchStatus("n_muon", 1);
+
+        tree.SetBranchStatus("onia_x", 1);
+        tree.SetBranchStatus("onia_y", 1);
+        tree.SetBranchStatus("onia_z", 1);
+        tree.SetBranchStatus("quad_x", 1);
+        tree.SetBranchStatus("quad_y", 1);
+        tree.SetBranchStatus("quad_z", 1);
+        tree.SetBranchStatus("quad_chi2", 1);
+        tree.SetBranchStatus("quad_id1", 1);
+        tree.SetBranchStatus("quad_id2", 1);
+        tree.SetBranchStatus("quad_id3", 1);
+        tree.SetBranchStatus("quad_id4", 1);
+        tree.SetBranchStatus("Event", 1);
+
+        tree.SetBranchStatus("mu_pvID", 1);
+        tree.SetBranchStatus("Event", 1);
+
+        for ientry in xrange(nentries):
+            tree.GetEntry(ientry)
+
+            if tree.n_muon < 4:
+                continue
+            ##
+            has_upsilon = False
+            mU = -1
+            can_id = []
+            onia1_id = 0
+            upsilon_chi2 = 9999
+            for i,onia_mass in enumerate(tree.onia_fitted_mass):
+                id1 = tree.onia_id1[i]
+                id2 = tree.onia_id2[i]
+                #print id1, id2
+                if tree.mu_track_pt[id1] > 4E3 and\
+                   tree.mu_track_pt[id2] > 4E3 and\
+                   tree.onia_chi2[id1] < 3 and\
+                   tree.onia_chi2[id2] < 3 and\
+                   onia_mass > 9.2E3 and\
+                   onia_mass < 9.7E3 and\
+                   tree.onia_chi2[i] < upsilon_chi2:
+
+                    has_upsilon = True
+                    upsilon_chi2 = tree.onia_chi2[i]
+                    mU = onia_mass/1E3
+                    if len(can_id) < 2:
+                        can_id.append(id1)
+                        can_id.append(id2)
+                    else:
+                        can_id[0] = id1
+                        can_id[1] = id2
+
+                    onia1_id = i
+
+            if not has_upsilon:
+                continue
+
+            has_add_mu = False
+            m34 = -1
+            onia2_chi2 = 99999
+            for i,onia_mass in enumerate(tree.onia_fitted_mass):
+                id1 = tree.onia_id1[i]
+                id2 = tree.onia_id2[i]
+                if id1 in can_id or id2 in can_id:
+                    continue
+
+                if tree.mu_track_pt[id1] > 3E3 and\
+                   tree.mu_track_pt[id2] > 3E3 and\
+                   tree.onia_chi2[id1] < 3 and\
+                   tree.onia_chi2[id2] < 3 and\
+                   onia_mass > 2E3 and\
+                   onia_mass < 20E3 and\
+                   tree.onia_chi2[i] < onia2_chi2:
+
+                    has_add_mu = True
+                    onia2_chi2 = tree.onia_chi2[i]
+                    m34 = onia_mass/1E3
+                    onia2_id = i
+                    if len(can_id) < 4:
+                        can_id.append(id1)
+                        can_id.append(id2)
+                    else:
+                        can_id[2] = id1
+                        can_id[3] = id2
+
+            if not has_add_mu:
+                continue
+
+            quad_id = -1
+            if len(can_id) != 4:
+                print "ERROR: ", tree.Event
+
+            for i,quad_mass in enumerate(tree.quad_fitted_mass):
+                id1 = tree.quad_id1[i]
+                id2 = tree.quad_id2[i]
+                id3 = tree.quad_id3[i]
+                id4 = tree.quad_id4[i]
+                if id1 not in can_id or\
+                   id2 not in can_id or\
+                   id3 not in can_id or\
+                   id4 not in can_id or\
+                   quad_mass > 50E3:
+                    continue
+
+                ## vertex association cut
+                pvID1 = tree.mu_pvID[can_id[0]]
+                pvID2 = tree.mu_pvID[can_id[1]]
+                pvID3 = tree.mu_pvID[can_id[2]]
+                pvID4 = tree.mu_pvID[can_id[3]]
+                pass_vertex = (pvID1 == pvID2) and (pvID3 == pvID2 or pvID4 == pvID2)
+                if not pass_vertex:
+                    continue
+
+                quad_id = i
+
+            if quad_id < 0:
+                continue
+                #print tree.Event
+
+            self.h_upsilon.Fill(mU)
+            self.h_jpsi.Fill(m34)
+            self.h_m4l.Fill(tree.quad_fitted_mass[quad_id]/1E3)
+
+            onia1_x = tree.onia_x[onia1_id]
+            onia1_y = tree.onia_y[onia1_id]
+            onia1_z = tree.onia_z[onia1_id]
+            onia2_x = tree.onia_x[onia2_id]
+            onia2_y = tree.onia_y[onia2_id]
+            onia2_z = tree.onia_z[onia2_id]
+            quad_x = tree.quad_x[quad_id]
+            quad_y = tree.quad_y[quad_id]
+            quad_z = tree.quad_z[quad_id]
+
+            dis_v1_quad = self.get_dis(onia1_x, onia1_y, onia1_z, quad_x, quad_y, quad_z)
+            dis_v2_quad = self.get_dis(onia2_x, onia2_y, onia2_z, quad_x, quad_y, quad_z)
+            dis_quad = math.sqrt(quad_x**2 + quad_y**2 + quad_z**2)
+            chi_quad = tree.quad_chi2[quad_id]
+
+            self.h_dis_v1_quad.Fill(dis_v1_quad)
+            self.h_dis_v2_quad.Fill(dis_v2_quad)
+            self.h_dis_quad.Fill(dis_quad)
+            self.h_chi_quad.Fill(chi_quad)
+
+            self.m4l_fitted[0] =  tree.quad_fitted_mass[quad_id]/1E3
+            self.m4l_track[0] =  tree.quad_track_mass[quad_id]/1E3
+            self.m4l[0] =  tree.quad_mass[quad_id]/1E3
+            self.m12[0] = mU
+            self.m34[0] = m34
+            self.dis_v1_x[0] = dis_v1_quad
+            self.dis_v2_x[0] = dis_v2_quad
+            self.x_dis[0] = dis_quad
+            self.x_chi2[0] = chi_quad
+            self.out_tree.Fill()
 
 
-    chi2_cut = 10
-    out_mass = ""
-    for ientry in xrange(nentries):
-        tree.GetEntry(ientry)
 
-        m4l = tree.m4l/1E3
-        m34 = tree.m34/1E3
-        mU = tree.mUpsilon/1E3
-        #if m34 > mU:
-        #    tmp = mU
-        #    mU = m34
-        #    m34 = tmp
+    def get_dis(self, x1, y1, z1, x2, y2, z2):
+        return math.sqrt((x1-x2)**2 + (y1-y2)**2 + (z1-z2)**2)
 
-        #if tree.n_muon < 4 or m4l <= 0 or tree.vtx4l_chi2ndf > chi2_cut or tree.vtx4l_chi2ndf < 0 or tree.m34 > 9.2:
-        #    continue
-        if m4l <= 0 or m34 < 2 or m34 > 20:
-            continue
+    def save_hists(self):
+        # save output
+        fout = ROOT.TFile.Open(out_name, "recreate")
+        self.h_upsilon.Write()
+        self.h_m4l.Write()
+        self.h_m4l_LHS.Write()
+        self.h_m4l_RHS_U1.Write()
+        self.h_m4l_RHS_U2.Write()
+        self.h_jpsi.Write()
 
-        pass_vertex = (tree.pvID1 == tree.pvID2 and (tree.pvID3 == tree.pvID2 or tree.pvID4 == tree.pvID2))
-        #pass_vertex = tree.pvID1 == tree.pvID2 and tree.pvID3 == tree.pvID4 and tree.pvID3 == tree.pvID2
-        if not pass_vertex:
-            continue
+        self.h_dis_v1_quad.Write()
+        self.h_dis_v2_quad.Write()
+        self.h_dis_quad.Write()
+        self.h_chi_quad.Write()
 
+        self.out_tree.Write()
+        fout.Close()
 
-        h_upsilon.Fill(mU)
-        #m4l = tree.m4l
-
-        if True:
-            h_jpsi.Fill(m34)
-            if mU < 9:
-                h_m4l_LHS.Fill(m4l)
-            elif mU >= 9.2 and mU < 9.7:
-            #elif mU >= 9 and mU < 9.8:
-                h_m4l.Fill(m4l)
-                out_mass += str(m4l)+" \n"
-            elif mU >= 9.7 and mU < 10.6:
-                h_m4l_RHS_U1.Fill(m4l)
-            else:
-                h_m4l_RHS_U2.Fill(m4l)
-
-    # save output
-    fout = ROOT.TFile.Open(out_name, "recreate")
-    h_upsilon.Write()
-    h_m4l.Write()
-    h_m4l_LHS.Write()
-    h_m4l_RHS_U1.Write()
-    h_m4l_RHS_U2.Write()
-    h_jpsi.Write()
-    fout.Close()
-
-    with open("m4lcan_13TeV.txt", 'w') as f:
-        f.write(out_mass);
-
-    #return out_name
 
 def draw(file_name, post_fix):
     f1 = ROOT.TFile.Open(file_name)
@@ -190,7 +341,11 @@ if __name__ == "__main__":
 
     if option == "make":
         input_name = sys.argv[2].split(',')
-        make_hists(input_name, out_name)
+        bls_ana = BLSana(out_name)
+        bls_ana.book_hists()
+        bls_ana.book_tree()
+        bls_ana.fill_hists(input_name)
+        bls_ana.save_hists()
     else:
         input_name = sys.argv[2]
         draw(input_name, out_name)

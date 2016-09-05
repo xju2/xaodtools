@@ -14,8 +14,8 @@
 
 #include "GoodRunsLists/GoodRunsListSelectionTool.h"
 // #include "JetMomentTools/JetVertexTaggerTool.h"
-// #include "TrigConfxAOD/xAODConfigTool.h"
-// #include "TrigDecisionTool/TrigDecisionTool.h"
+#include "TrigConfxAOD/xAODConfigTool.h"
+#include "TrigDecisionTool/TrigDecisionTool.h"
 #include "IsolationSelection/IsolationSelectionTool.h"
 #include "ElectronPhotonSelectorTools/AsgElectronLikelihoodTool.h"
 #include "PileupReweighting/PileupReweightingTool.h"
@@ -74,6 +74,8 @@ public:
             double sum_of_evt_w_sq);
 
     static ST::SUSYObjDef_xAOD* GetSUSYTools(bool is_data, const char* config_name);
+
+    bool PassTrigger(const string& trig_name);
 private:
     static const char* APP_NAME;
     string iso_wp_ ;
@@ -82,6 +84,8 @@ private:
     CP::IsolationSelectionTool* iso_tool_;
     AsgElectronLikelihoodTool* ele_medium_LLH_tool_;
     // ToolHandle<CP::IPileupReweightingTool> m_prw_tool;
+    TrigConf::xAODConfigTool *m_trigConfigTool_;
+    Trig::TrigDecisionTool *m_trigDecisionTool_;
 
 
     bool initialize();
