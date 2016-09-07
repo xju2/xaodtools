@@ -669,13 +669,20 @@ StatusCode VFitZmmOnAOD::zmm_on_aod() {
   }
 
   // remove event with less than four muons
-  if(n_muon < 4) return StatusCode::FAILURE;
+  if(n_muon < 4) {
+      delete good_muons;
+      return StatusCode::FAILURE;
+  }
   bool has_neutral_track = (n_pos >= 2 && n_neg >=2);
-  if(!has_neutral_track) return StatusCode::FAILURE;
+  if(!has_neutral_track){
+      delete good_muons;
+      return StatusCode::FAILURE;
+  }
   m_cutFlow->Fill(2);
 
   this->buildTwoMuons( *good_muons );
   this->buildFourMuons( *good_muons );
+  delete good_muons;
 
   return StatusCode::SUCCESS;
 }

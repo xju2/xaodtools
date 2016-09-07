@@ -376,7 +376,7 @@ int main( int argc, char* argv[] )
                 n_muon ++;
                 muon_br->Fill(**mu_itr, ei, pv);
                 int muIndex = (*mu_itr)->auxdataConst<int>("BPHY4MuonIndex");
-                
+
                 if(do_debug){
                     cout << "Type: " << (*mu_itr)->muonType() << endl;
                     cout << "Index: " << muIndex << endl;

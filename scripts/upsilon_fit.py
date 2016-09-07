@@ -52,6 +52,8 @@ class Fit4L:
             # add chi2 cut
             #if self.tree.x_chi2 > 5:
             #    continue
+            if self.tree.m34 < 4:
+                continue
 
             self.obs.setVal(m4l)
             data.add(obs_set)

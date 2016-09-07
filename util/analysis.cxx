@@ -51,6 +51,7 @@
 #include "PATInterfaces/SystematicCode.h"
 
 #include "MyXAODTools/GammaJetAna.h"
+#include "MyXAODTools/UpsilonAna.h"
 
 #include <TError.h>
 using namespace std;
@@ -62,7 +63,7 @@ int main( int argc, char* argv[] )
     if ((argc > 1 && string(argv[1]) == "help") ||(argc < 3))
     {
         cout << argv[0] << " analysisName toberun.txt number_evts isData=1 debug=0" << endl;
-        cout << "analysisName: gammajet" << endl;
+        cout << "analysisName: gammajet, upsilon" << endl;
         exit(1);
     }
     // The application's name:
@@ -73,7 +74,9 @@ int main( int argc, char* argv[] )
     AnalysisBase* ana = NULL;
     if(anaName == "gammajet") {
         ana = new GammaJetAna();
-    } else {
+    } else if(anaName == "upsilon") {
+        ana = new UpsilonAna();
+    }else{
         Error("cannot find algorithm: %s", anaName.Data());
         return 1;
     }

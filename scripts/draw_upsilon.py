@@ -29,6 +29,9 @@ class BLSana:
         self.dis_v2_x = array('f', [0])
         self.x_dis = array('f', [0])
         self.x_chi2 = array('f', [0])
+        self.x_lxy = array('f', [0])
+        self.x_track_pt = array('f', [0])
+        self.x_fitted_pt = array('f', [0])
 
         self.out_tree.Branch("m4l_fitted", self.m4l_fitted, "m4l_fitted/F")
         self.out_tree.Branch("m4l_track", self.m4l_track, "m4l_track/F")
@@ -39,6 +42,9 @@ class BLSana:
         self.out_tree.Branch("dis_v2_x", self.dis_v2_x, "dis_v2_x/F")
         self.out_tree.Branch("x_dis", self.x_dis, "x_dis/F")
         self.out_tree.Branch("x_chi2", self.x_chi2, "x_chi2/F")
+        self.out_tree.Branch("x_lxy", self.x_lxy, "x_lxy/F")
+        self.out_tree.Branch("x_track_pt", self.x_track_pt, "x_track_pt/F")
+        self.out_tree.Branch("x_fitted_pt", self.x_fitted_pt, "x_fitted_pt/F")
 
     def book_hists(self):
         self.h_upsilon = ROOT.TH1F("h_upsilon", "upsilon mass;m_{#varUpsilon} [GeV];Events / 50 MeV", 400, 1, 21)
@@ -68,31 +74,38 @@ class BLSana:
 
         ## disable branches
         tree.SetBranchStatus("*", 0)
-        tree.SetBranchStatus("onia_fitted_mass", 1);
-        tree.SetBranchStatus("onia_chi2", 1);
-        tree.SetBranchStatus("onia_id1", 1);
-        tree.SetBranchStatus("onia_id2", 1);
-        tree.SetBranchStatus("quad_fitted_mass", 1);
-        tree.SetBranchStatus("quad_track_mass", 1);
-        tree.SetBranchStatus("quad_mass", 1);
-        tree.SetBranchStatus("mu_track_pt", 1);
-        tree.SetBranchStatus("n_muon", 1);
+        tree.SetBranchStatus("onia_fitted_mass", 1)
+        tree.SetBranchStatus("onia_chi2", 1)
+        tree.SetBranchStatus("onia_id1", 1)
+        tree.SetBranchStatus("onia_id2", 1)
+        tree.SetBranchStatus("quad_fitted_mass", 1)
+        tree.SetBranchStatus("quad_fitted_pt", 1)
+        tree.SetBranchStatus("quad_track_mass", 1)
+        tree.SetBranchStatus("quad_track_pt", 1)
+        tree.SetBranchStatus("quad_mass", 1)
+        tree.SetBranchStatus("quad_nCombined", 1)
+        tree.SetBranchStatus("mu_track_pt", 1)
+        tree.SetBranchStatus("n_muon", 1)
 
-        tree.SetBranchStatus("onia_x", 1);
-        tree.SetBranchStatus("onia_y", 1);
-        tree.SetBranchStatus("onia_z", 1);
-        tree.SetBranchStatus("quad_x", 1);
-        tree.SetBranchStatus("quad_y", 1);
-        tree.SetBranchStatus("quad_z", 1);
-        tree.SetBranchStatus("quad_chi2", 1);
-        tree.SetBranchStatus("quad_id1", 1);
-        tree.SetBranchStatus("quad_id2", 1);
-        tree.SetBranchStatus("quad_id3", 1);
-        tree.SetBranchStatus("quad_id4", 1);
-        tree.SetBranchStatus("Event", 1);
+        tree.SetBranchStatus("onia_x", 1)
+        tree.SetBranchStatus("onia_y", 1)
+        tree.SetBranchStatus("onia_z", 1)
+        tree.SetBranchStatus("quad_x", 1)
+        tree.SetBranchStatus("quad_y", 1)
+        tree.SetBranchStatus("quad_z", 1)
+        tree.SetBranchStatus("quad_chi2", 1)
+        tree.SetBranchStatus("quad_id1", 1)
+        tree.SetBranchStatus("quad_id2", 1)
+        tree.SetBranchStatus("quad_id3", 1)
+        tree.SetBranchStatus("quad_id4", 1)
+        tree.SetBranchStatus("Event", 1)
 
-        tree.SetBranchStatus("mu_pvID", 1);
-        tree.SetBranchStatus("Event", 1);
+        tree.SetBranchStatus("v0_x", 1)
+        tree.SetBranchStatus("v0_y", 1)
+        tree.SetBranchStatus("v0_z", 1)
+
+        tree.SetBranchStatus("mu_pvID", 1)
+        tree.SetBranchStatus("Event", 1)
 
         for ientry in xrange(nentries):
             tree.GetEntry(ientry)
@@ -163,11 +176,12 @@ class BLSana:
             if not has_add_mu:
                 continue
 
-            quad_id = -1
             if len(can_id) != 4:
                 print "ERROR: ", tree.Event
 
-            for i,quad_mass in enumerate(tree.quad_fitted_mass):
+            mass_id = -1
+            quad_id = -1
+            for i,x_chi2 in enumerate(tree.quad_chi2):
                 id1 = tree.quad_id1[i]
                 id2 = tree.quad_id2[i]
                 id3 = tree.quad_id3[i]
@@ -175,8 +189,13 @@ class BLSana:
                 if id1 not in can_id or\
                    id2 not in can_id or\
                    id3 not in can_id or\
-                   id4 not in can_id or\
-                   quad_mass > 50E3:
+                   id4 not in can_id:
+                    continue
+
+                if x_chi2 < 0:
+                    print "Fit failed"
+                    continue
+                if tree.quad_nCombined < 3:
                     continue
 
                 ## vertex association cut
@@ -186,8 +205,10 @@ class BLSana:
                 pvID4 = tree.mu_pvID[can_id[3]]
                 pass_vertex = (pvID1 == pvID2) and (pvID3 == pvID2 or pvID4 == pvID2)
                 if not pass_vertex:
-                    continue
+                    continue 
 
+                mass_id += 1
+                quad_mass = tree.quad_fitted_mass[mass_id]
                 quad_id = i
 
             if quad_id < 0:
@@ -196,7 +217,7 @@ class BLSana:
 
             self.h_upsilon.Fill(mU)
             self.h_jpsi.Fill(m34)
-            self.h_m4l.Fill(tree.quad_fitted_mass[quad_id]/1E3)
+            self.h_m4l.Fill(tree.quad_fitted_mass[mass_id]/1E3)
 
             onia1_x = tree.onia_x[onia1_id]
             onia1_y = tree.onia_y[onia1_id]
@@ -218,7 +239,7 @@ class BLSana:
             self.h_dis_quad.Fill(dis_quad)
             self.h_chi_quad.Fill(chi_quad)
 
-            self.m4l_fitted[0] =  tree.quad_fitted_mass[quad_id]/1E3
+            self.m4l_fitted[0] =  tree.quad_fitted_mass[mass_id]/1E3
             self.m4l_track[0] =  tree.quad_track_mass[quad_id]/1E3
             self.m4l[0] =  tree.quad_mass[quad_id]/1E3
             self.m12[0] = mU
@@ -227,6 +248,10 @@ class BLSana:
             self.dis_v2_x[0] = dis_v2_quad
             self.x_dis[0] = dis_quad
             self.x_chi2[0] = chi_quad
+            self.x_lxy[0] = math.sqrt(quad_x**2 + quad_y**2)
+            self.x_track_pt[0] = tree.quad_track_pt[quad_id]
+            #self.x_fitted_pt[0] = tree.quad_fitted_pt[mass_id]
+
             self.out_tree.Fill()
 
 

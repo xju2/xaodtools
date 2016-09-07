@@ -1,1 +1,1 @@
-run_gamma_jet.sh
+run_upsilon.sh
