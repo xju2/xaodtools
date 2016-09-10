@@ -13,8 +13,10 @@ class Fit4L:
         self.fin = ROOT.TFile.Open(file_name)
         self.br_name = br_name
         self.tree = self.fin.Get("bls")
-        self.obs = RooRealVar("obs", "m4l", 14, 21)
-        self.nbins = 35
+        min_x = 15
+        max_x = 25
+        self.obs = RooRealVar("obs", "m4l", min_x, max_x)
+        self.nbins = (max_x - min_x) * 5
         self.obs.setBin(self.nbins)
         self.ws = ROOT.RooWorkspace("combined", "combined")
 
@@ -33,8 +35,8 @@ class Fit4L:
         p2 = RooRealVar("p2", "p2", -1E6, 1E6)
         p3 = RooRealVar("p3", "p3", -1E6, 1E6)
         p4 = RooRealVar("p4", "p4", -1E6, 1E6)
-        #bkg = ROOT.RooChebychev("bkg", "bkg", self.obs, ROOT.RooArgList(p0, p1, p2, p3, p4))
-        bkg = ROOT.RooChebychev("bkg", "bkg", self.obs, ROOT.RooArgList(p0, p1))
+        bkg = ROOT.RooChebychev("bkg", "bkg", self.obs, ROOT.RooArgList(p0, p1, p2, p3, p4))
+        #bkg = ROOT.RooChebychev("bkg", "bkg", self.obs, ROOT.RooArgList(p0, p1))
         ebkg = ROOT.RooExtendPdf("ebkg", "ebkg", bkg, n_bkg)
         model = ROOT.RooAddPdf("model", "model", ROOT.RooArgList(esig, ebkg))
         getattr(self.ws, "import")(model)
@@ -79,7 +81,6 @@ class Fit4L:
         #self.minimize(nll)
         nll_uncondition = nll.getVal()
 
-
         print "significance", math.sqrt(2*(nll_condition - nll_uncondition))
 
         ## plot
@@ -88,7 +89,7 @@ class Fit4L:
         model.plotOn(frame, ROOT.RooFit.LineColor(2))
         canvas = ROOT.TCanvas("canvas", "canvas", 600, 600)
         frame.Draw()
-        frame.GetYaxis().SetRangeUser(0, 100)
+        frame.GetYaxis().SetRangeUser(0, 2000)
         canvas.SaveAs("fit.pdf")
 
         self.save()

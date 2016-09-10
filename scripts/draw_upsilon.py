@@ -12,10 +12,13 @@ if not hasattr(ROOT, "myText"):
     ROOT.gROOT.LoadMacro("/afs/cern.ch/user/x/xju/tool/AtlasUtils.C")
     ROOT.gROOT.LoadMacro("/afs/cern.ch/user/x/xju/tool/loader.c")
 
+m_debug = True
+
 class BLSana:
     def __init__(self, out_name):
         print "start to work"
         self.out_name = out_name
+        self.do_save = True
 
     def book_tree(self):
         self.out_tree = ROOT.TTree("bls", "bls")
@@ -33,6 +36,23 @@ class BLSana:
         self.x_track_pt = array('f', [0])
         self.x_fitted_pt = array('f', [0])
 
+        self.m1_pt = array('f', [0])
+        self.m2_pt = array('f', [0])
+        self.m3_pt = array('f', [0])
+        self.m4_pt = array('f', [0])
+
+        self.m1_track_pt = array('f', [0])
+        self.m2_track_pt = array('f', [0])
+        self.m3_track_pt = array('f', [0])
+        self.m4_track_pt = array('f', [0])
+
+        self.u1_chi2 = array('f', [0])
+        self.u2_chi2 = array('f', [0])
+
+        self.run = array('i', [0])
+        self.event = array('i', [0])
+
+
         self.out_tree.Branch("m4l_fitted", self.m4l_fitted, "m4l_fitted/F")
         self.out_tree.Branch("m4l_track", self.m4l_track, "m4l_track/F")
         self.out_tree.Branch("m4l", self.m4l, "m4l/F")
@@ -45,6 +65,22 @@ class BLSana:
         self.out_tree.Branch("x_lxy", self.x_lxy, "x_lxy/F")
         self.out_tree.Branch("x_track_pt", self.x_track_pt, "x_track_pt/F")
         self.out_tree.Branch("x_fitted_pt", self.x_fitted_pt, "x_fitted_pt/F")
+
+        self.out_tree.Branch("m1_pt", self.m1_pt, "m1_pt/F")
+        self.out_tree.Branch("m2_pt", self.m2_pt, "m2_pt/F")
+        self.out_tree.Branch("m3_pt", self.m3_pt, "m3_pt/F")
+        self.out_tree.Branch("m4_pt", self.m4_pt, "m4_pt/F")
+
+        self.out_tree.Branch("m1_track_pt", self.m1_track_pt, "m1_track_pt/F")
+        self.out_tree.Branch("m2_track_pt", self.m2_track_pt, "m2_track_pt/F")
+        self.out_tree.Branch("m3_track_pt", self.m3_track_pt, "m3_track_pt/F")
+        self.out_tree.Branch("m4_track_pt", self.m4_track_pt, "m4_track_pt/F")
+
+        self.out_tree.Branch("u1_chi2", self.u1_chi2, "u1_chi2/F")
+        self.out_tree.Branch("u2_chi2", self.u2_chi2, "u2_chi2/F")
+
+        self.out_tree.Branch("run", self.run, "run/I")
+        self.out_tree.Branch("event", self.event, "event/I")
 
     def book_hists(self):
         self.h_upsilon = ROOT.TH1F("h_upsilon", "upsilon mass;m_{#varUpsilon} [GeV];Events / 50 MeV", 400, 1, 21)
@@ -67,10 +103,14 @@ class BLSana:
     def fill_hists(self, file_names):
         tree = ROOT.TChain("physics", "physics")
         for file_ in file_names:
+            print "adding.. ", file_
             tree.Add(file_)
 
         nentries = tree.GetEntries()
         print "total entries:",nentries
+        if nentries == 0:
+            self.do_save = False
+            return
 
         ## disable branches
         tree.SetBranchStatus("*", 0)
@@ -84,8 +124,11 @@ class BLSana:
         tree.SetBranchStatus("quad_track_pt", 1)
         tree.SetBranchStatus("quad_mass", 1)
         tree.SetBranchStatus("quad_nCombined", 1)
-        tree.SetBranchStatus("mu_track_pt", 1)
+
         tree.SetBranchStatus("n_muon", 1)
+        tree.SetBranchStatus("mu_track_pt", 1)
+        tree.SetBranchStatus("mu_pt", 1)
+        tree.SetBranchStatus("mu_pvID", 1)
 
         tree.SetBranchStatus("onia_x", 1)
         tree.SetBranchStatus("onia_y", 1)
@@ -99,16 +142,37 @@ class BLSana:
         tree.SetBranchStatus("quad_id3", 1)
         tree.SetBranchStatus("quad_id4", 1)
         tree.SetBranchStatus("Event", 1)
+        tree.SetBranchStatus("Run", 1)
+        tree.SetBranchStatus("EventNumber", 1)
+        tree.SetBranchStatus("RunNumber", 1)
 
         tree.SetBranchStatus("v0_x", 1)
         tree.SetBranchStatus("v0_y", 1)
         tree.SetBranchStatus("v0_z", 1)
 
-        tree.SetBranchStatus("mu_pvID", 1)
-        tree.SetBranchStatus("Event", 1)
+        interested_event = [
+            (208662, 168839095),
+                           ]
 
         for ientry in xrange(nentries):
             tree.GetEntry(ientry)
+
+            #if m_debug and (tree.Run != 203636 or tree.Event != 50171978):
+            #if m_debug and (tree.Run != 202712 or tree.Event != 4744031):
+            #if m_debug and (tree.Run != 202712 or tree.Event != 42230077):
+
+            if hasattr(tree, "Run"):
+                run = tree.Run
+                event = tree.Event
+            else:
+                run = tree.RunNumber
+                event = tree.EventNumber
+
+            if m_debug and (run, event) not in interested_event:
+                continue
+
+            if m_debug:
+                print "process: ",run, event
 
             if tree.n_muon < 4:
                 continue
@@ -122,13 +186,16 @@ class BLSana:
                 id1 = tree.onia_id1[i]
                 id2 = tree.onia_id2[i]
                 #print id1, id2
-                if tree.mu_track_pt[id1] > 4E3 and\
-                   tree.mu_track_pt[id2] > 4E3 and\
-                   tree.onia_chi2[id1] < 3 and\
-                   tree.onia_chi2[id2] < 3 and\
+
+                if tree.mu_track_pt[id1] > 2E3 and\
+                   tree.mu_track_pt[id2] > 2E3 and\
+                   tree.onia_chi2[i] < 3 and\
                    onia_mass > 9.2E3 and\
                    onia_mass < 9.7E3 and\
                    tree.onia_chi2[i] < upsilon_chi2:
+
+                    #if m_debug:
+                    #    print tree.mu_track_pt[id1],tree.mu_track_pt[id2],tree.onia_chi2[i],onia_mass
 
                     has_upsilon = True
                     upsilon_chi2 = tree.onia_chi2[i]
@@ -143,21 +210,30 @@ class BLSana:
                     onia1_id = i
 
             if not has_upsilon:
+                if m_debug:
+                    print "cannot find upsilon"
                 continue
 
+            if m_debug:
+                print "Upsilon mass: ", mU
             has_add_mu = False
             m34 = -1
             onia2_chi2 = 99999
             for i,onia_mass in enumerate(tree.onia_fitted_mass):
                 id1 = tree.onia_id1[i]
                 id2 = tree.onia_id2[i]
+                if i== onia1_id:
+                    continue
+
                 if id1 in can_id or id2 in can_id:
                     continue
 
-                if tree.mu_track_pt[id1] > 3E3 and\
-                   tree.mu_track_pt[id2] > 3E3 and\
-                   tree.onia_chi2[id1] < 3 and\
-                   tree.onia_chi2[id2] < 3 and\
+                #if m_debug:
+                #    print tree.mu_track_pt[id1],tree.mu_track_pt[id2],tree.onia_chi2[i],onia_mass
+
+                if tree.mu_track_pt[id1] > 2E3 and\
+                   tree.mu_track_pt[id2] > 2E3 and\
+                   tree.onia_chi2[i] < 3 and\
                    onia_mass > 2E3 and\
                    onia_mass < 20E3 and\
                    tree.onia_chi2[i] < onia2_chi2:
@@ -174,14 +250,24 @@ class BLSana:
                         can_id[3] = id2
 
             if not has_add_mu:
+                if m_debug:
+                    print "cannot second pair"
                 continue
 
             if len(can_id) != 4:
                 print "ERROR: ", tree.Event
 
+            if m_debug:
+                print "muonID:"," ".join([str(x) for x in can_id])
             mass_id = -1
             quad_id = -1
+            j = -1
             for i,x_chi2 in enumerate(tree.quad_chi2):
+                if x_chi2 < 0:
+                    print "Fit failed",run,event
+                    continue
+
+                j += 1
                 id1 = tree.quad_id1[i]
                 id2 = tree.quad_id2[i]
                 id3 = tree.quad_id3[i]
@@ -192,10 +278,9 @@ class BLSana:
                    id4 not in can_id:
                     continue
 
-                if x_chi2 < 0:
-                    print "Fit failed"
-                    continue
                 if tree.quad_nCombined < 3:
+                    if m_debug:
+                        print "less than 3 combined muons"
                     continue
 
                 ## vertex association cut
@@ -205,15 +290,22 @@ class BLSana:
                 pvID4 = tree.mu_pvID[can_id[3]]
                 pass_vertex = (pvID1 == pvID2) and (pvID3 == pvID2 or pvID4 == pvID2)
                 if not pass_vertex:
-                    continue 
+                    if m_debug:
+                        print "not from same vertex",pvID1,pvID2,pvID3,pvID4
+                    continue
 
-                mass_id += 1
+                mass_id = j
                 quad_mass = tree.quad_fitted_mass[mass_id]
+                if m_debug:
+                    print "mass-> ",quad_mass,mass_id
                 quad_id = i
 
             if quad_id < 0:
                 continue
                 #print tree.Event
+
+            if m_debug:
+                print "quadID:", quad_id, "mass:", quad_mass," massID:", mass_id
 
             self.h_upsilon.Fill(mU)
             self.h_jpsi.Fill(m34)
@@ -225,9 +317,9 @@ class BLSana:
             onia2_x = tree.onia_x[onia2_id]
             onia2_y = tree.onia_y[onia2_id]
             onia2_z = tree.onia_z[onia2_id]
-            quad_x = tree.quad_x[quad_id]
-            quad_y = tree.quad_y[quad_id]
-            quad_z = tree.quad_z[quad_id]
+            quad_x = tree.quad_x[mass_id]
+            quad_y = tree.quad_y[mass_id]
+            quad_z = tree.quad_z[mass_id]
 
             dis_v1_quad = self.get_dis(onia1_x, onia1_y, onia1_z, quad_x, quad_y, quad_z)
             dis_v2_quad = self.get_dis(onia2_x, onia2_y, onia2_z, quad_x, quad_y, quad_z)
@@ -252,6 +344,21 @@ class BLSana:
             self.x_track_pt[0] = tree.quad_track_pt[quad_id]
             #self.x_fitted_pt[0] = tree.quad_fitted_pt[mass_id]
 
+            self.run[0] = run
+            self.event[0] = event
+            self.m1_track_pt[0] = tree.mu_track_pt[ tree.quad_id1[quad_id] ]
+            self.m2_track_pt[0] = tree.mu_track_pt[ tree.quad_id2[quad_id] ]
+            self.m3_track_pt[0] = tree.mu_track_pt[ tree.quad_id3[quad_id] ]
+            self.m4_track_pt[0] = tree.mu_track_pt[ tree.quad_id4[quad_id] ]
+
+            self.m1_pt[0] = tree.mu_pt[ tree.quad_id1[quad_id] ]
+            self.m2_pt[0] = tree.mu_pt[ tree.quad_id2[quad_id] ]
+            self.m3_pt[0] = tree.mu_pt[ tree.quad_id3[quad_id] ]
+            self.m4_pt[0] = tree.mu_pt[ tree.quad_id4[quad_id] ]
+
+            self.u1_chi2[0] = tree.onia_chi2[ onia1_id ]
+            self.u2_chi2[0] = tree.onia_chi2[ onia2_id ]
+
             self.out_tree.Fill()
 
 
@@ -260,6 +367,8 @@ class BLSana:
         return math.sqrt((x1-x2)**2 + (y1-y2)**2 + (z1-z2)**2)
 
     def save_hists(self):
+        if not self.do_save:
+            return
         # save output
         fout = ROOT.TFile.Open(out_name, "recreate")
         self.h_upsilon.Write()
@@ -351,10 +460,46 @@ def draw(file_name, post_fix):
     ROOT.myText(x_pos, y_pos, 1, "Entries: {:.0f}".format(h5.Integral()))
     canvas.SaveAs("m4l_"+post_fix+".pdf")
 
+def compare_sideband(file_name, br_name="x_chi2"):
+
+    f1 = ROOT.TFile.Open(file_name)
+    tree = f1.Get("bls")
+    h_sig = ROOT.TH1F("h_sig", "signal", 10, 0, 20)
+    h_left = h_sig.Clone("h_left")
+    h_right = h_sig.Clone("h_right")
+
+    sig_cut = "m4l_track > 17.8 && m4l_track < 18.8"
+    left_cut = "m4l_track < 17.8"
+    right_cut = "m4l_track > 18.8 && m4l_track < 25"
+
+    canvas = ROOT.TCanvas("canvas", "canvas", 600, 600)
+
+    tree.Draw(br_name+">>h_sig", "x_chi2 < 100 && "+sig_cut)
+    tree.Draw(br_name+">>h_left", "x_chi2 < 100 && "+left_cut)
+    tree.Draw(br_name+">>h_right", "x_chi2 < 100 && "+right_cut)
+
+    n_sig = h_sig.Integral()
+    h_left.Scale(n_sig / h_left.Integral())
+    h_right.Scale(n_sig / h_right.Integral())
+
+    canvas.SetLogy()
+    #canvas.SetLogx()
+    h_sig.Draw("EP")
+    h_left.SetLineColor(2)
+    h_right.SetLineColor(4)
+    h_left.SetMarkerColor(2)
+    h_right.SetMarkerColor(4)
+
+    h_left.Draw("same EP")
+    h_right.Draw("same EP")
+    ROOT.myLineText(0.8, 0.85, h_sig, "SR")
+    ROOT.myLineText(0.8, 0.80, h_left, "LHS")
+    ROOT.myLineText(0.8, 0.75, h_right, "RHS")
+    canvas.SaveAs("cmp_"+br_name+".pdf")
 
 if __name__ == "__main__":
     if len(sys.argv) < 4:
-        print sys.argv[0], "make/draw file_index,file2 out_name"
+        print sys.argv[0], "make/draw/cmp file_index,file2 out_name"
         exit(1)
 
     base_name = "/afs/cern.ch/user/x/xju/work/upsilon/run/data12_v1/split_and_merge/merged_"
@@ -371,6 +516,9 @@ if __name__ == "__main__":
         bls_ana.book_tree()
         bls_ana.fill_hists(input_name)
         bls_ana.save_hists()
-    else:
+    elif option == "draw":
         input_name = sys.argv[2]
         draw(input_name, out_name)
+    else:
+        input_name = sys.argv[2]
+        compare_sideband(input_name, out_name)

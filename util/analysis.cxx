@@ -117,8 +117,6 @@ int main( int argc, char* argv[] )
     Info( APP_NAME, "Number of events in the chain: %i",
             static_cast< int >( event.getEntries() ) );
 
-
-
     // StatusCode::enableFailure();
     // CP::SystematicCode::enableFailure();
     // CP::CorrectionCode::enableFailure();
