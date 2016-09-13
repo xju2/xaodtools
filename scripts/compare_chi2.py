@@ -35,7 +35,7 @@ def get_dic():
 def process():
     can_michigan = get_dic()
     #print can_michigan
-    f1 = ROOT.TFile.Open("all_xy.root")
+    f1 = ROOT.TFile.Open("all.root")
     tree = f1.Get("bls")
     nentries = tree.GetEntries()
 

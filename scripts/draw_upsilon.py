@@ -12,7 +12,7 @@ if not hasattr(ROOT, "myText"):
     ROOT.gROOT.LoadMacro("/afs/cern.ch/user/x/xju/tool/AtlasUtils.C")
     ROOT.gROOT.LoadMacro("/afs/cern.ch/user/x/xju/tool/loader.c")
 
-m_debug = True
+m_debug = False
 
 class BLSana:
     def __init__(self, out_name):
@@ -30,6 +30,8 @@ class BLSana:
         self.m34 = array('f', [0])
         self.dis_v1_x = array('f', [0])
         self.dis_v2_x = array('f', [0])
+        self.dis_v1_v2 = array('f', [0])
+        self.z_v1_v2 = array('f', [0])
         self.x_dis = array('f', [0])
         self.x_chi2 = array('f', [0])
         self.x_lxy = array('f', [0])
@@ -60,6 +62,8 @@ class BLSana:
         self.out_tree.Branch("m34", self.m34, "m34/F")
         self.out_tree.Branch("dis_v1_x", self.dis_v1_x, "dis_v1_x/F")
         self.out_tree.Branch("dis_v2_x", self.dis_v2_x, "dis_v2_x/F")
+        self.out_tree.Branch("dis_v1_v2", self.dis_v1_v2, "dis_v1_v2/F")
+        self.out_tree.Branch("z_v1_v2", self.z_v1_v2, "z_v1_v2/F")
         self.out_tree.Branch("x_dis", self.x_dis, "x_dis/F")
         self.out_tree.Branch("x_chi2", self.x_chi2, "x_chi2/F")
         self.out_tree.Branch("x_lxy", self.x_lxy, "x_lxy/F")
@@ -151,7 +155,9 @@ class BLSana:
         tree.SetBranchStatus("v0_z", 1)
 
         interested_event = [
-            (208662, 168839095),
+            #(208662, 168839095),
+            (202712, 14264115),
+            (205071, 120286323),
                            ]
 
         for ientry in xrange(nentries):
@@ -174,138 +180,18 @@ class BLSana:
             if m_debug:
                 print "process: ",run, event
 
-            if tree.n_muon < 4:
+            if tree.n_muon != 4:
                 continue
+
+            self.run[0] = run
+            self.event[0] = event
             ##
-            has_upsilon = False
-            mU = -1
-            can_id = []
-            onia1_id = 0
-            upsilon_chi2 = 9999
-            for i,onia_mass in enumerate(tree.onia_fitted_mass):
-                id1 = tree.onia_id1[i]
-                id2 = tree.onia_id2[i]
-                #print id1, id2
-
-                if tree.mu_track_pt[id1] > 2E3 and\
-                   tree.mu_track_pt[id2] > 2E3 and\
-                   tree.onia_chi2[i] < 3 and\
-                   onia_mass > 9.2E3 and\
-                   onia_mass < 9.7E3 and\
-                   tree.onia_chi2[i] < upsilon_chi2:
-
-                    #if m_debug:
-                    #    print tree.mu_track_pt[id1],tree.mu_track_pt[id2],tree.onia_chi2[i],onia_mass
-
-                    has_upsilon = True
-                    upsilon_chi2 = tree.onia_chi2[i]
-                    mU = onia_mass/1E3
-                    if len(can_id) < 2:
-                        can_id.append(id1)
-                        can_id.append(id2)
-                    else:
-                        can_id[0] = id1
-                        can_id[1] = id2
-
-                    onia1_id = i
-
-            if not has_upsilon:
-                if m_debug:
-                    print "cannot find upsilon"
+            results = self.select_upsilon(tree)
+            #results = self.select_quadruplet(tree)
+            if results is None:
                 continue
 
-            if m_debug:
-                print "Upsilon mass: ", mU
-            has_add_mu = False
-            m34 = -1
-            onia2_chi2 = 99999
-            for i,onia_mass in enumerate(tree.onia_fitted_mass):
-                id1 = tree.onia_id1[i]
-                id2 = tree.onia_id2[i]
-                if i== onia1_id:
-                    continue
-
-                if id1 in can_id or id2 in can_id:
-                    continue
-
-                #if m_debug:
-                #    print tree.mu_track_pt[id1],tree.mu_track_pt[id2],tree.onia_chi2[i],onia_mass
-
-                if tree.mu_track_pt[id1] > 2E3 and\
-                   tree.mu_track_pt[id2] > 2E3 and\
-                   tree.onia_chi2[i] < 3 and\
-                   onia_mass > 2E3 and\
-                   onia_mass < 20E3 and\
-                   tree.onia_chi2[i] < onia2_chi2:
-
-                    has_add_mu = True
-                    onia2_chi2 = tree.onia_chi2[i]
-                    m34 = onia_mass/1E3
-                    onia2_id = i
-                    if len(can_id) < 4:
-                        can_id.append(id1)
-                        can_id.append(id2)
-                    else:
-                        can_id[2] = id1
-                        can_id[3] = id2
-
-            if not has_add_mu:
-                if m_debug:
-                    print "cannot second pair"
-                continue
-
-            if len(can_id) != 4:
-                print "ERROR: ", tree.Event
-
-            if m_debug:
-                print "muonID:"," ".join([str(x) for x in can_id])
-            mass_id = -1
-            quad_id = -1
-            j = -1
-            for i,x_chi2 in enumerate(tree.quad_chi2):
-                if x_chi2 < 0:
-                    print "Fit failed",run,event
-                    continue
-
-                j += 1
-                id1 = tree.quad_id1[i]
-                id2 = tree.quad_id2[i]
-                id3 = tree.quad_id3[i]
-                id4 = tree.quad_id4[i]
-                if id1 not in can_id or\
-                   id2 not in can_id or\
-                   id3 not in can_id or\
-                   id4 not in can_id:
-                    continue
-
-                if tree.quad_nCombined < 3:
-                    if m_debug:
-                        print "less than 3 combined muons"
-                    continue
-
-                ## vertex association cut
-                pvID1 = tree.mu_pvID[can_id[0]]
-                pvID2 = tree.mu_pvID[can_id[1]]
-                pvID3 = tree.mu_pvID[can_id[2]]
-                pvID4 = tree.mu_pvID[can_id[3]]
-                pass_vertex = (pvID1 == pvID2) and (pvID3 == pvID2 or pvID4 == pvID2)
-                if not pass_vertex:
-                    if m_debug:
-                        print "not from same vertex",pvID1,pvID2,pvID3,pvID4
-                    continue
-
-                mass_id = j
-                quad_mass = tree.quad_fitted_mass[mass_id]
-                if m_debug:
-                    print "mass-> ",quad_mass,mass_id
-                quad_id = i
-
-            if quad_id < 0:
-                continue
-                #print tree.Event
-
-            if m_debug:
-                print "quadID:", quad_id, "mass:", quad_mass," massID:", mass_id
+            mU, m34, mass_id, onia1_id, onia2_id, quad_id = results
 
             self.h_upsilon.Fill(mU)
             self.h_jpsi.Fill(m34)
@@ -323,6 +209,9 @@ class BLSana:
 
             dis_v1_quad = self.get_dis(onia1_x, onia1_y, onia1_z, quad_x, quad_y, quad_z)
             dis_v2_quad = self.get_dis(onia2_x, onia2_y, onia2_z, quad_x, quad_y, quad_z)
+            dis_v1_v2 = self.get_dis(onia1_x, onia1_y, onia1_z, onia2_x, onia2_y, onia2_z)
+            z_v1_v2 = abs(onia1_z-onia2_z)
+
             dis_quad = math.sqrt(quad_x**2 + quad_y**2 + quad_z**2)
             chi_quad = tree.quad_chi2[quad_id]
 
@@ -338,14 +227,14 @@ class BLSana:
             self.m34[0] = m34
             self.dis_v1_x[0] = dis_v1_quad
             self.dis_v2_x[0] = dis_v2_quad
+            self.dis_v1_v2[0] = dis_v1_v2
+            self.z_v1_v2[0] = z_v1_v2
             self.x_dis[0] = dis_quad
             self.x_chi2[0] = chi_quad
             self.x_lxy[0] = math.sqrt(quad_x**2 + quad_y**2)
             self.x_track_pt[0] = tree.quad_track_pt[quad_id]
             #self.x_fitted_pt[0] = tree.quad_fitted_pt[mass_id]
 
-            self.run[0] = run
-            self.event[0] = event
             self.m1_track_pt[0] = tree.mu_track_pt[ tree.quad_id1[quad_id] ]
             self.m2_track_pt[0] = tree.mu_track_pt[ tree.quad_id2[quad_id] ]
             self.m3_track_pt[0] = tree.mu_track_pt[ tree.quad_id3[quad_id] ]
@@ -361,7 +250,258 @@ class BLSana:
 
             self.out_tree.Fill()
 
+    def select_upsilon(self, tree):
+        has_upsilon = False
+        mU = -1
+        can_id = []
+        onia1_id = 0
+        upsilon_chi2 = 9999
+        for i,onia_mass in enumerate(tree.onia_fitted_mass):
+            id1 = tree.onia_id1[i]
+            id2 = tree.onia_id2[i]
+            #print id1, id2
 
+            if tree.mu_track_pt[id1] > 4E3 and\
+               tree.mu_track_pt[id2] > 4E3 and\
+               tree.onia_chi2[i] < 3 and\
+               onia_mass > 9.2E3 and\
+               onia_mass < 9.7E3 and\
+               tree.onia_chi2[i] < upsilon_chi2:
+                has_upsilon = True
+                upsilon_chi2 = tree.onia_chi2[i]
+                mU = onia_mass/1E3
+                if len(can_id) < 2:
+                    can_id.append(id1)
+                    can_id.append(id2)
+                else:
+                    can_id[0] = id1
+                    can_id[1] = id2
+
+                onia1_id = i
+
+        if not has_upsilon:
+            if m_debug:
+                print "cannot find upsilon"
+            return None
+
+        if m_debug:
+            print "Upsilon mass: ", mU
+
+        has_add_mu = False
+        m34 = -1
+        onia2_chi2 = 99999
+        for i,onia_mass in enumerate(tree.onia_fitted_mass):
+            id1 = tree.onia_id1[i]
+            id2 = tree.onia_id2[i]
+            if i== onia1_id:
+                continue
+
+            if id1 in can_id or id2 in can_id:
+                continue
+
+            if tree.mu_track_pt[id1] > 3E3 and\
+               tree.mu_track_pt[id2] > 3E3 and\
+               tree.onia_chi2[i] < 3 and\
+               onia_mass > 2E3 and\
+               onia_mass < 20E3 and\
+               tree.onia_chi2[i] < onia2_chi2:
+
+                has_add_mu = True
+                onia2_chi2 = tree.onia_chi2[i]
+                m34 = onia_mass/1E3
+                onia2_id = i
+                if len(can_id) < 4:
+                    can_id.append(id1)
+                    can_id.append(id2)
+                else:
+                    can_id[2] = id1
+                    can_id[3] = id2
+
+        if not has_add_mu:
+            if m_debug:
+                print "cannot second pair"
+            return None
+
+        if m_debug:
+            print "muonID:"," ".join([str(x) for x in can_id])
+
+        mass_id = -1
+        quad_id = -1
+        j = -1
+        for i,x_chi2 in enumerate(tree.quad_chi2):
+            if x_chi2 < 0:
+                if m_debug:
+                    print self.run[0],self.event[0],"Fit failed",x_chi2
+                continue
+
+            j += 1
+            id1 = tree.quad_id1[i]
+            id2 = tree.quad_id2[i]
+            id3 = tree.quad_id3[i]
+            id4 = tree.quad_id4[i]
+            if id1 not in can_id or\
+               id2 not in can_id or\
+               id3 not in can_id or\
+               id4 not in can_id:
+                continue
+
+            if tree.quad_nCombined[i] < 3:
+                if m_debug:
+                    print "less than 3 combined muons"
+                continue
+
+            ## vertex association cut
+            pvID1 = tree.mu_pvID[can_id[0]]
+            pvID2 = tree.mu_pvID[can_id[1]]
+            pvID3 = tree.mu_pvID[can_id[2]]
+            pvID4 = tree.mu_pvID[can_id[3]]
+            #pass_vertex = (pvID1 == pvID2) and (pvID3 == pvID2 or pvID4 == pvID2)
+            pass_vertex = pvID1 == 0 and pvID1 == pvID2 and pvID3 == pvID2 and pvID4 == pvID3
+            if not pass_vertex:
+                if m_debug:
+                    print "not from same vertex",pvID1,pvID2,pvID3,pvID4
+                continue
+
+            mass_id = j
+            quad_mass = tree.quad_fitted_mass[mass_id]
+            if m_debug:
+                print "mass-> ",quad_mass,mass_id
+            quad_id = i
+
+        if quad_id < 0:
+            return None
+
+        if m_debug:
+            print "quadID:", quad_id, "mass:", quad_mass," massID:", mass_id
+
+        return (mU, m34, mass_id, onia1_id, onia2_id, quad_id)
+
+    def select_quadruplet(self, tree):
+
+        m12 = [-1, False]
+        m34 = [-1, False]
+        mass_id = -1
+        onia1_id = -1
+        onia2_id = -1
+        quad_id =  -1
+        min_quad_chi2 = 999999
+        for id_onia1 in range(len(tree.onia_fitted_mass)):
+            mu_id1 = tree.onia_id1[id_onia1]
+            mu_id2 = tree.onia_id2[id_onia1]
+
+            mu_pt1 = tree.mu_track_pt[mu_id1]
+            mu_pt2 = tree.mu_track_pt[mu_id2]
+
+            if tree.onia_chi2[id_onia1] > 3:
+                continue
+
+            if mu_pt1 <= 3E3 or mu_pt2 <= 3E3:
+                continue
+
+            mass_onia1 = tree.onia_fitted_mass[id_onia1]
+            if mass_onia1 < 2E3 or\
+               mass_onia1 > 20E3:
+                continue
+            if m_debug:
+                print "find a good onia"
+
+            for id_onia2 in range(id_onia1+1, len(tree.onia_fitted_mass)):
+                mu_id3 = tree.onia_id1[id_onia2]
+                mu_id4 = tree.onia_id2[id_onia2]
+
+                mu_pt3 = tree.mu_track_pt[mu_id3]
+                mu_pt4 = tree.mu_track_pt[mu_id4]
+                if tree.onia_chi2[id_onia2] > 3:
+                    continue
+
+                if mu_pt3 <= 3E3 or mu_pt4 <= 3E3:
+                    continue
+
+                mass_onia2 = tree.onia_fitted_mass[id_onia2]
+                if mass_onia2 < 2E3 or\
+                   mass_onia2 > 20E3:
+                    continue
+
+                if mu_id3 in [mu_id1, mu_id2] or\
+                   mu_id4 in [mu_id1, mu_id2]:
+                    continue
+                if m_debug:
+                    print "find a second onia"
+
+                # pT cut, either 44,33
+                #assign mU and m34
+                m12[0] = mass_onia1
+                m12[1] = mu_pt1 > 4E3 and mu_pt2 > 4E3
+                m34[0] = mass_onia2
+                m34[1] = mu_pt3 > 4E3 and mu_pt4 > 4E3
+                if not m12[1] and not m34[1]:
+                    continue
+
+                if m_debug:
+                    print "find onia pass 4GeV cut"
+                # find the chi2 of the four muons
+                muon_cans = [mu_id1, mu_id2, mu_id3, mu_id4]
+                if m_debug:
+                    print "muonID:"," ".join([str(x) for x in muon_cans])
+                j = -1
+                for iquad, x_chi2 in enumerate(tree.quad_chi2):
+                    if x_chi2 < 0:
+                        continue
+
+                    j += 1
+                    id1 = tree.quad_id1[iquad]
+                    id2 = tree.quad_id2[iquad]
+                    id3 = tree.quad_id3[iquad]
+                    id4 = tree.quad_id4[iquad]
+                    if m_debug:
+                        print id1,id2,id3,id4
+                    if id1 not in muon_cans or\
+                       id2 not in muon_cans or\
+                       id3 not in muon_cans or\
+                       id4 not in muon_cans:
+                        continue
+
+                    if tree.quad_nCombined[iquad] < 3:
+                        if m_debug:
+                            print "less than 3 combined muons",tree.quad_nCombined[iquad]
+                        continue
+
+                    ## vertex association cut
+                    pvID1 = tree.mu_pvID[muon_cans[0]]
+                    pvID2 = tree.mu_pvID[muon_cans[1]]
+                    pvID3 = tree.mu_pvID[muon_cans[2]]
+                    pvID4 = tree.mu_pvID[muon_cans[3]]
+                    pass_vertex = (pvID1 == pvID2) and (pvID3 == pvID2 or pvID4 == pvID2)
+                    if not pass_vertex:
+                        if m_debug:
+                            print "not from same vertex",pvID1,pvID2,pvID3,pvID4
+                        continue
+
+                    # min chi2
+                    if tree.quad_chi2[iquad] > min_quad_chi2:
+                        if m_debug:
+                            print "too large chi2"
+                        continue
+
+                    mass_id = j
+                    quad_id = iquad
+                    min_quad_chi2 = tree.quad_chi2[iquad]
+                    onia1_id = id_onia1
+                    onia2_id = id_onia2
+
+        # check if there's quadruplet
+        if quad_id < 0:
+            if m_debug:
+                print self.run[0],self.event[0],"no quadruplet"
+            return None
+        # apply the upsilon cut!
+        if (m12[1] and m12[0] > 9.2E3 and m12[0] < 9.7E3) or\
+           (m34[1] and m34[0] > 9.2E3 and m34[0] < 9.7E3):
+            return (m12[0], m34[0], mass_id, onia1_id, onia2_id, quad_id)
+        else:
+            if m_debug:
+                print self.run[0],self.event[0],"no upsilon"
+            return None
 
     def get_dis(self, x1, y1, z1, x2, y2, z2):
         return math.sqrt((x1-x2)**2 + (y1-y2)**2 + (z1-z2)**2)
@@ -369,6 +509,7 @@ class BLSana:
     def save_hists(self):
         if not self.do_save:
             return
+
         # save output
         fout = ROOT.TFile.Open(out_name, "recreate")
         self.h_upsilon.Write()
@@ -464,7 +605,7 @@ def compare_sideband(file_name, br_name="x_chi2"):
 
     f1 = ROOT.TFile.Open(file_name)
     tree = f1.Get("bls")
-    h_sig = ROOT.TH1F("h_sig", "signal", 10, 0, 20)
+    h_sig = ROOT.TH1F("h_sig", "signal", 10, 0, 50)
     h_left = h_sig.Clone("h_left")
     h_right = h_sig.Clone("h_right")
 
@@ -474,27 +615,32 @@ def compare_sideband(file_name, br_name="x_chi2"):
 
     canvas = ROOT.TCanvas("canvas", "canvas", 600, 600)
 
-    tree.Draw(br_name+">>h_sig", "x_chi2 < 100 && "+sig_cut)
-    tree.Draw(br_name+">>h_left", "x_chi2 < 100 && "+left_cut)
-    tree.Draw(br_name+">>h_right", "x_chi2 < 100 && "+right_cut)
+    tree.Draw(br_name+">>h_sig", br_name+" < 100 && "+sig_cut)
+    tree.Draw(br_name+">>h_left", br_name+" < 100 && "+left_cut)
+    tree.Draw(br_name+">>h_right", br_name+" < 100 && "+right_cut)
 
     n_sig = h_sig.Integral()
     h_left.Scale(n_sig / h_left.Integral())
     h_right.Scale(n_sig / h_right.Integral())
 
-    canvas.SetLogy()
+    #canvas.SetLogy()
     #canvas.SetLogx()
+    h_sig.SetMarkerColor(1)
     h_sig.Draw("EP")
     h_left.SetLineColor(2)
     h_right.SetLineColor(4)
     h_left.SetMarkerColor(2)
     h_right.SetMarkerColor(4)
+    h_left.SetMarkerStyle(24)
+    h_right.SetMarkerStyle(27)
 
     h_left.Draw("same EP")
     h_right.Draw("same EP")
-    ROOT.myLineText(0.8, 0.85, h_sig, "SR")
-    ROOT.myLineText(0.8, 0.80, h_left, "LHS")
-    ROOT.myLineText(0.8, 0.75, h_right, "RHS")
+    legend = ROOT.myLegend(0.7, 0.8, 0.9, 0.9)
+    legend.AddEntry(h_sig, "SR", "EP")
+    legend.AddEntry(h_left, "LHS", "EP")
+    legend.AddEntry(h_right, "RHS", "EP")
+    legend.Draw("same")
     canvas.SaveAs("cmp_"+br_name+".pdf")
 
 if __name__ == "__main__":

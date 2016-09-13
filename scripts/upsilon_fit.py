@@ -10,9 +10,8 @@ ROOT.gROOT.SetBatch()
 
 class Fit4L:
     def __init__(self, file_name, br_name):
-        self.fin = ROOT.TFile.Open(file_name)
+        self.file_name = file_name
         self.br_name = br_name
-        self.tree = self.fin.Get("bls")
         min_x = 15
         max_x = 25
         self.obs = RooRealVar("obs", "m4l", min_x, max_x)
@@ -22,9 +21,10 @@ class Fit4L:
 
     def build_model(self):
         #mean = RooRealVar("mean", "mean of gaussian", 18.1, 17, 19)
-        #sigma = RooRealVar("sigma", "sigma of gaussian", 0.21, 0.15, 1.0)
-        mean = RooRealVar("mean", "mean of gaussian", 18.15)
+        #sigma = RooRealVar("sigma", "sigma of gaussian", 0.21, 0.01, 1.0)
+        mean = RooRealVar("mean", "mean of gaussian", 18.06)
         sigma = RooRealVar("sigma", "sigma of gaussian", 0.19)
+        #sigma = RooRealVar("sigma", "sigma of gaussian", 0.08)
         gaussian = ROOT.RooGaussian("gauss", "gauss", self.obs, mean, sigma)
         n_sig = RooRealVar("n_sig", "number of signal" , 50, 0, 1000)
         esig = ROOT.RooExtendPdf("esig", "esig", gaussian, n_sig)
@@ -35,35 +35,64 @@ class Fit4L:
         p2 = RooRealVar("p2", "p2", -1E6, 1E6)
         p3 = RooRealVar("p3", "p3", -1E6, 1E6)
         p4 = RooRealVar("p4", "p4", -1E6, 1E6)
-        bkg = ROOT.RooChebychev("bkg", "bkg", self.obs, ROOT.RooArgList(p0, p1, p2, p3, p4))
-        #bkg = ROOT.RooChebychev("bkg", "bkg", self.obs, ROOT.RooArgList(p0, p1))
+        #bkg = ROOT.RooChebychev("bkg", "bkg", self.obs, ROOT.RooArgList(p0, p1, p2, p3, p4))
+        bkg = ROOT.RooChebychev("bkg", "bkg", self.obs, ROOT.RooArgList(p0, p1))
         ebkg = ROOT.RooExtendPdf("ebkg", "ebkg", bkg, n_bkg)
         model = ROOT.RooAddPdf("model", "model", ROOT.RooArgList(esig, ebkg))
         getattr(self.ws, "import")(model)
 
     def get_data(self):
-        nentries = self.tree.GetEntries()
+        fin = ROOT.TFile.Open(self.file_name)
+        tree = fin.Get("bls")
+        nentries = tree.GetEntries()
         print "total: ", nentries
         obs_set = ROOT.RooArgSet(self.obs)
         data = ROOT.RooDataSet("data", "data", obs_set)
         for ientry in xrange(nentries):
-            self.tree.GetEntry(ientry)
-            m4l = getattr(self.tree, self.br_name)
+            tree.GetEntry(ientry)
+            m4l = getattr(tree, self.br_name)
             if m4l > self.obs.getMax() or m4l < self.obs.getMin():
                 continue
             # add chi2 cut
-            #if self.tree.x_chi2 > 5:
+            if tree.x_chi2 > 10:
+                continue
+            #if tree.m34 < 4:
             #    continue
-            if self.tree.m34 < 4:
+
+            self.obs.setVal(m4l)
+            data.add(obs_set)
+        getattr(self.ws, "import")(data)
+        fin.Close()
+
+    def get_data_ts(self):
+        """
+        get data provided by TieSheng
+        """
+        fin = ROOT.TFile.Open(self.file_name)
+        tree = fin.Get("physics")
+        nentries = tree.GetEntries()
+        print "total: ", nentries
+        obs_set = ROOT.RooArgSet(self.obs)
+        data = ROOT.RooDataSet("data", "data", obs_set)
+        for ientry in xrange(nentries):
+            tree.GetEntry(ientry)
+            m4l = getattr(tree, "pX.m")
+            chi2 = getattr(tree, "pX.chi2")
+            if m4l > self.obs.getMax() or m4l < self.obs.getMin():
+                continue
+            # add chi2 cut
+            if chi2 <= 50:
                 continue
 
             self.obs.setVal(m4l)
             data.add(obs_set)
         getattr(self.ws, "import")(data)
+        fin.Close()
 
     def fit(self):
         self.build_model()
         self.get_data()
+        #self.get_data_ts()
         data = self.ws.obj("data")
         model = self.ws.obj("model")
         nll = model.createNLL(data)
@@ -89,14 +118,13 @@ class Fit4L:
         model.plotOn(frame, ROOT.RooFit.LineColor(2))
         canvas = ROOT.TCanvas("canvas", "canvas", 600, 600)
         frame.Draw()
-        frame.GetYaxis().SetRangeUser(0, 2000)
+        #frame.GetYaxis().SetRangeUser(0, 120)
         canvas.SaveAs("fit.pdf")
 
         self.save()
 
     def save(self):
         self.ws.writeToFile("combined.root")
-        self.fin.Close()
 
     def minimize(self, nll):
         minim = ROOT.RooMinimizer(nll)

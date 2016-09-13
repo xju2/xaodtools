@@ -82,6 +82,8 @@ def save_compare(h_xy, h_ts, out_name):
     h_ts.SetLineColor(2)
     h_xy.SetMarkerColor(4)
     h_ts.SetMarkerColor(2)
+    h_xy.SetMarkerStyle(20)
+    h_ts.SetMarkerStyle(24)
 
     max_y = h_xy.GetMaximum()
     if h_ts.GetMaximum() > max_y:
