@@ -13,12 +13,20 @@ if not hasattr(ROOT, "myText"):
     ROOT.gROOT.LoadMacro("/afs/cern.ch/user/x/xju/tool/loader.c")
 
 m_debug = False
+CHI2_DIMUON_CUT = 6
+CHI2_4MUON_CUT = 50
+LEADING_MUON_PT = 3E3
+SUBLEADING_MUON_PT = 3E3
 
 class BLSana:
+    """
+    select upsilon+upsilon
+    """
     def __init__(self, out_name):
         print "start to work"
         self.out_name = out_name
         self.do_save = True
+        self.ignore_PV_cut = True
 
     def book_tree(self):
         self.out_tree = ROOT.TTree("bls", "bls")
@@ -37,6 +45,7 @@ class BLSana:
         self.x_lxy = array('f', [0])
         self.x_track_pt = array('f', [0])
         self.x_fitted_pt = array('f', [0])
+        self.x_type = array('f', [0])
 
         self.m1_pt = array('f', [0])
         self.m2_pt = array('f', [0])
@@ -47,6 +56,11 @@ class BLSana:
         self.m2_track_pt = array('f', [0])
         self.m3_track_pt = array('f', [0])
         self.m4_track_pt = array('f', [0])
+
+        self.m1_track_eta = array('f', [0])
+        self.m2_track_eta = array('f', [0])
+        self.m3_track_eta = array('f', [0])
+        self.m4_track_eta = array('f', [0])
 
         self.u1_chi2 = array('f', [0])
         self.u2_chi2 = array('f', [0])
@@ -69,6 +83,7 @@ class BLSana:
         self.out_tree.Branch("x_lxy", self.x_lxy, "x_lxy/F")
         self.out_tree.Branch("x_track_pt", self.x_track_pt, "x_track_pt/F")
         self.out_tree.Branch("x_fitted_pt", self.x_fitted_pt, "x_fitted_pt/F")
+        self.out_tree.Branch("x_type", self.x_type, "x_type/F")
 
         self.out_tree.Branch("m1_pt", self.m1_pt, "m1_pt/F")
         self.out_tree.Branch("m2_pt", self.m2_pt, "m2_pt/F")
@@ -79,6 +94,11 @@ class BLSana:
         self.out_tree.Branch("m2_track_pt", self.m2_track_pt, "m2_track_pt/F")
         self.out_tree.Branch("m3_track_pt", self.m3_track_pt, "m3_track_pt/F")
         self.out_tree.Branch("m4_track_pt", self.m4_track_pt, "m4_track_pt/F")
+
+        self.out_tree.Branch("m1_track_eta", self.m1_track_eta, "m1_track_eta/F")
+        self.out_tree.Branch("m2_track_eta", self.m2_track_eta, "m2_track_eta/F")
+        self.out_tree.Branch("m3_track_eta", self.m3_track_eta, "m3_track_eta/F")
+        self.out_tree.Branch("m4_track_eta", self.m4_track_eta, "m4_track_eta/F")
 
         self.out_tree.Branch("u1_chi2", self.u1_chi2, "u1_chi2/F")
         self.out_tree.Branch("u2_chi2", self.u2_chi2, "u2_chi2/F")
@@ -118,10 +138,13 @@ class BLSana:
 
         ## disable branches
         tree.SetBranchStatus("*", 0)
+        tree.SetBranchStatus("onia_type", 1)
         tree.SetBranchStatus("onia_fitted_mass", 1)
         tree.SetBranchStatus("onia_chi2", 1)
         tree.SetBranchStatus("onia_id1", 1)
         tree.SetBranchStatus("onia_id2", 1)
+
+        tree.SetBranchStatus("quad_type", 1)
         tree.SetBranchStatus("quad_fitted_mass", 1)
         tree.SetBranchStatus("quad_fitted_pt", 1)
         tree.SetBranchStatus("quad_track_mass", 1)
@@ -131,6 +154,7 @@ class BLSana:
 
         tree.SetBranchStatus("n_muon", 1)
         tree.SetBranchStatus("mu_track_pt", 1)
+        tree.SetBranchStatus("mu_track_eta", 1)
         tree.SetBranchStatus("mu_pt", 1)
         tree.SetBranchStatus("mu_pvID", 1)
 
@@ -191,7 +215,7 @@ class BLSana:
             if results is None:
                 continue
 
-            mU, m34, mass_id, onia1_id, onia2_id, quad_id = results
+            mU, m34, mass_id, onia1_id, onia2_id, quad_id, quad_type = results
 
             self.h_upsilon.Fill(mU)
             self.h_jpsi.Fill(m34)
@@ -234,11 +258,17 @@ class BLSana:
             self.x_lxy[0] = math.sqrt(quad_x**2 + quad_y**2)
             self.x_track_pt[0] = tree.quad_track_pt[quad_id]
             #self.x_fitted_pt[0] = tree.quad_fitted_pt[mass_id]
+            self.x_type[0] = quad_type
 
             self.m1_track_pt[0] = tree.mu_track_pt[ tree.quad_id1[quad_id] ]
             self.m2_track_pt[0] = tree.mu_track_pt[ tree.quad_id2[quad_id] ]
             self.m3_track_pt[0] = tree.mu_track_pt[ tree.quad_id3[quad_id] ]
             self.m4_track_pt[0] = tree.mu_track_pt[ tree.quad_id4[quad_id] ]
+
+            self.m1_track_eta[0] = tree.mu_track_eta[ tree.quad_id1[quad_id] ]
+            self.m2_track_eta[0] = tree.mu_track_eta[ tree.quad_id2[quad_id] ]
+            self.m3_track_eta[0] = tree.mu_track_eta[ tree.quad_id3[quad_id] ]
+            self.m4_track_eta[0] = tree.mu_track_eta[ tree.quad_id4[quad_id] ]
 
             self.m1_pt[0] = tree.mu_pt[ tree.quad_id1[quad_id] ]
             self.m2_pt[0] = tree.mu_pt[ tree.quad_id2[quad_id] ]
@@ -261,9 +291,9 @@ class BLSana:
             id2 = tree.onia_id2[i]
             #print id1, id2
 
-            if tree.mu_track_pt[id1] > 4E3 and\
-               tree.mu_track_pt[id2] > 4E3 and\
-               tree.onia_chi2[i] < 3 and\
+            if tree.mu_track_pt[id1] > LEADING_MUON_PT and\
+               tree.mu_track_pt[id2] > LEADING_MUON_PT and\
+               tree.onia_chi2[i] < CHI2_DIMUON_CUT and\
                onia_mass > 9.2E3 and\
                onia_mass < 9.7E3 and\
                tree.onia_chi2[i] < upsilon_chi2:
@@ -299,11 +329,11 @@ class BLSana:
             if id1 in can_id or id2 in can_id:
                 continue
 
-            if tree.mu_track_pt[id1] > 3E3 and\
-               tree.mu_track_pt[id2] > 3E3 and\
-               tree.onia_chi2[i] < 3 and\
-               onia_mass > 2E3 and\
-               onia_mass < 20E3 and\
+            if tree.mu_track_pt[id1] > SUBLEADING_MUON_PT and\
+               tree.mu_track_pt[id2] > SUBLEADING_MUON_PT and\
+               tree.onia_chi2[i] < CHI2_DIMUON_CUT and\
+               onia_mass > 9.2E3 and\
+               onia_mass < 9.7E3 and\
                tree.onia_chi2[i] < onia2_chi2:
 
                 has_add_mu = True
@@ -355,9 +385,9 @@ class BLSana:
             pvID2 = tree.mu_pvID[can_id[1]]
             pvID3 = tree.mu_pvID[can_id[2]]
             pvID4 = tree.mu_pvID[can_id[3]]
-            #pass_vertex = (pvID1 == pvID2) and (pvID3 == pvID2 or pvID4 == pvID2)
-            pass_vertex = pvID1 == 0 and pvID1 == pvID2 and pvID3 == pvID2 and pvID4 == pvID3
-            if not pass_vertex:
+            pass_vertex = (pvID1 == pvID2) and (pvID3 == pvID2 or pvID4 == pvID2)
+            #pass_vertex = pvID1 == 0 and pvID1 == pvID2 and pvID3 == pvID2 and pvID4 == pvID3
+            if not self.ignore_PV_cut and not pass_vertex:
                 if m_debug:
                     print "not from same vertex",pvID1,pvID2,pvID3,pvID4
                 continue
@@ -385,6 +415,8 @@ class BLSana:
         onia2_id = -1
         quad_id =  -1
         min_quad_chi2 = 999999
+        has_upsilon = False
+        has_jpsi = False
         for id_onia1 in range(len(tree.onia_fitted_mass)):
             mu_id1 = tree.onia_id1[id_onia1]
             mu_id2 = tree.onia_id2[id_onia1]
@@ -392,15 +424,15 @@ class BLSana:
             mu_pt1 = tree.mu_track_pt[mu_id1]
             mu_pt2 = tree.mu_track_pt[mu_id2]
 
-            if tree.onia_chi2[id_onia1] > 3:
+            if tree.onia_chi2[id_onia1] > CHI2_DIMUON_CUT:
                 continue
 
             if mu_pt1 <= 3E3 or mu_pt2 <= 3E3:
                 continue
 
             mass_onia1 = tree.onia_fitted_mass[id_onia1]
-            if mass_onia1 < 2E3 or\
-               mass_onia1 > 20E3:
+            if mass_onia1 < 9.2E3 or\
+               mass_onia1 > 9.7E3:
                 continue
             if m_debug:
                 print "find a good onia"
@@ -411,15 +443,15 @@ class BLSana:
 
                 mu_pt3 = tree.mu_track_pt[mu_id3]
                 mu_pt4 = tree.mu_track_pt[mu_id4]
-                if tree.onia_chi2[id_onia2] > 3:
+                if tree.onia_chi2[id_onia2] > CHI2_DIMUON_CUT:
                     continue
 
                 if mu_pt3 <= 3E3 or mu_pt4 <= 3E3:
                     continue
 
                 mass_onia2 = tree.onia_fitted_mass[id_onia2]
-                if mass_onia2 < 2E3 or\
-                   mass_onia2 > 20E3:
+                if mass_onia2 < 9.2E3 or\
+                   mass_onia2 > 9.7E3:
                     continue
 
                 if mu_id3 in [mu_id1, mu_id2] or\
@@ -434,8 +466,8 @@ class BLSana:
                 m12[1] = mu_pt1 > 4E3 and mu_pt2 > 4E3
                 m34[0] = mass_onia2
                 m34[1] = mu_pt3 > 4E3 and mu_pt4 > 4E3
-                if not m12[1] and not m34[1]:
-                    continue
+                #if not m12[1] and not m34[1]:
+                #    continue
 
                 if m_debug:
                     print "find onia pass 4GeV cut"
@@ -472,7 +504,7 @@ class BLSana:
                     pvID3 = tree.mu_pvID[muon_cans[2]]
                     pvID4 = tree.mu_pvID[muon_cans[3]]
                     pass_vertex = (pvID1 == pvID2) and (pvID3 == pvID2 or pvID4 == pvID2)
-                    if not pass_vertex:
+                    if not pass_vertex and not self.ignore_PV_cut:
                         if m_debug:
                             print "not from same vertex",pvID1,pvID2,pvID3,pvID4
                         continue
@@ -494,14 +526,16 @@ class BLSana:
             if m_debug:
                 print self.run[0],self.event[0],"no quadruplet"
             return None
+
+        return (m12[0], m34[0], mass_id, onia1_id, onia2_id, quad_id)
         # apply the upsilon cut!
-        if (m12[1] and m12[0] > 9.2E3 and m12[0] < 9.7E3) or\
-           (m34[1] and m34[0] > 9.2E3 and m34[0] < 9.7E3):
-            return (m12[0], m34[0], mass_id, onia1_id, onia2_id, quad_id)
-        else:
-            if m_debug:
-                print self.run[0],self.event[0],"no upsilon"
-            return None
+        #if (m12[1] and m12[0] > 9.2E3 and m12[0] < 9.7E3) or\
+        #   (m34[1] and m34[0] > 9.2E3 and m34[0] < 9.7E3):
+        #    return (m12[0], m34[0], mass_id, onia1_id, onia2_id, quad_id)
+        #else:
+        #    if m_debug:
+        #        print self.run[0],self.event[0],"no upsilon"
+        #    return None
 
     def get_dis(self, x1, y1, z1, x2, y2, z2):
         return math.sqrt((x1-x2)**2 + (y1-y2)**2 + (z1-z2)**2)

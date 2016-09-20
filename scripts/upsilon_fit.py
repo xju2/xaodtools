@@ -2,6 +2,8 @@
 
 import ROOT
 from ROOT import RooRealVar
+import random
+from array import array
 
 import sys
 import math
@@ -54,8 +56,8 @@ class Fit4L:
             if m4l > self.obs.getMax() or m4l < self.obs.getMin():
                 continue
             # add chi2 cut
-            if tree.x_chi2 > 10:
-                continue
+            #if tree.x_chi2 > 10:
+            #    continue
             #if tree.m34 < 4:
             #    continue
 
@@ -88,6 +90,33 @@ class Fit4L:
             data.add(obs_set)
         getattr(self.ws, "import")(data)
         fin.Close()
+
+    def get_random_data(self):
+        NSIGNAL = 86
+        fin = ROOT.TFile.Open(self.file_name)
+        tree = fin.Get("bls")
+        nentries = tree.GetEntries()
+        print "total: ", nentries
+        obs_set = ROOT.RooArgSet(self.obs)
+        data = ROOT.RooDataSet("data", "data", obs_set)
+        sample = random.sample([x for x in range(nentries)], NSIGNAL)
+        #for ientry in xrange(nentries):
+        for ientry in sample:
+            tree.GetEntry(ientry)
+            m4l = getattr(tree, self.br_name)
+            if m4l > self.obs.getMax() or m4l < self.obs.getMin():
+                continue
+            # add chi2 cut
+            #if tree.x_chi2 > 10:
+            #    continue
+            #if tree.m34 < 4:
+            #    continue
+
+            self.obs.setVal(m4l)
+            data.add(obs_set)
+
+        fin.Close()
+        return data
 
     def fit(self):
         self.build_model()
@@ -134,6 +163,32 @@ class Fit4L:
         status = minim.minimize("Minuit2", ROOT.Math.MinimizerOptions.DefaultMinimizerAlgo());
         print "fit stats:", status
 
+    def fit_signal_random(self):
+        mean = RooRealVar("mean", "mean of gaussian", 18.1, 17, 19)
+        sigma = RooRealVar("sigma", "sigma of gaussian", 0.21, 0.01, 1.0)
+        gaussian = ROOT.RooGaussian("gauss", "gauss", self.obs, mean, sigma)
+        NTRIES = 10000
+        fout = ROOT.TFile.Open("ensamble.root", "recreate")
+        br_mean = array('f', [0])
+        br_sigma = array('f', [0])
+        out_tree = ROOT.TTree("physics", "physics")
+        out_tree.Branch("mean", br_mean, "mean/F")
+        out_tree.Branch("sigma", br_sigma, "sigma/F")
+        hists = []
+        self.obs.setRange("peak", 17.7, 18.3);
+        for itry in range(NTRIES):
+            data = self.get_random_data()
+            gaussian.fitTo(data, ROOT.RooFit.Range("peak"))
+            br_mean[0] = mean.getVal()
+            br_sigma[0] = sigma.getVal()
+            out_tree.Fill()
+            hists.append(super(ROOT.RooDataSet, data).createHistogram("mass_"+str(itry), self.obs))
+
+        fout.cd()
+        for hist in hists:
+            hist.Write()
+        out_tree.Write()
+        fout.Close()
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -141,9 +196,10 @@ if __name__ == "__main__":
         exit(1)
 
     file_name = sys.argv[1]
-    br_name = "m4l_track"
+    br_name = "m4l_fitted"
     if len(sys.argv) > 2:
         br_name = sys.argv[2]
 
     fit_4l = Fit4L(file_name, br_name)
     fit_4l.fit()
+    #fit_4l.fit_signal_random()

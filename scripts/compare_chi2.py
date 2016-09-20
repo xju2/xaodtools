@@ -64,6 +64,8 @@ def process():
     m4l_full_xy = ROOT.TH1F("m4l_full_xy", "m4l;m_{4l} [GeV]; Events/0.4GeV", 100, 10, 50)
     m4l_full_ts = m4l_full_xy.Clone("m4l_full_ts")
 
+    m4l_diff = ROOT.TH1F("m4l_diff", "m4l;m_{4l}^{constraint} - m_{4l} [GeV];", 40, -1, 1)
+
     for ientry in xrange(nentries):
         tree.GetEntry(ientry)
         run = int(tree.run)
@@ -90,7 +92,7 @@ def process():
         m4l_ts.Fill(michigan_mass)
         m4l_full_xy.Fill(tree.m4l_fitted)
         m4l_full_ts.Fill(michigan_mass)
-
+        m4l_diff.Fill(tree.m4l_fitted - michigan_mass)
 
     fout.cd()
     out_tree.Write()
@@ -100,6 +102,7 @@ def process():
     m4l_ts.Write()
     m4l_full_xy.Write()
     m4l_full_ts.Write()
+    m4l_diff.Write()
 
     fout.Close()
     f1.Close()
