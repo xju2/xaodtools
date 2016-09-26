@@ -24,6 +24,7 @@ AnalysisBase::AnalysisBase(
     muon_br = new MuonBranch();
     el_br = new ElectronBranch();
     jet_br = new JetBranch();
+    ph_br = new PhotonBranch();
     m_objTool = NULL;
 
     CreateBranch();
@@ -43,6 +44,7 @@ AnalysisBase::~AnalysisBase()
     if (muon_br) delete muon_br;
     if (el_br) delete el_br;
     if (jet_br) delete jet_br;
+    if (ph_br) delete ph_br;
 }
 
 void AnalysisBase::CreateBranch()
@@ -105,6 +107,7 @@ void AnalysisBase::ClearBranch()
     if(muon_br)     muon_br->ClearBranch();
     if(el_br)       el_br->ClearBranch();
     if(jet_br)      jet_br->ClearBranch();
+    if(ph_br)       ph_br   ->ClearBranch();
 }
 
 int AnalysisBase::process(Long64_t ientry)

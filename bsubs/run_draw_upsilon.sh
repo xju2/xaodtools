@@ -11,4 +11,9 @@ which root
 which python
 script="/afs/cern.ch/user/x/xju/work/upsilon/code/MyXAODTools/scripts/draw_upsilon.py"
 #python /afs/cern.ch/user/x/xju/work/upsilon/run/data12_v3/new_upsilon.py  make $input_ $output_
-python $script make $input_ $output_
+
+new_input=`echo ${input_} | awk -F/ '{printf("%s/%s/%s",$9,$10,$11)}'`
+new_input=${GROUPEOSDIR}bphys/merged/$new_input
+echo "${new_input}"
+
+python $script make $new_input $output_

@@ -39,11 +39,6 @@ GammaJetAna::~GammaJetAna(){
         physics->Write();
         f_out->Close();
     }
-    if (cp_tools) delete cp_tools;
-    if (event_br) delete event_br;
-    if (muon_br) delete muon_br;
-    if (el_br) delete el_br;
-    if (jet_br) delete jet_br;
 }
 
 void GammaJetAna::CreateBranch()
@@ -62,7 +57,9 @@ void GammaJetAna::AttachBranchToTree()
     AnalysisBase::AttachBranchToTree();
 
     event_br->AttachBranchToTree(*physics);
-    jet_br->AttachBranchToTree(*physics);
+    jet_br  ->AttachBranchToTree(*physics);
+    ph_br   ->AttachBranchToTree(*physics);
+    el_br   ->AttachBranchToTree(*physics);
     physics->Branch("mass", &m_mass, "mass/F"); 
 }
 
@@ -89,6 +86,11 @@ int GammaJetAna::process(Long64_t ientry)
     xAOD::ShallowAuxContainer* el_copyaux = NULL;
     CHECK( m_objTool->GetElectrons(el_copy, el_copyaux, true) );
     if(m_debug) Info(APP_NAME, "Got Electrons");
+    // Fill baseline electrons
+    for(auto el_itr = el_copy->begin(); el_itr != el_copy->end(); ++el_itr){
+        if(! dec_baseline(**el_itr) ) continue;
+        el_br->Fill( **el_itr );
+    }
 
     // Get Jets
     xAOD::JetContainer* jets_copy = NULL;
@@ -106,6 +108,8 @@ int GammaJetAna::process(Long64_t ientry)
         if(photon->pt() > LEADING_PHOTON_CUT){
             leading_ph_id = ph_itr;
         }
+        // Save all good photons
+        ph_br->Fill(**ph_itr);
     }
     if(leading_ph_id == ph_copy->end()) return 2;
     if(m_debug) Info(APP_NAME, "Got leading photon");
@@ -114,6 +118,8 @@ int GammaJetAna::process(Long64_t ientry)
     auto leading_jet_id = jets_copy->end();
     for(auto jet_itr = jets_copy->begin(); jet_itr != jets_copy->end(); ++jet_itr){
         if(! dec_signal(**jet_itr)) continue;
+        // Save all good jets 
+        jet_br->Fill(**jet_itr);
 
         // check overlap
         bool overlap_w_ph = false;

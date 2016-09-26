@@ -265,11 +265,13 @@ int UpsilonAna::process(Long64_t ientry)
     for(auto mu_itr = muons_copy->begin(); mu_itr != muons_copy->end(); ++mu_itr)
     {
         imuon ++;
-        // if( (bool) dec_signal(**mu_itr) && (bool) dec_passOR(**mu_itr))
         if( (*mu_itr)->muonType() != xAOD::Muon::Combined && 
             (*mu_itr)->muonType() != xAOD::Muon::SegmentTagged ) continue;
 
         const xAOD::TrackParticle* id_track = MuonBranch::getTrack( (**mu_itr) );
+        if(id_track){
+            if(fabs(id_track->eta()) > 2.5) continue;
+        }
         float charge = (*mu_itr)->charge();
         bool consitent_charge = (id_track->charge() == charge);
         if(!consitent_charge) continue;

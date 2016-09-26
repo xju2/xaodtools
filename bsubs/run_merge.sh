@@ -10,4 +10,8 @@ cp ${dir_}/$file_ .
 out_name="merged_${file_}.root"
 hadd ${out_name} `cat ${file_}`
 
-scp ${out_name} $dir_/
+#scp ${out_name} $dir_/
+out_dir=`echo ${dir_} | awk -F/ '{printf("%s/%s",$9,$10)}'`
+echo "${GROUPEOSDIR}bphys/merged/$out_dir/${out_name}"
+
+xrdcp -f ${out_name} ${GROUPEOSDIR}bphys/merged/$out_dir/${out_name}

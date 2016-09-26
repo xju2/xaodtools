@@ -18,6 +18,7 @@
 #include "MyXAODTools/ElectronBranch.h"
 #include "MyXAODTools/MuonBranch.h"
 #include "MyXAODTools/JetBranch.h"
+#include "MyXAODTools/PhotonBranch.h"
 
 static SG::AuxElement::Decorator<char> dec_baseline("baseline");
 static SG::AuxElement::Decorator<char> dec_signal("signal");
@@ -69,6 +70,7 @@ protected:
     MuonBranch* muon_br;
     ElectronBranch* el_br;
     JetBranch* jet_br;
+    PhotonBranch* ph_br;
 
     // tools for CP recommendations
     CPToolsHelper* cp_tools;

@@ -19,6 +19,7 @@ def submit(exe, out_log_name):
     bad_jobs = 0
     good_jobs = 0
     input_dir = base_dir + "/split_and_merge/"
+    #input_dir = base_dir + "/split_and_merge_Jpsi/"
     input_all = glob.glob(input_dir+"x*")
 
     for input_name in input_all:
@@ -43,19 +44,48 @@ def submit_tree(exe, out_log_name):
     bad_jobs = 0
     good_jobs = 0
     input_dir = base_dir + "/split_and_merge/"
-    input_all = glob.glob(input_dir+"*root*")
+    input_all = glob.glob(input_dir+"x*")
 
     check_dir(base_dir+"/histograms/")
     for input_name in input_all:
-        out_name = base_dir+"/histograms/"+os.path.basename(input_name).replace(".root", "_hist.root")
-        run_cmd = exe + " " +input_dir+" "+out_name
+        input_basename = "merged_"+os.path.basename(input_name)+".root"
+        out_name = base_dir+"/histograms/"+os.path.basename(input_basename).replace(".root", "_hist.root")
+        input_name = os.path.dirname(input_name)+"/"+input_basename
+        run_cmd = exe + " " +input_name+" "+out_name
 
         bsubs_cmd = "bsub -q wisc  -R 'pool>4000' -C 0 -o " + \
                 base_dir+ "/"+ out_log_name+" "+run_cmd
 
-        print bsubs_cmd
+        #print bsubs_cmd
+        status,output=commands.getstatusoutput(bsubs_cmd)
+        status = 0
+        if status != 0:
+            bad_jobs += 1
+        else:
+            good_jobs += 1
 
-        #status,output=commands.getstatusoutput(bsubs_cmd)
+    print "Good jobs: "+ str(good_jobs)+", "+str(bad_jobs)+" failed!"
+
+def submit_daod(exe, out_log_name, directory):
+    print "executable:", exe
+    print "log file:", out_log_name
+    print "directory:", directory
+    bad_jobs = 0
+    good_jobs = 0
+
+    input_dir = base_dir + "/"+directory+"/"
+    input_all = glob.glob(input_dir+"x*")
+
+    check_dir(base_dir+"/"+directory)
+    for input_name in input_all:
+        out_name = input_dir+"mini_"+os.path.basename(input_name)+".root"
+        run_cmd = exe + " " +input_name+" "+out_name
+
+        bsubs_cmd = "bsub -q wisc  -R 'pool>4000' -C 0 -o " + \
+                base_dir+ "/"+ out_log_name+" "+run_cmd
+
+        #print bsubs_cmd
+        status,output=commands.getstatusoutput(bsubs_cmd)
         status = 0
         if status != 0:
             bad_jobs += 1
@@ -67,7 +97,7 @@ def submit_tree(exe, out_log_name):
 if __name__ == "__main__":
 
     if len(sys.argv) < 3:
-        print sys.argv[0]," merge_tree/make_aod/merge_aod/make_tree log_name"
+        print sys.argv[0]," merge_tree/make_aod/merge_aod/make_tree/read_DAOD log_name/directory"
         exit(1)
 
     option = sys.argv[1]
@@ -83,6 +113,12 @@ if __name__ == "__main__":
         exe = exe_base+"run_draw_upsilon.sh"
         submit_tree(exe, out_log_name)
         exit(0)
+    elif option == "make_tree":
+        exe = exe_base+"run_daod.sh"
+        if len(sys.argv) < 4:
+            print "add directory"
+            exit(1)
+        submit_daod(exe, out_log_name, directory)
     else:
         print option," not supported!"
         exit(2)
