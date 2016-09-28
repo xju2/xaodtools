@@ -6,8 +6,10 @@ ROOT.gROOT.SetBatch()
 import string
 import math
 from array import array
+from sets import Set
+import time
+from optparse import OptionParser
 
-import AtlasStyle
 if not hasattr(ROOT, "myText"):
     ROOT.gROOT.LoadMacro("/afs/cern.ch/user/x/xju/tool/AtlasUtils.C")
     ROOT.gROOT.LoadMacro("/afs/cern.ch/user/x/xju/tool/loader.c")
@@ -15,10 +17,9 @@ if not hasattr(ROOT, "myText"):
 if not hasattr(ROOT, "passMultiLepton"):
     ROOT.gROOT.LoadMacro("/afs/cern.ch/user/x/xju/work/upsilon/code/MyXAODTools/scripts/MultiLeptonDefs_new.cxx")
 
-m_debug = False
 m_good = True
 
-CHI2_DIMUON_CUT = 9E3
+CHI2_DIMUON_CUT = 3
 CHI2_DIELE_CUT = 8
 CHI2_4MUON_CUT = 50
 
@@ -47,6 +48,25 @@ class BLSana:
 
         # select upsilon first or quadruplet first
         self.upsilon_first = False
+
+        # do 13 TeV
+        self.do_13TeV = True
+
+        # do debug
+        self.m_debug = False
+
+        self.cut_flow = ROOT.TH1F("cut_flow", "cut flow", 100, 0.5, 100.5)
+        self.cut_flow_no3mu4 = ROOT.TH1F("cut_flow_no3mu4", "cut flow", 100, 0.5, 100.5)
+        self.cut_flow_with_3mu4 = ROOT.TH1F("cut_flow_with3mu4", "cut flow", 100, 0.5, 100.5)
+
+    def set_do13TeV(self, status):
+        self.do_13TeV = status
+
+    def set_uf(self, status):
+        self.upsilon_first = status
+
+    def set_debug(self, status):
+        self.m_debug = status
 
     def book_tree(self):
         self.out_tree = ROOT.TTree("bls", "bls")
@@ -195,12 +215,19 @@ class BLSana:
             return
 
         interested_event = [
-            (208662, 168839095),
-            (202712, 14264115),
-            (205071, 120286323),
-            (200863, 7700025),
-            (203602, 101453536), 
+            #(208662, 168839095),
+            #(202712, 14264115),
+            #(205071, 120286323),
+            #(200863, 7700025),
+            #(203602, 101453536), 
+            (298862, 254897812),
                            ]
+
+        start_time = time.time()
+        if hasattr(tree, "mu_z0_pv_sintheta"):
+            self.do_13TeV = False
+
+        print "do 13TeV:", self.do_13TeV
 
         for ientry in xrange(nentries):
             tree.GetEntry(ientry)
@@ -212,22 +239,30 @@ class BLSana:
                 run = tree.RunNumber
                 event = tree.EventNumber
 
-            if m_good and m_debug and (run, event) not in interested_event:
+            self.run[0] = run
+            self.event[0] = event
+
+            self.fillCutFlow(1)
+
+
+            if m_good and self.m_debug and (run, event) not in interested_event:
                 continue
 
-            if m_debug:
+            if self.m_debug:
                 print "process: ",run, event
+
+            if ientry%50000 == 0:
+                print "processed:", ientry,"with time: {:.2f} min".format((time.time()-start_time)/60.)
 
             if tree.n_muon < 2: # don't forget mu-mu-e-e
                 continue
 
-            self.run[0] = run
-            self.event[0] = event
             ##
             if self.upsilon_first and tree.n_muon < 4:
                 results = self.select_upsilon(tree)
             else:
-                results = self.select_quadruplet(tree)
+                #results = self.select_quadruplet(tree)
+                results = self.select_v04(tree)
 
             if results is None:
                 continue
@@ -315,7 +350,20 @@ class BLSana:
             self.m3_track_p[0] = tree.mu_track_pt[mu3_id]*ROOT.TMath.CosH(tree.mu_track_eta[mu3_id])
             self.m4_track_p[0] = tree.mu_track_pt[mu4_id]*ROOT.TMath.CosH(tree.mu_track_eta[mu4_id])
 
-            if abs(quad_type) == 0 and hasattr(tree, "mu_d0_pv_sig"):
+            if self.do_13TeV:
+                self.m1_trackD0PV[0] = tree.mu_d0[ tree.quad_id1[quad_id] ]
+                self.m2_trackD0PV[0] = tree.mu_d0[ tree.quad_id2[quad_id] ]
+                self.m3_trackD0PV[0] = tree.mu_d0[ tree.quad_id3[quad_id] ]
+                self.m4_trackD0PV[0] = tree.mu_d0[ tree.quad_id4[quad_id] ]
+                self.m1_trackD0SigPV[0] = tree.mu_d0_sig[ tree.quad_id1[quad_id] ]
+                self.m2_trackD0SigPV[0] = tree.mu_d0_sig[ tree.quad_id2[quad_id] ]
+                self.m3_trackD0SigPV[0] = tree.mu_d0_sig[ tree.quad_id3[quad_id] ]
+                self.m4_trackD0SigPV[0] = tree.mu_d0_sig[ tree.quad_id4[quad_id] ]
+                self.m1_trackZ0PV[0] = tree.mu_z0_sintheta[ tree.quad_id1[quad_id] ]
+                self.m2_trackZ0PV[0] = tree.mu_z0_sintheta[ tree.quad_id2[quad_id] ]
+                self.m3_trackZ0PV[0] = tree.mu_z0_sintheta[ tree.quad_id3[quad_id] ]
+                self.m4_trackZ0PV[0] = tree.mu_z0_sintheta[ tree.quad_id4[quad_id] ]
+            elif abs(quad_type) == 0 and hasattr(tree, "mu_d0_pv_sig"):
                 self.m1_trackD0PV[0] = tree.mu_d0_pv[ tree.quad_id1[quad_id] ]
                 self.m2_trackD0PV[0] = tree.mu_d0_pv[ tree.quad_id2[quad_id] ]
                 self.m3_trackD0PV[0] = tree.mu_d0_pv[ tree.quad_id3[quad_id] ]
@@ -347,7 +395,7 @@ class BLSana:
 
             # require to be muon-muon pair
             if hasattr(tree, "onia_type") and tree.onia_type[i] != 0:
-                if m_debug:
+                if self.m_debug:
                     print "failed onia type cut",tree.onia_type[i]
                 continue
 
@@ -370,15 +418,15 @@ class BLSana:
 
                 onia1_id = i
             else:
-                if m_debug:
+                if self.m_debug:
                     print "failed pT cuts"
 
         if not has_upsilon:
-            if m_debug:
+            if self.m_debug:
                 print "cannot find upsilon"
             return None
 
-        if m_debug:
+        if self.m_debug:
             print "Upsilon mass: ", mU, self.event[0], self.run[0]
 
         m34 = -1
@@ -458,11 +506,11 @@ class BLSana:
                         can_id[3] = id2
 
         if m34 < 0:
-            if m_debug:
+            if self.m_debug:
                 print "cannot second pair"
             return None
 
-        if m_debug:
+        if self.m_debug:
             print "muonID:"," ".join([str(x) for x in can_id])
 
         mass_id = -1
@@ -470,7 +518,7 @@ class BLSana:
         j = -1
         for i,x_chi2 in enumerate(tree.quad_chi2):
             if x_chi2 < 0:
-                if m_debug:
+                if self.m_debug:
                     print self.run[0],self.event[0],"Fit failed",x_chi2
                 continue
 
@@ -486,7 +534,7 @@ class BLSana:
                 continue
 
             if tree.quad_nCombined[i] < 3:
-                if m_debug:
+                if self.m_debug:
                     print "less than 3 combined muons"
                 continue
 
@@ -505,20 +553,20 @@ class BLSana:
             #pass_vertex = pvID1 == 0 and pvID1 == pvID2 and pvID3 == pvID2 and pvID4 == pvID3
 
             if not self.ignore_PV_cut and not pass_vertex:
-                if m_debug:
+                if self.m_debug:
                     print "not from same vertex",pvID1,pvID2,pvID3,pvID4
                 continue
 
             mass_id = j
             quad_mass = tree.quad_fitted_mass[mass_id]
-            if m_debug:
+            if self.m_debug:
                 print "mass-> ",quad_mass,mass_id
             quad_id = i
 
         if quad_id < 0:
             return None
 
-        if m_debug:
+        if self.m_debug:
             print "quadID:", quad_id, "mass:", quad_mass," massID:", mass_id,"quadType:",quad_type
 
         return (mU, m34, mass_id, onia1_id, onia2_id, quad_id, quad_type)
@@ -552,7 +600,7 @@ class BLSana:
 
 
             mass_onia1 = tree.onia_fitted_mass[id_onia1]
-            if m_debug:
+            if self.m_debug:
                 print "find a good onia"
 
             for id_onia2 in range(id_onia1+1, len(tree.onia_fitted_mass)):
@@ -574,7 +622,7 @@ class BLSana:
 
                 mass_onia2 = tree.onia_fitted_mass[id_onia2]
 
-                if m_debug:
+                if self.m_debug:
                     print "find a second onia"
 
                 # pT cut, either 44,33
@@ -585,12 +633,12 @@ class BLSana:
                 m34[1] = mu_pt3 > LEADING_MUON_PT and mu_pt4 > LEADING_MUON_PT
                 if not m12[1] and not m34[1]: continue
 
-                if m_debug:
+                if self.m_debug:
                     print "find onia pass 4 GeV cut"
 
                 # find the chi2 of the four muons
                 muon_cans = [mu_id1, mu_id2, mu_id3, mu_id4]
-                if m_debug:
+                if self.m_debug:
                     print "muonID:"," ".join([str(x) for x in muon_cans])
                 j = -1
                 for iquad, x_chi2 in enumerate(tree.quad_chi2):
@@ -601,7 +649,7 @@ class BLSana:
                     id2 = tree.quad_id2[iquad]
                     id3 = tree.quad_id3[iquad]
                     id4 = tree.quad_id4[iquad]
-                    if m_debug:
+                    if self.m_debug:
                         print id1,id2,id3,id4
                     if id1 not in muon_cans or\
                        id2 not in muon_cans or\
@@ -610,7 +658,7 @@ class BLSana:
                         continue
 
                     if tree.quad_nCombined[iquad] < 3:
-                        if m_debug:
+                        if self.m_debug:
                             print "less than 3 combined muons",tree.quad_nCombined[iquad]
                         continue
 
@@ -623,13 +671,13 @@ class BLSana:
                     self.x_nDummyPV[0] = len( filter(self.notZero, [pvID1, pvID2, pvID3, pvID4]) )
 
                     if not pass_vertex and not self.ignore_PV_cut:
-                        if m_debug:
+                        if self.m_debug:
                             print "not from same vertex",pvID1,pvID2,pvID3,pvID4
                         continue
 
                     # min chi2
                     #if tree.quad_chi2[iquad] > min_quad_chi2:
-                    #    if m_debug:
+                    #    if self.m_debug:
                     #        print "too large chi2"
                     #    continue
                     total_pT = mu_pt1+mu_pt2+mu_pt3+mu_pt4
@@ -645,7 +693,7 @@ class BLSana:
 
         # check if there's quadruplet
         if quad_id < 0:
-            if m_debug:
+            if self.m_debug:
                 print self.run[0],self.event[0],"no quadruplet"
             return None
 
@@ -657,9 +705,151 @@ class BLSana:
            (m34[1] and m34[0] > M12CUT_LOW and m34[0] < M12CUT_HI):
             return (m12[0], m34[0], mass_id, onia1_id, onia2_id, quad_id, quad_type)
         else:
-            if m_debug:
+            if self.m_debug:
                 print self.run[0],self.event[0],"no upsilon"
             return None
+
+    def select_v04(self, tree):
+        """
+        corresponding to Note v0.4, announced on Sep.27,2016
+        """
+        ##first select four good muons
+        good_cb_muons = []
+        good_st_muons = []
+        for i in range(len(tree.mu_track_pt)):
+            if not self.passMuonID(tree, i):
+                continue
+            if tree.mu_type[i] == 0:
+                good_cb_muons.append(i)
+            else:
+                good_st_muons.append(i)
+
+        if len(good_cb_muons) + len(good_st_muons) > 3:
+            self.fillCutFlow(2)
+
+        good_muons = []
+        if len(good_cb_muons) >= 4:
+            good_muons = good_cb_muons[0:4]
+        elif len(good_cb_muons) == 3 and len(good_st_muons) >= 1:
+            good_muons = good_cb_muons + [good_st_muons[0]]
+        else:
+            return None
+        self.fillCutFlow(3)
+
+        # find quadruplet pair
+        quad_id = -1
+        for i in range(len(tree.quad_id1)):
+            id1 = tree.quad_id1[i]
+            id2 = tree.quad_id2[i]
+            id3 = tree.quad_id3[i]
+            id4 = tree.quad_id4[i]
+            if id1 not in good_muons or\
+               id2 not in good_muons or\
+               id3 not in good_muons or\
+               id4 not in good_muons:
+                continue
+
+            quad_id = i
+            break
+
+        if quad_id < 0:
+            return None
+
+        m4l = tree.quad_fitted_mass[quad_id]
+        #if m4l > 50E3:
+        #    return None
+        #self.cut_flow.Fill(3)
+
+        # onia cuts
+        onia_pair_index = []
+        for i in range(len(tree.onia_fitted_mass)):
+            mu_id1 = tree.onia_id1[i]
+            mu_id2 = tree.onia_id2[i]
+            if mu_id1 not in good_muons or\
+               mu_id2 not in good_muons:
+                continue
+
+            if not self.passOniaCuts(tree, i):
+                continue
+            for j in range(i+1, len(tree.onia_fitted_mass)):
+                mu_id3 = tree.onia_id1[j]
+                mu_id4 = tree.onia_id2[j]
+                if mu_id3 not in good_muons or\
+                   mu_id4 not in good_muons:
+                    continue
+
+                if mu_id3 in [mu_id1, mu_id2] or\
+                   mu_id4 in [mu_id1, mu_id2]:
+                    continue
+
+                if not self.passOniaCuts(tree, j):
+                    continue
+
+                onia_pair_index.append( (i,j) )
+
+        if len(onia_pair_index) < 1:
+            return None
+        self.fillCutFlow(4)
+
+        if self.m_debug:
+            print "onia_pars: "
+            print onia_pair_index
+
+        # neutral charge
+        total_charge = 0
+        for i in good_muons:
+            total_charge += tree.mu_charge[i]
+
+        if total_charge != 0:
+            return None
+        self.fillCutFlow(5)
+
+        # if has upsilon
+        chi2_upsilon = 9E9
+        id_upsilon = [-1, -1, -1, -1, -1, -1]
+        for i,j in onia_pair_index:
+            mu_id1 = tree.onia_id1[i]
+            mu_id2 = tree.onia_id2[i]
+            mu_id3 = tree.onia_id1[j]
+            mu_id4 = tree.onia_id2[j]
+
+            if self.passUpsilon(tree, i):
+                id_upsilon[0] = i
+                id_upsilon[1] = mu_id1
+                id_upsilon[2] = mu_id2
+                id_upsilon[3] = j
+                id_upsilon[4] = mu_id3
+                id_upsilon[5] = mu_id4
+            elif self.passUpsilon(tree, j):
+                id_upsilon[0] = j
+                id_upsilon[1] = mu_id3
+                id_upsilon[2] = mu_id4
+                id_upsilon[3] = i
+                id_upsilon[4] = mu_id1
+                id_upsilon[5] = mu_id2
+            else:
+                pass
+
+        if id_upsilon[0] < 0:
+            return None
+        self.fillCutFlow(6)
+
+        # count number of combined muons
+        ncombined = 0
+        for i in good_muons:
+            if tree.mu_type[i] == 0:
+                ncombined += 1
+
+        if ncombined == 4:
+            self.fillCutFlow(7)
+
+        onia1_id = id_upsilon[0]
+        onia2_id = id_upsilon[3]
+        m12 = tree.onia_fitted_mass[onia1_id]
+        m34 = tree.onia_fitted_mass[onia2_id]
+        if self.m_debug:
+            print "mass: ", m12, m34, m4l
+        return (m12, m34, quad_id, onia1_id, onia2_id, quad_id, 0)
 
     def get_dis(self, x1, y1, z1, x2, y2, z2):
         return math.sqrt((x1-x2)**2 + (y1-y2)**2 + (z1-z2)**2)
@@ -670,6 +860,9 @@ class BLSana:
 
         # save output
         fout = ROOT.TFile.Open(out_name, "recreate")
+        self.cut_flow.Write()
+        self.cut_flow_with_3mu4.Write()
+        self.cut_flow_no3mu4.Write()
         self.h_upsilon.Write()
         self.h_m4l.Write()
         self.h_m4l_LHS.Write()
@@ -721,9 +914,20 @@ class BLSana:
         """
         mu_pt = tree.mu_track_pt[mu_id]
         res = mu_pt > SUBLEADING_MUON_PT
+        mu_eta = tree.mu_track_eta[mu_id]
+        res = res and abs(mu_eta) < 2.5
 
-        if hasattr(tree, "mu_d0_pv"):
-            pass
+        if self.do_13TeV:
+            d0_sig = tree.mu_d0_sig[mu_id]
+            z0_ = tree.mu_z0_sintheta[mu_id]
+        elif hasattr(tree, "mu_d0_pv_sig"):
+            d0_sig = tree.mu_d0_pv_sig[mu_id]
+            z0_ = tree.mu_z0_pv_sintheta[mu_id]
+        else:
+            return True
+
+        res = res and abs(d0_sig) < 6
+        res = res and z0_ < 1
 
         return res
 
@@ -731,15 +935,47 @@ class BLSana:
         """
             pass basic onia selections
         """
-        res = not (hasattr(tree, "onia_type") and tree.onia_type[onia_id]==1)
-        res = res and tree.onia_chi2[onia_id] > CHI2_DIMUON_CUT
+        #mu_id1 = tree.onia_id1[id_onia2]
+        #mu_id2 = tree.onia_id2[id_onia2]
+        #if tree.mu_charge[mu_id1] + tree.mu_charge[mu_id2] != 0:
+        #    return False
+        if hasattr(tree, "onia_type") and tree.onia_type[onia_id]==1:
+            return False
+
+        res = tree.onia_chi2[onia_id] < CHI2_DIMUON_CUT
         mass_onia = tree.onia_fitted_mass[onia_id]
         res = res and mass_onia > M34CUT_LOW and mass_onia < M34CUT_HI
         return res
 
+    def passUpsilon(self, tree, onia_id):
+        if not self.passOniaCuts(tree, onia_id):
+            return False
+
+        mu_id1 = tree.onia_id1[onia_id]
+        mu_id2 = tree.onia_id2[onia_id]
+        if tree.mu_charge[mu_id1] + tree.mu_charge[mu_id2] != 0:
+            return False
+
+        mu_pt1 = tree.mu_track_pt[mu_id1]
+        mu_pt2 = tree.mu_track_pt[mu_id2]
+        if mu_pt1 <= 4E3 or mu_pt2 <= 4E3:
+            return False
+
+        mass_onia = tree.onia_fitted_mass[onia_id]
+        if mass_onia > 9.2E3 and mass_onia < 9.7E3:
+            return True
+        else:
+            return False
+
     def notZero(self, x):
         return x!=0
 
+    def fillCutFlow(self, ncut):
+        self.cut_flow.Fill(ncut)
+        if self.run[0] >= 307619:
+            self.cut_flow_with_3mu4.Fill(ncut)
+        else:
+            self.cut_flow_no3mu4.Fill(ncut)
 
 def draw(file_name, post_fix):
     f1 = ROOT.TFile.Open(file_name)
@@ -857,27 +1093,46 @@ def compare_sideband(file_name, br_name="x_chi2"):
     canvas.SaveAs("cmp_"+br_name+".pdf")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 4:
-        print sys.argv[0], "make/draw/cmp file_index,file2 out_name"
-        exit(1)
+    usage = sys.argv[0]+" make/draw/cmp file_index,file2 out_name"
+    parser = OptionParser(usage=usage)
+    parser.add_option("--do8TeV", action="store_true", dest="do8TeV",help="Perform 8 TeV analysis",default=False)
+    parser.add_option("--uf", action="store_true", dest="uf",help="select upsilon first",default=False)
+    parser.add_option("-v", action="store_true", dest="verbose",help="debug mode",default=False)
+
+    (options, args) = parser.parse_args()
+    if len(args) < 3:
+        parser.print_help()
+        exit(0)
 
     base_name = "/afs/cern.ch/user/x/xju/work/upsilon/run/data12_v1/split_and_merge/merged_"
     #input_files = [base_name+x+".root" for x in string.ascii_lowercase]
-    option = sys.argv[1]
-    out_name = sys.argv[3]
-    print sys.argv[2]
+    option = args[0]
+    out_name = args[2]
+    print option
     print out_name
 
+    import AtlasStyle
+
     if option == "make":
-        input_name = sys.argv[2].split(',')
+        input_name = args[1].split(',')
         bls_ana = BLSana(out_name)
+        if options.do8TeV:
+            bls_ana.set_do13TeV(False)
+
+        if options.uf:
+            bls_ana.set_uf(True)
+
+        if options.verbose:
+            bls_ana.set_debug(True)
+
         bls_ana.book_hists()
         bls_ana.book_tree()
         bls_ana.fill_hists(input_name)
         bls_ana.save_hists()
+
     elif option == "draw":
-        input_name = sys.argv[2]
+        input_name = args[1]
         draw(input_name, out_name)
     else:
-        input_name = sys.argv[2]
+        input_name = args[1]
         compare_sideband(input_name, out_name)
