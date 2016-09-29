@@ -9,5 +9,6 @@ namespace MyXAODTools{
         TChain* loader(const char* inFile_name, const char* chain_name = "physics");
     }
     float delta_r(float eta1, float phi1, float eta2, float phi2);
+    void tokenizeString(const string& str, char delim, vector<string>& tokens);
 }
 #endif

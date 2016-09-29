@@ -30,7 +30,7 @@ M12CUT_LOW = 9.2E3
 M12CUT_HI = 9.7E3
 
 M34CUT_LOW = 2E3
-M34CUT_HI = 20E3
+M34CUT_HI = 50E3
 
 class BLSana:
     """
@@ -124,9 +124,6 @@ class BLSana:
         self.u1_chi2 = array('f', [0])
         self.u2_chi2 = array('f', [0])
 
-        self.run = array('i', [0])
-        self.event = array('i', [0])
-
 
         self.out_tree.Branch("m4l_fitted", self.m4l_fitted, "m4l_fitted/F")
         self.out_tree.Branch("m4l_track", self.m4l_track, "m4l_track/F")
@@ -181,8 +178,28 @@ class BLSana:
         self.out_tree.Branch("u1_chi2", self.u1_chi2, "u1_chi2/F")
         self.out_tree.Branch("u2_chi2", self.u2_chi2, "u2_chi2/F")
 
+        self.run = array('i', [0])
+        self.event = array('i', [0])
         self.out_tree.Branch("run", self.run, "run/I")
         self.out_tree.Branch("event", self.event, "event/I")
+
+        self.trig_3mu4 = array('i', [0])
+        self.out_tree.Branch("trig_3mu4", self.trig_3mu4, "trig_3mu4/I")
+
+    def book_upsilon(self):
+        self.tree_onia = ROOT.TTree("upsilon", "upsilon")
+
+        self.up_mass = ROOT.vector('float')()
+        self.up_chi2 = ROOT.vector('float')()
+
+        self.tree_onia.Branch("run", self.run, "run/I")
+        self.tree_onia.Branch("event", self.event, "event/I")
+        self.tree_onia.Branch("mass", self.up_mass)
+        self.tree_onia.Branch("chi2", self.up_chi2)
+
+    def clear_upsilon(self):
+        self.up_mass.clear()
+        self.up_chi2.clear()
 
     def book_hists(self):
         self.h_upsilon = ROOT.TH1F("h_upsilon", "upsilon mass;m_{#varUpsilon} [GeV];Events / 50 MeV", 400, 1, 21)
@@ -231,6 +248,7 @@ class BLSana:
 
         for ientry in xrange(nentries):
             tree.GetEntry(ientry)
+            self.clear_upsilon()
 
             if hasattr(tree, "Run"):
                 run = tree.Run
@@ -379,6 +397,8 @@ class BLSana:
 
             self.u1_chi2[0] = tree.onia_chi2[ onia1_id ]
             self.u2_chi2[0] = tree.onia_chi2[ onia2_id ]
+
+            self.trig_3mu4[0] = int(tree.trig_3mu4)
 
             self.out_tree.Fill()
 
@@ -736,6 +756,27 @@ class BLSana:
             return None
         self.fillCutFlow(3)
 
+        # Fill in tree onia
+        # after find at least 3-combined muons.
+        # require mass of netrual onia combinations [2-50] GeV and pT > 4 GeV,
+        # looking for upsilon candidates
+        NOMASSCUT = True
+        for i,onia_mass in enumerate(tree.onia_fitted_mass):
+            mu_id1 = tree.onia_id1[i]
+            mu_id2 = tree.onia_id2[i]
+            if mu_id1 not in good_muons or\
+               mu_id2 not in good_muons:
+                continue
+
+            if not self.passUpsilon(tree, i, NOMASSCUT):
+                continue
+
+            self.up_mass.push_back(onia_mass)
+            self.up_chi2.push_back(tree.onia_chi2[i])
+
+        self.tree_onia.Fill()
+        ################################
+
         # find quadruplet pair
         quad_id = -1
         for i in range(len(tree.quad_id1)):
@@ -876,6 +917,7 @@ class BLSana:
         self.h_chi_quad.Write()
 
         self.out_tree.Write()
+        self.tree_onia.Write()
         fout.Close()
 
     def passElectronID(self, tree, el_id):
@@ -947,9 +989,9 @@ class BLSana:
         res = res and mass_onia > M34CUT_LOW and mass_onia < M34CUT_HI
         return res
 
-    def passUpsilon(self, tree, onia_id):
-        if not self.passOniaCuts(tree, onia_id):
-            return False
+    def passUpsilon(self, tree, onia_id, noMass=False):
+        #if not self.passOniaCuts(tree, onia_id):
+        #    return False
 
         mu_id1 = tree.onia_id1[onia_id]
         mu_id2 = tree.onia_id2[onia_id]
@@ -962,7 +1004,7 @@ class BLSana:
             return False
 
         mass_onia = tree.onia_fitted_mass[onia_id]
-        if mass_onia > 9.2E3 and mass_onia < 9.7E3:
+        if noMass or (mass_onia > 9.2E3 and mass_onia < 9.7E3):
             return True
         else:
             return False
@@ -1127,6 +1169,7 @@ if __name__ == "__main__":
 
         bls_ana.book_hists()
         bls_ana.book_tree()
+        bls_ana.book_upsilon()
         bls_ana.fill_hists(input_name)
         bls_ana.save_hists()
 

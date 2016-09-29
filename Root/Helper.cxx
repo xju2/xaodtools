@@ -3,6 +3,8 @@
 #include <string>
 #include <fstream>
 #include <iostream>
+#include <sstream>
+#include <boost/algorithm/string.hpp>
 
 #include <TString.h>
 #include <TVector2.h>
@@ -37,4 +39,15 @@ float MyXAODTools::delta_r(float eta1, float phi1, float eta2, float phi2)
     double dphi = fabs(TVector2::Phi_mpi_pi( TVector2::Phi_mpi_pi(phi1) - TVector2::Phi_mpi_pi(phi2) ));
     double deta = eta1 - eta2;
     return sqrt(deta * deta + dphi * dphi);
+}
+
+void MyXAODTools::tokenizeString(const string& str, char delim, vector<string>& tokens)
+{
+    tokens.clear();
+    istringstream iss(str);
+    string token;
+    while ( getline(iss, token, delim) ){
+        boost::algorithm::trim(token);
+        tokens.push_back(token);
+    }
 }

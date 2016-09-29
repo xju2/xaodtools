@@ -58,7 +58,6 @@ def submit_tree(exe, out_log_name):
 
         #print bsubs_cmd
         status,output=commands.getstatusoutput(bsubs_cmd)
-        status = 0
         if status != 0:
             bad_jobs += 1
         else:
@@ -75,7 +74,7 @@ def submit_daod(exe, out_log_name, directory):
 
     input_dir = base_dir + "/"+directory+"/"
     input_all = glob.glob(input_dir+"x*")
-
+    print "total files:",len(input_all)
     check_dir(base_dir+"/"+directory)
     for input_name in input_all:
         out_name = input_dir+"mini_"+os.path.basename(input_name)+".root"
@@ -86,7 +85,6 @@ def submit_daod(exe, out_log_name, directory):
 
         #print bsubs_cmd
         status,output=commands.getstatusoutput(bsubs_cmd)
-        status = 0
         if status != 0:
             bad_jobs += 1
         else:
@@ -97,7 +95,7 @@ def submit_daod(exe, out_log_name, directory):
 if __name__ == "__main__":
 
     if len(sys.argv) < 3:
-        print sys.argv[0]," merge_tree/make_aod/merge_aod/make_tree/read_DAOD log_name/directory"
+        print sys.argv[0]," merge_tree/make_aod/merge_aod/make_tree/read_daod log_name/directory"
         exit(1)
 
     option = sys.argv[1]
@@ -113,12 +111,15 @@ if __name__ == "__main__":
         exe = exe_base+"run_draw_upsilon.sh"
         submit_tree(exe, out_log_name)
         exit(0)
-    elif option == "make_tree":
+    elif option == "read_daod":
         exe = exe_base+"run_daod.sh"
         if len(sys.argv) < 4:
             print "add directory"
             exit(1)
+
+        directory= sys.argv[3]
         submit_daod(exe, out_log_name, directory)
+        exit(0)
     else:
         print option," not supported!"
         exit(2)

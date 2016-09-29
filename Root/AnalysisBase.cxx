@@ -19,7 +19,7 @@ AnalysisBase::AnalysisBase(
     physics = new TTree(tree_name, tree_name);
 
     // initiate tools
-    cp_tools = new CPToolsHelper();
+    cp_tools = NULL;
     event_br = new EventInfoCreator();
     muon_br = new MuonBranch();
     el_br = new ElectronBranch();
@@ -83,7 +83,7 @@ void AnalysisBase::GetSUSYTool(const char* config)
 void AnalysisBase::AttachBranchToTree()
 {
     // Trigger Info
-    for(auto kv : trigger_map_){
+    for(auto& kv : trigger_map_){
         TString key(kv.first);
         TString br_name(kv.first);
         br_name.ReplaceAll("HLT", "trig");
@@ -112,10 +112,15 @@ void AnalysisBase::ClearBranch()
 
 int AnalysisBase::process(Long64_t ientry)
 {
-    if(m_debug) Info(APP_NAME, " AnalysisBase:processing");
     event->getEntry( ientry );
     CHECK( event->retrieve( ei, "EventInfo" ) );
+    //Hack...
+    if(ei->eventNumber() != 1773037184) return 1;
+
+    if(m_debug) Info(APP_NAME, " AnalysisBase:processing: %d %llu", (int) ei->runNumber(), ei->eventNumber());
+
     CHECK(m_objTool->ApplyPRWTool());
+
 
     for(auto& kv : trigger_map_)
     {
@@ -127,16 +132,25 @@ int AnalysisBase::process(Long64_t ientry)
             kv.second = false;
         }
         if(m_debug){
-            Info(APP_NAME, "%s trigger %d %d", kv.first.c_str(),
+            Info(APP_NAME, "%s trigger: %d %d", kv.first.c_str(),
                     (int) kv.second, (int) pass_trigger_);
         }
     }
 
     CHECK( event->retrieve(vertice, "PrimaryVertices") );
+
+    if(cp_tools == NULL){
+        cp_tools = new CPToolsHelper();
+    }
+
     if(! cp_tools->HasPrimaryVertex(*vertice, 1))
         return 1;
 
     pv = CPToolsHelper::GetPrimVtx( *vertice );
+
+    if(! cp_tools->PassGRL(*ei) ){
+        return 1;
+    }
     return 0;
 }
 

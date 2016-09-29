@@ -265,7 +265,7 @@ int UpsilonAna::process(Long64_t ientry)
     for(auto mu_itr = muons_copy->begin(); mu_itr != muons_copy->end(); ++mu_itr)
     {
         imuon ++;
-        if( (*mu_itr)->muonType() != xAOD::Muon::Combined && 
+        if( (*mu_itr)->muonType() != xAOD::Muon::Combined &&
             (*mu_itr)->muonType() != xAOD::Muon::SegmentTagged ) continue;
 
         const xAOD::TrackParticle* id_track = MuonBranch::getTrack( (**mu_itr) );
@@ -295,7 +295,9 @@ int UpsilonAna::process(Long64_t ientry)
             muon_br->ptvarcone30_->push_back( (*mu_itr)->auxdataConst<float>("ptvarcone30") );
         }
     }
-    if (n_pos >= 2 && n_neg >= 2){
+    //if (n_pos >= 2 && n_neg >= 2)
+    if (n_muon >= 4)
+    {
         this->buildTwoMuons( *good_muons );
         this->buildFourMuons( *good_muons );
         tree->Fill();
@@ -317,7 +319,7 @@ void UpsilonAna::buildTwoMuons(const MuonVect& muons)
         for(int j = i+1; j < (int) muons.size(); ++j) {
             const xAOD::Muon* muon2 = dynamic_cast<const xAOD::Muon*>( muons.at(j) );
             float mu_charge_2 = muon2->charge();
-            if( (mu_charge_1 + mu_charge_2 ) != 0) continue;
+            // if( (mu_charge_1 + mu_charge_2 ) != 0) continue;
 
             this->fillOniaInfo(*muon1, *muon2);
             m_onia_muon1id->push_back(i);
@@ -340,7 +342,7 @@ void UpsilonAna::buildFourMuons(const MuonVect& muons)
 
                 for(int l=k+1; l < (int) muons.size(); ++l){
                     const xAOD::Muon* muon4 = dynamic_cast<const xAOD::Muon*>( muons.at(l) );
-                    if( (muon1->charge() + muon2->charge() + muon3->charge() + muon4->charge()) != 0) continue;
+                    // if( (muon1->charge() + muon2->charge() + muon3->charge() + muon4->charge()) != 0) continue;
                     // so far we have four neutral tracks
 
                     // require at least three combined muons

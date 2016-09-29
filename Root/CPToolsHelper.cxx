@@ -55,6 +55,7 @@ bool CPToolsHelper::initialize(){
     CHECK(ele_medium_LLH_tool_->initialize());
 
     // Trigger
+    /**
     m_trigConfigTool_ = new TrigConf::xAODConfigTool("xAODConfigTool"); // gives us access to the meta-data
     CHECK( m_trigConfigTool_->initialize() );
     ToolHandle< TrigConf::ITrigConfigTool > trigConfigHandle( m_trigConfigTool_ );
@@ -63,6 +64,7 @@ bool CPToolsHelper::initialize(){
     m_trigDecisionTool_->setProperty( "TrigDecisionKey", "xTrigDecision" );
     CHECK( m_trigDecisionTool_->initialize() );
     Info( APP_NAME, "Trigger decision tool initialized..." );
+    **/
 
     return true;
 }
@@ -269,6 +271,7 @@ bool CPToolsHelper::SaveProcessedEvents(
 }
 ST::SUSYObjDef_xAOD* CPToolsHelper::GetSUSYTools(bool isData, const char* config_name)
 {
+    Info( APP_NAME, "Creating SUSY Tools initialized... " );
     // create SUSYTools and config it
     ST::SUSYObjDef_xAOD* objTool = new ST::SUSYObjDef_xAOD("SUSYObjDef_Upsilon");
     objTool->msg().setLevel(MSG::ERROR);   // MSG::VERBOSE

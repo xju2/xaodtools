@@ -66,20 +66,9 @@ int main( int argc, char* argv[] )
         cout << "analysisName: gammajet, upsilon" << endl;
         exit(1);
     }
+
     // The application's name:
     const char* APP_NAME = argv[ 1 ];
-    TString anaName(argv[1]);
-    anaName.ToLower();
-    // setup the analysis.
-    AnalysisBase* ana = NULL;
-    if(anaName == "gammajet") {
-        ana = new GammaJetAna();
-    } else if(anaName == "upsilon") {
-        ana = new UpsilonAna();
-    }else{
-        Error("cannot find algorithm: %s", anaName.Data());
-        return 1;
-    }
 
     // Initialise the application:
     CHECK( xAOD::Init( APP_NAME ) );
@@ -117,10 +106,20 @@ int main( int argc, char* argv[] )
     Info( APP_NAME, "Number of events in the chain: %i",
             static_cast< int >( event.getEntries() ) );
 
-    // StatusCode::enableFailure();
-    // CP::SystematicCode::enableFailure();
-    // CP::CorrectionCode::enableFailure();
     xAOD::TStore store;
+
+    TString anaName(argv[1]);
+    anaName.ToLower();
+    // setup the analysis.
+    AnalysisBase* ana = NULL;
+    if(anaName == "gammajet") {
+        ana = new GammaJetAna();
+    } else if(anaName == "upsilon") {
+        ana = new UpsilonAna();
+    }else{
+        Error("cannot find algorithm: %s", anaName.Data());
+        return 1;
+    }
 
     // Decide how many events to run over:
     Long64_t entries = event.getEntries();
@@ -146,10 +145,12 @@ int main( int argc, char* argv[] )
     if (isData) {
         cout <<"You are running data, congratuations" << endl;
     }
+    event.getEntry(0);
 
     ana->SetEvent(&event); // don't change the order with following commands
     ana->SaveProcessedInfo(total_evts_pro, sum_of_evt_w, sum_of_evt_w_sq);
     ana->GetSUSYTool();
+
     if(do_debug) ana->SetVerbose();
 
     for( Long64_t entry = 0; entry < entries; ++entry )
