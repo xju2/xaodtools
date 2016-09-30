@@ -191,15 +191,27 @@ class BLSana:
 
         self.up_mass = ROOT.vector('float')()
         self.up_chi2 = ROOT.vector('float')()
+        self.up_d0_1 = ROOT.vector('float')()
+        self.up_d0_2 = ROOT.vector('float')()
+        self.up_z0_1 = ROOT.vector('float')()
+        self.up_z0_2 = ROOT.vector('float')()
 
         self.tree_onia.Branch("run", self.run, "run/I")
         self.tree_onia.Branch("event", self.event, "event/I")
         self.tree_onia.Branch("mass", self.up_mass)
         self.tree_onia.Branch("chi2", self.up_chi2)
+        self.tree_onia.Branch("mu_d0_1", self.up_d0_1)
+        self.tree_onia.Branch("mu_d0_2", self.up_d0_2)
+        self.tree_onia.Branch("mu_z0_1", self.up_z0_1)
+        self.tree_onia.Branch("mu_z0_2", self.up_z0_2)
 
     def clear_upsilon(self):
         self.up_mass.clear()
         self.up_chi2.clear()
+        self.up_d0_1.clear()
+        self.up_d0_2.clear()
+        self.up_z0_1.clear()
+        self.up_z0_2.clear()
 
     def book_hists(self):
         self.h_upsilon = ROOT.TH1F("h_upsilon", "upsilon mass;m_{#varUpsilon} [GeV];Events / 50 MeV", 400, 1, 21)
@@ -773,6 +785,10 @@ class BLSana:
 
             self.up_mass.push_back(onia_mass)
             self.up_chi2.push_back(tree.onia_chi2[i])
+            self.up_d0_1.push_back(tree.mu_d0_sig[mu_id1])
+            self.up_d0_2.push_back(tree.mu_d0_sig[mu_id2])
+            self.up_z0_1.push_back(tree.mu_z0_sintheta[mu_id1])
+            self.up_z0_2.push_back(tree.mu_z0_sintheta[mu_id2])
 
         self.tree_onia.Fill()
         ################################
@@ -797,8 +813,8 @@ class BLSana:
             return None
 
         m4l = tree.quad_fitted_mass[quad_id]
-        #if m4l > 50E3:
-        #    return None
+        if m4l > 50E3 or m4l < 0:
+            return None
         #self.cut_flow.Fill(3)
 
         # onia cuts
@@ -890,6 +906,9 @@ class BLSana:
         m34 = tree.onia_fitted_mass[onia2_id]
         if self.m_debug:
             print "mass: ", m12, m34, m4l
+
+        if tree.trig_3mu4:
+            self.fillCutFlow(8)
         return (m12, m34, quad_id, onia1_id, onia2_id, quad_id, 0)
 
     def get_dis(self, x1, y1, z1, x2, y2, z2):
@@ -969,7 +988,7 @@ class BLSana:
             return True
 
         res = res and abs(d0_sig) < 6
-        res = res and z0_ < 1
+        res = res and abs(z0_) < 1
 
         return res
 
