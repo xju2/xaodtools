@@ -141,6 +141,9 @@ class MakeHists:
 
         h_chi2 = ROOT.TH1F("h_chi2", "chi2;Log10(#chi^{2});Events", 40, -2, 6)
         hists += self.make_hists(h_chi2, "TMath::Log10(chi2)>>h_chi2_")
+
+        h_chi2_linear = ROOT.TH1F("h_chi2_linear", "chi2;chi^{2};Events", 50, 0, 100)
+        hists += self.make_hists(h_chi2_linear, "chi2>>h_chi2_linear_")
         # save output
         self.out_name = out_name
         fout = ROOT.TFile.Open(out_name, "recreate")
@@ -153,13 +156,14 @@ class MakeHists:
             self.out_name = "hist_sideband.root"
 
         fin = ROOT.TFile.Open(self.out_name)
-        base_name = "h_chi2_"
+        base_name = "h_chi2_linear_"
         hists = {}
         for name,cut in self.bands.iteritems():
             hists[name] = fin.Get(base_name+name)
             print name,":",hists[name].Integral()
 
-        save_compare([cpt.norm_hist(x) for x in hists.values()], hists.keys(), "chi2_upsilon")
+        #save_compare([cpt.norm_hist(x) for x in hists.values()], hists.keys(), "chi2_upsilon")
+        save_compare(hists.values(), hists.keys(), "chi2_upsilon_linear", True)
         fin.Close()
 
 def get_chi2_slice(hist):
@@ -172,10 +176,12 @@ def get_chi2_slice(hist):
     h3 = hist.ProjectionY(hist.GetName()+"_s3", bin_100+1, xaxis.GetNbins())
     return [h1, h2, h3]
 
-def save_compare(hists, labels, out_name):
+def save_compare(hists, labels, out_name, is_log=False):
     if len(hists) != len(labels):
         return None
     canvas = ROOT.TCanvas("canvas", "canvas", 600, 600)
+    if is_log:
+        canvas.SetLogy()
     colors = [4, 2, 8]
     styles = [20, 24, 34]
 
@@ -188,7 +194,10 @@ def save_compare(hists, labels, out_name):
             max_y = hist.GetMaximum()
 
     h1 = hists[0]
-    h1.GetYaxis().SetRangeUser(0, max_y*1.1)
+    if is_log:
+        h1.GetYaxis().SetRangeUser(1E-3, max_y*100)
+    else:
+        h1.GetYaxis().SetRangeUser(0, max_y*1.1)
     h1.Draw("EP")
     for i in range(1, len(hists)):
         hists[i].Draw("same EP")
@@ -198,8 +207,12 @@ def save_compare(hists, labels, out_name):
         legend.AddEntry(hist, label, "EP")
 
     legend.Draw("same")
-    canvas.SaveAs(out_name+".pdf")
-    canvas.SaveAs(out_name+".eps")
+    if is_log:
+        canvas.SaveAs(out_name+"_log.pdf")
+        canvas.SaveAs(out_name+"_log.eps")
+    else:
+        canvas.SaveAs(out_name+".pdf")
+        canvas.SaveAs(out_name+".eps")
 
 def plot():
     fin = ROOT.TFile.Open("output_chi2.root")
@@ -236,8 +249,9 @@ def plot():
     fin.Close()
 
 def test():
-    hist_maker = MakeHists("all_v5.root", "upsilon")
-    #hist_maker.make_upsilon("hist_sideband.root")
+    #hist_maker = MakeHists("all_v5.root", "upsilon")
+    hist_maker = MakeHists("all_v5_withGRL.root", "upsilon")
+    hist_maker.make_upsilon("hist_sideband.root")
     hist_maker.compare_hists()
 
 if __name__ == "__main__":
