@@ -186,6 +186,9 @@ class BLSana:
         self.trig_3mu4 = array('i', [0])
         self.out_tree.Branch("trig_3mu4", self.trig_3mu4, "trig_3mu4/I")
 
+        self.charge = array('f', [0])
+        self.out_tree.Branch("charge", self.charge, "charge/F")
+
     def book_upsilon(self):
         self.tree_onia = ROOT.TTree("upsilon", "upsilon")
 
@@ -212,6 +215,21 @@ class BLSana:
         self.up_d0_2.clear()
         self.up_z0_1.clear()
         self.up_z0_2.clear()
+
+    def book_ss(self):
+        self.tree_ss = ROOT.TTree("ss", "ss")
+
+        self.ss_m4l = array('f', [0])
+        self.ss_m12 = array('f', [0])
+        self.ss_m34 = array('f', [0])
+        self.tree_ss.Branch("m4l", self.ss_m4l, "m4l/F")
+        self.tree_ss.Branch("m12", self.ss_m12, "m12/F")
+        self.tree_ss.Branch("m34", self.ss_m34, "m34/F")
+
+    def clear_ss(self):
+        self.ss_m4l.clear()
+        self.ss_m12.clear()
+        self.ss_m34.clear()
 
     def book_hists(self):
         self.h_upsilon = ROOT.TH1F("h_upsilon", "upsilon mass;m_{#varUpsilon} [GeV];Events / 50 MeV", 400, 1, 21)
@@ -272,7 +290,7 @@ class BLSana:
             self.run[0] = run
             self.event[0] = event
 
-            self.fillCutFlow(1)
+            self.fill_cut_flow(1)
 
 
             if m_good and self.m_debug and (run, event) not in interested_event:
@@ -411,6 +429,11 @@ class BLSana:
             self.u2_chi2[0] = tree.onia_chi2[ onia2_id ]
 
             self.trig_3mu4[0] = int(tree.trig_3mu4)
+            # get total charge
+            if quad_type == 0:
+                self.charge[0] = tree.mu_charge[mu1_id]+tree.mu_charge[mu2_id]+tree.mu_charge[mu3_id]+tree.mu_charge[mu4_id]
+            else:
+                self.charge[0] = tree.mu_charge[mu1_id]+tree.mu_charge[mu2_id]+tree.el_charge[mu3_id]+tree.el_charge[mu4_id]
 
             self.out_tree.Fill()
 
@@ -757,7 +780,7 @@ class BLSana:
                 good_st_muons.append(i)
 
         if len(good_cb_muons) + len(good_st_muons) > 3:
-            self.fillCutFlow(2)
+            self.fill_cut_flow(2)
 
         good_muons = []
         if len(good_cb_muons) >= 4:
@@ -766,32 +789,10 @@ class BLSana:
             good_muons = good_cb_muons + [good_st_muons[0]]
         else:
             return None
-        self.fillCutFlow(3)
+        self.fill_cut_flow(3)
 
-        # Fill in tree onia
-        # after find at least 3-combined muons.
-        # require mass of netrual onia combinations [2-50] GeV and pT > 4 GeV,
-        # looking for upsilon candidates
-        NOMASSCUT = True
-        for i,onia_mass in enumerate(tree.onia_fitted_mass):
-            mu_id1 = tree.onia_id1[i]
-            mu_id2 = tree.onia_id2[i]
-            if mu_id1 not in good_muons or\
-               mu_id2 not in good_muons:
-                continue
-
-            if not self.passUpsilon(tree, i, NOMASSCUT):
-                continue
-
-            self.up_mass.push_back(onia_mass)
-            self.up_chi2.push_back(tree.onia_chi2[i])
-            self.up_d0_1.push_back(tree.mu_d0_sig[mu_id1])
-            self.up_d0_2.push_back(tree.mu_d0_sig[mu_id2])
-            self.up_z0_1.push_back(tree.mu_z0_sintheta[mu_id1])
-            self.up_z0_2.push_back(tree.mu_z0_sintheta[mu_id2])
-
-        self.tree_onia.Fill()
-        ################################
+        # for chi2 studies
+        self.fill_onia(tree, good_muons)
 
         # find quadruplet pair
         quad_id = -1
@@ -818,35 +819,36 @@ class BLSana:
         #self.cut_flow.Fill(3)
 
         # onia cuts
-        onia_pair_index = []
-        for i in range(len(tree.onia_fitted_mass)):
-            mu_id1 = tree.onia_id1[i]
-            mu_id2 = tree.onia_id2[i]
-            if mu_id1 not in good_muons or\
-               mu_id2 not in good_muons:
-                continue
+        onia_pair_index = self.find_onia_pair(tree, good_muons, self.passOniaCuts)
+        #onia_pair_index = []
+        #for i in range(len(tree.onia_fitted_mass)):
+        #    mu_id1 = tree.onia_id1[i]
+        #    mu_id2 = tree.onia_id2[i]
+        #    if mu_id1 not in good_muons or\
+        #       mu_id2 not in good_muons:
+        #        continue
 
-            if not self.passOniaCuts(tree, i):
-                continue
-            for j in range(i+1, len(tree.onia_fitted_mass)):
-                mu_id3 = tree.onia_id1[j]
-                mu_id4 = tree.onia_id2[j]
-                if mu_id3 not in good_muons or\
-                   mu_id4 not in good_muons:
-                    continue
+        #    if not self.passOniaCuts(tree, i):
+        #        continue
+        #    for j in range(i+1, len(tree.onia_fitted_mass)):
+        #        mu_id3 = tree.onia_id1[j]
+        #        mu_id4 = tree.onia_id2[j]
+        #        if mu_id3 not in good_muons or\
+        #           mu_id4 not in good_muons:
+        #            continue
 
-                if mu_id3 in [mu_id1, mu_id2] or\
-                   mu_id4 in [mu_id1, mu_id2]:
-                    continue
+        #        if mu_id3 in [mu_id1, mu_id2] or\
+        #           mu_id4 in [mu_id1, mu_id2]:
+        #            continue
 
-                if not self.passOniaCuts(tree, j):
-                    continue
+        #        if not self.passOniaCuts(tree, j):
+        #            continue
 
-                onia_pair_index.append( (i,j) )
+        #        onia_pair_index.append( (i,j) )
 
         if len(onia_pair_index) < 1:
             return None
-        self.fillCutFlow(4)
+        self.fill_cut_flow(4)
 
         if self.m_debug:
             print "onia_pars: "
@@ -857,9 +859,11 @@ class BLSana:
         for i in good_muons:
             total_charge += tree.mu_charge[i]
 
-        if total_charge != 0:
+        charge_weight = 0
+        if abs(total_charge) != 2:
+            charge_weight = 10
             return None
-        self.fillCutFlow(5)
+        self.fill_cut_flow(5+charge_weight)
 
         # if has upsilon
         chi2_upsilon = 9E9
@@ -889,7 +893,7 @@ class BLSana:
 
         if id_upsilon[0] < 0:
             return None
-        self.fillCutFlow(6)
+        self.fill_cut_flow(6+charge_weight)
 
         # count number of combined muons
         ncombined = 0
@@ -898,7 +902,7 @@ class BLSana:
                 ncombined += 1
 
         if ncombined == 4:
-            self.fillCutFlow(7)
+            self.fill_cut_flow(7+charge_weight)
 
         onia1_id = id_upsilon[0]
         onia2_id = id_upsilon[3]
@@ -908,7 +912,7 @@ class BLSana:
             print "mass: ", m12, m34, m4l
 
         if tree.trig_3mu4:
-            self.fillCutFlow(8)
+            self.fill_cut_flow(8+charge_weight)
         return (m12, m34, quad_id, onia1_id, onia2_id, quad_id, 0)
 
     def get_dis(self, x1, y1, z1, x2, y2, z2):
@@ -1008,9 +1012,20 @@ class BLSana:
         res = res and mass_onia > M34CUT_LOW and mass_onia < M34CUT_HI
         return res
 
-    def passUpsilon(self, tree, onia_id, noMass=False):
+    def passUpsilon(self, tree, onia_id):
         #if not self.passOniaCuts(tree, onia_id):
         #    return False
+
+        if not self.is_neutral_onia(tree, onia_id):
+            return False
+
+        mass_onia = tree.onia_fitted_mass[onia_id]
+        return (mass_onia > 9.2E3 and mass_onia < 9.7E3)
+
+    def is_neutral_onia(self, tree, onia_id):
+        """
+        neutral onia, with muon pT > 4 GeV
+        """
 
         mu_id1 = tree.onia_id1[onia_id]
         mu_id2 = tree.onia_id2[onia_id]
@@ -1022,21 +1037,90 @@ class BLSana:
         if mu_pt1 <= 4E3 or mu_pt2 <= 4E3:
             return False
 
-        mass_onia = tree.onia_fitted_mass[onia_id]
-        if noMass or (mass_onia > 9.2E3 and mass_onia < 9.7E3):
-            return True
-        else:
-            return False
+        return True
 
     def notZero(self, x):
         return x!=0
 
-    def fillCutFlow(self, ncut):
+    def fill_cut_flow(self, ncut):
         self.cut_flow.Fill(ncut)
         if self.run[0] >= 307619:
             self.cut_flow_with_3mu4.Fill(ncut)
         else:
             self.cut_flow_no3mu4.Fill(ncut)
+
+    def fill_onia(self, tree, good_muons):
+        """
+         Fill in tree_onia, for chi2 performance studies
+        """
+        used_muons = []
+        for i in sorted(range(len(tree.onia_chi2)), key=lambda k:tree.onia_chi2[k]):
+            mu_id1 = tree.onia_id1[i]
+            mu_id2 = tree.onia_id2[i]
+            if mu_id1 not in good_muons or\
+               mu_id2 not in good_muons:
+                continue
+
+            if mu_id1 in used_muons or\
+               mu_id2 in used_muons:
+                continue
+
+            # charge
+            if tree.mu_charge[mu_id1] + tree.mu_charge[mu_id2] != 0:
+                continue
+            # pT
+            mu_pt1 = tree.mu_track_pt[mu_id1]
+            mu_pt2 = tree.mu_track_pt[mu_id2]
+            if mu_pt1 <= SUBLEADING_MUON_PT or mu_pt2 <= SUBLEADING_MUON_PT:
+                continue
+            # mass
+            mass_onia = tree.onia_fitted_mass[i]
+            if mass_onia < M34CUT_LOW or mass_onia > M34CUT_HI:
+                continue
+
+            used_muons.append(mu_id1)
+            used_muons.append(mu_id2)
+
+            self.up_mass.push_back(mass_onia/1E3)
+            self.up_chi2.push_back(tree.onia_chi2[i])
+            self.up_d0_1.push_back(tree.mu_d0_sig[mu_id1])
+            self.up_d0_2.push_back(tree.mu_d0_sig[mu_id2])
+            self.up_z0_1.push_back(tree.mu_z0_sintheta[mu_id1])
+            self.up_z0_2.push_back(tree.mu_z0_sintheta[mu_id2])
+
+        self.tree_onia.Fill()
+
+    def find_onia_pair(self, tree, good_muons, pass_cuts):
+        """
+        return the onia-pair index build from good_muons and pass cuts.
+        """
+        onia_pair_index = []
+        for i in range(len(tree.onia_fitted_mass)):
+            mu_id1 = tree.onia_id1[i]
+            mu_id2 = tree.onia_id2[i]
+            if mu_id1 not in good_muons or\
+               mu_id2 not in good_muons:
+                continue
+
+            if not pass_cuts(tree, i):
+                continue
+
+            for j in range(i+1, len(tree.onia_fitted_mass)):
+                mu_id3 = tree.onia_id1[j]
+                mu_id4 = tree.onia_id2[j]
+                if mu_id3 not in good_muons or\
+                   mu_id4 not in good_muons:
+                    continue
+
+                if mu_id3 in [mu_id1, mu_id2] or\
+                   mu_id4 in [mu_id1, mu_id2]:
+                    continue
+
+                if not pass_cuts(tree, j):
+                    continue
+
+                onia_pair_index.append( (i,j) )
+        return onia_pair_index
 
 def draw(file_name, post_fix):
     f1 = ROOT.TFile.Open(file_name)
