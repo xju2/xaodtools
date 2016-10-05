@@ -207,6 +207,7 @@ class BLSana:
         self.tree_onia.Branch("mu_d0_2", self.up_d0_2)
         self.tree_onia.Branch("mu_z0_1", self.up_z0_1)
         self.tree_onia.Branch("mu_z0_2", self.up_z0_2)
+        self.tree_onia.Branch("trig_3mu4", self.trig_3mu4, "trig_3mu4/I")
 
     def clear_upsilon(self):
         self.up_mass.clear()
@@ -305,6 +306,8 @@ class BLSana:
             if tree.n_muon < 2: # don't forget mu-mu-e-e
                 continue
 
+            # add trigger info
+            self.trig_3mu4[0] = int(tree.trig_3mu4)
             ##
             if self.upsilon_first and tree.n_muon < 4:
                 results = self.select_upsilon(tree)
@@ -428,7 +431,6 @@ class BLSana:
             self.u1_chi2[0] = tree.onia_chi2[ onia1_id ]
             self.u2_chi2[0] = tree.onia_chi2[ onia2_id ]
 
-            self.trig_3mu4[0] = int(tree.trig_3mu4)
             # get total charge
             if quad_type == 0:
                 self.charge[0] = tree.mu_charge[mu1_id]+tree.mu_charge[mu2_id]+tree.mu_charge[mu3_id]+tree.mu_charge[mu4_id]

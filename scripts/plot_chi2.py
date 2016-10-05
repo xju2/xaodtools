@@ -112,9 +112,9 @@ class MakeHists:
         self.f1 = ROOT.TFile.Open(file_name)
         self.tree = self.f1.Get(tree_name)
 
-        self.cut_left = ROOT.TCut("mass > 8.5E3 && mass < 9.0E3")
-        self.cut_mid = ROOT.TCut("mass > 9.2E3 && mass < 9.7E3")
-        self.cut_right = ROOT.TCut("mass > 11E3 && mass < 11.5E3")
+        self.cut_left = ROOT.TCut("mass > 8.5 && mass < 9.0")
+        self.cut_mid = ROOT.TCut("mass > 9.2 && mass < 9.7")
+        self.cut_right = ROOT.TCut("mass > 11 && mass < 11.5")
         self.bands = {
             "LHS":self.cut_left,
             "SR":self.cut_mid,
@@ -135,14 +135,14 @@ class MakeHists:
         # plot chi2 in upsilon side-band
 
         hists = []
-        h_chi2_mass = ROOT.TH2F("h_chi2_mass", "chi2 vs mass;Log10(#chi^{2});m_{onia} [GeV]", 40, -2, 6, 40, 8E3, 12E3)
+        h_chi2_mass = ROOT.TH2F("h_chi2_mass", "chi2 vs mass;Log10(#chi^{2});m_{onia} [GeV]", 40, -2, 6, 40, 8, 12)
         self.tree.Draw("mass:TMath::Log10(chi2)>>h_chi2_mass")
         hists.append(h_chi2_mass)
 
         h_chi2 = ROOT.TH1F("h_chi2", "chi2;Log10(#chi^{2});Events", 40, -2, 6)
         hists += self.make_hists(h_chi2, "TMath::Log10(chi2)>>h_chi2_")
 
-        h_chi2_linear = ROOT.TH1F("h_chi2_linear", "chi2;chi^{2};Events", 50, 0, 100)
+        h_chi2_linear = ROOT.TH1F("h_chi2_linear", "chi2;#chi^{2};Events", 10, 0, 10)
         hists += self.make_hists(h_chi2_linear, "chi2>>h_chi2_linear_")
         # save output
         self.out_name = out_name
@@ -163,6 +163,7 @@ class MakeHists:
             print name,":",hists[name].Integral()
 
         #save_compare([cpt.norm_hist(x) for x in hists.values()], hists.keys(), "chi2_upsilon")
+        save_compare(hists.values(), hists.keys(), "chi2_upsilon_linear", False)
         save_compare(hists.values(), hists.keys(), "chi2_upsilon_linear", True)
         fin.Close()
 
@@ -198,6 +199,7 @@ def save_compare(hists, labels, out_name, is_log=False):
         h1.GetYaxis().SetRangeUser(1E-3, max_y*100)
     else:
         h1.GetYaxis().SetRangeUser(0, max_y*1.1)
+
     h1.Draw("EP")
     for i in range(1, len(hists)):
         hists[i].Draw("same EP")
@@ -250,7 +252,8 @@ def plot():
 
 def test():
     #hist_maker = MakeHists("all_v5.root", "upsilon")
-    hist_maker = MakeHists("all_v5_withGRL.root", "upsilon")
+    #hist_maker = MakeHists("all_v5_withGRL.root", "upsilon") ##
+    hist_maker = MakeHists("all_v7_chi2Studies.root", "upsilon") ##
     hist_maker.make_upsilon("hist_sideband.root")
     hist_maker.compare_hists()
 
