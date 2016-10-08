@@ -36,9 +36,15 @@ class Fit2L:
     def build_model(self):
         mean = RooRealVar("mean", "mass of 1S", 9.46, 9.2, 9.7)
         sigma = RooRealVar("sigma", "sigma of gaussian", 0.14, 0.09, 0.3)
-        #mean = RooRealVar("mean", "mass of 1S", 9.46)
-        #sigma = RooRealVar("sigma", "sigma of gaussian", 0.14)
-        gaussian = ROOT.RooGaussian("gauss", "gauss", self.obs, mean, sigma)
+        #mean = RooRealVar("mean", "mass of 1S", 9.48617)
+        #sigma = RooRealVar("sigma", "sigma of gaussian", 0.16821)
+        #gaussian = ROOT.RooGaussian("gauss", "gauss", self.obs, mean, sigma)
+
+        ## try Crystal Ball
+        alpha = RooRealVar("alpha", "alpha of CB", 5.9, 0, 100)
+        cb_n = RooRealVar("cb_n", "n of CB",  55.4, 0, 100)
+        gaussian = ROOT.RooCBShape("gauss", "gauss", self.obs, mean, sigma, alpha, cb_n)
+
         n_sig = RooRealVar("n_sig", "number of signal" , 5000, 0, 100000)
         esig = ROOT.RooExtendPdf("esig", "esig", gaussian, n_sig)
 
@@ -59,11 +65,16 @@ class Fit2L:
         esig3 = ROOT.RooExtendPdf("esig3", "esig3", g3, n3)
 
         n_bkg = RooRealVar("n_bkg", "number of bkg" , 1000, 0, 100000)
-        p0 = RooRealVar("p0", "p0", -1E6, 1E6)
-        p1 = RooRealVar("p1", "p1", -1E6, 1E6)
-        p2 = RooRealVar("p2", "p2", -1E6, 1E6)
-        p3 = RooRealVar("p3", "p3", -1E6, 1E6)
-        p4 = RooRealVar("p4", "p4", -1E6, 1E6)
+        #p0 = RooRealVar("p0", "p0", -1E6, 1E6)
+        #p1 = RooRealVar("p1", "p1", -1E6, 1E6)
+        #p2 = RooRealVar("p2", "p2", -1E6, 1E6)
+        #p3 = RooRealVar("p3", "p3", -1E6, 1E6)
+        #p4 = RooRealVar("p4", "p4", -1E6, 1E6)
+        p0 = RooRealVar("p0", "p0", 8.25477e-02)
+        p1 = RooRealVar("p1", "p1", -3.95646e-02)
+        p2 = RooRealVar("p2", "p2", -3.60626e-02)
+        p3 = RooRealVar("p3", "p3", -1.35696e-02)
+        p4 = RooRealVar("p4", "p4", -1.46353e-02)
         bkg = ROOT.RooChebychev("bkg", "bkg", self.obs, RooArgList(p0, p1, p2, p3, p4))
         #bkg = ROOT.RooPolynomial("bkg", "bkg", self.obs, RooArgList(p0, p1, p2))
         ebkg = ROOT.RooExtendPdf("ebkg", "ebkg", bkg, n_bkg)
@@ -185,7 +196,7 @@ class Fit2L:
             ROOT.RooFit.Normalization(self.ws.obj("n_bkg").getVal(), ROOT.RooAbsReal.NumEvent)
         )
 
-        self.ws.obj("esig").plotOn(
+        self.ws.obj("gauss").plotOn(
             frame, ROOT.RooFit.LineColor(3),
             ROOT.RooFit.Normalization(self.ws.obj("n_sig").getVal(), ROOT.RooAbsReal.NumEvent)
         )
@@ -203,12 +214,14 @@ class Fit2L:
         #frame.SetMaximum(max_y*1.7)
         ## add legend
         y_start = 0.45
-        x_start = 0.55
+        x_start = 0.60
         ROOT.myText(x_start, y_start, 1, "In [9.2, 9.7] GeV")
-        ROOT.myText(x_start, y_start-0.05, 1, "with #chi^{2} > "+str(self.chi2_cut))
+        ROOT.myText(x_start, y_start-0.05, 1, "with #chi^{2} < "+str(self.chi2_cut))
         ROOT.myText(x_start, y_start-0.05*2, 1, "N(1S) = {:.1f}".format(nsig))
         ROOT.myText(x_start, y_start-0.05*3, 1, "N(bkg) = {:.1f}".format(nbkg))
         ROOT.myText(x_start, y_start-0.05*4, 1, "S/sqrt(B):{:.1f}".format(nsig/math.sqrt(nbkg)))
+        ROOT.myText(0.2, y_start, 1, "m = {:.2f} GeV".format(self.ws.var("mean").getVal()))
+        ROOT.myText(0.2, y_start-0.05, 1, "#sigma = {:.2f} GeV".format(self.ws.var("sigma").getVal()))
 
         canvas.SaveAs("fit_"+str(self.chi2_cut)+".pdf")
         self.ws.obj("s2").Print()
@@ -234,8 +247,8 @@ if __name__ == "__main__":
     #fit_4l.fit()
     #fit_4l.fit_signal_random()
 
-    cuts = [2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 10000]
-    #cuts = [3]
+    #cuts = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 8, 10, 10000]
+    cuts = [10000]
     for cut in cuts:
         fit_4l = Fit2L(file_name, br_name)
         fit_4l.chi2_cut = cut

@@ -251,6 +251,7 @@ class BLSana:
         self.h_chi_quad = ROOT.TH1F("h_chi2_quad",  ";Quad #chi^{2};", 900, 0, 9E6)
 
     def fill_hists(self, file_names):
+        print "debug:", self.m_debug
         tree = ROOT.TChain("physics", "physics")
         for file_ in file_names:
             print "adding.. ", file_
@@ -268,9 +269,11 @@ class BLSana:
             #(205071, 120286323),
             #(200863, 7700025),
             #(203602, 101453536), 
-            (298862, 254897812),
+            #(298862, 254897812),
+            #(297730, 52169344),
+            (297730, 323745457),
                            ]
-
+        imatched = 0
         start_time = time.time()
         if hasattr(tree, "mu_z0_pv_sintheta"):
             self.do_13TeV = False
@@ -294,8 +297,13 @@ class BLSana:
             self.fill_cut_flow(1)
 
 
+            if m_good and self.m_debug and imatched == len(interested_event):
+                break
             if m_good and self.m_debug and (run, event) not in interested_event:
                 continue
+
+            if m_good and self.m_debug:
+                imatched += 1
 
             if self.m_debug:
                 print "process: ",run, event
@@ -1055,10 +1063,19 @@ class BLSana:
         """
          Fill in tree_onia, for chi2 performance studies
         """
+        if self.m_debug:
+            print "in fill_onia"
+            print "good muons:"+",".join([str(x) for x in good_muons])
         used_muons = []
-        for i in sorted(range(len(tree.onia_chi2)), key=lambda k:tree.onia_chi2[k]):
+        for i in sorted(range(len(tree.onia_chi2)), key=lambda k:tree.onia_chi2[k], reverse=False):
+            mass_onia = tree.onia_fitted_mass[i]
+            if self.m_debug:
+                print "read: {:.0f} {:.2f} {:.2f}".format(i, tree.onia_chi2[i],mass_onia)
             mu_id1 = tree.onia_id1[i]
             mu_id2 = tree.onia_id2[i]
+            if self.m_debug:
+                print "muon id:",mu_id1, mu_id2
+
             if mu_id1 not in good_muons or\
                mu_id2 not in good_muons:
                 continue
@@ -1070,16 +1087,24 @@ class BLSana:
             # charge
             if tree.mu_charge[mu_id1] + tree.mu_charge[mu_id2] != 0:
                 continue
+            if self.m_debug:
+                print "passed charge"
             # pT
             mu_pt1 = tree.mu_track_pt[mu_id1]
             mu_pt2 = tree.mu_track_pt[mu_id2]
             if mu_pt1 <= SUBLEADING_MUON_PT or mu_pt2 <= SUBLEADING_MUON_PT:
                 continue
+            if self.m_debug:
+                print "passed pT"
             # mass
-            mass_onia = tree.onia_fitted_mass[i]
             if mass_onia < M34CUT_LOW or mass_onia > M34CUT_HI:
                 continue
 
+            if self.m_debug:
+                print "passed mass"
+
+            if self.m_debug:
+                print "onia: ", i, "accepted:", tree.onia_chi2[i]
             used_muons.append(mu_id1)
             used_muons.append(mu_id2)
 
