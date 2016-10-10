@@ -108,9 +108,13 @@ def make_ts():
 
 
 class MakeHists:
-    def __init__(self, file_name, tree_name):
-        self.f1 = ROOT.TFile.Open(file_name)
-        self.tree = self.f1.Get(tree_name)
+    def __init__(self, file_names, tree_name):
+        self.tree = ROOT.TChain(tree_name, tree_name)
+        if type(file_names) is list:
+            for file_name in file_names:
+                self.tree.Add(file_name)
+        else:
+            self.tree.Add(file_names)
 
         self.cut_left = ROOT.TCut("mass > 8.5 && mass < 9.0")
         self.cut_mid = ROOT.TCut("mass > 9.2 && mass < 9.7")
@@ -253,7 +257,8 @@ def plot():
 def test():
     #hist_maker = MakeHists("all_v5.root", "upsilon")
     #hist_maker = MakeHists("all_v5_withGRL.root", "upsilon") ##
-    hist_maker = MakeHists("all_v7_chi2Studies.root", "upsilon") ##
+    #hist_maker = MakeHists("all_v7_chi2Studies.root", "upsilon") ##
+    hist_maker = MakeHists(["all_v7_chi2StudiesAllOniaSaved.root","all_2015_v1.root"], "upsilon") ##
     hist_maker.make_upsilon("hist_sideband.root")
     hist_maker.compare_hists()
 

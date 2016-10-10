@@ -271,12 +271,13 @@ class BLSana:
             #(203602, 101453536), 
             #(298862, 254897812),
             #(297730, 52169344),
-            (297730, 323745457),
+            #(297730, 323745457),
+            (276329, 226156467)
                            ]
         imatched = 0
         start_time = time.time()
-        if hasattr(tree, "mu_z0_pv_sintheta"):
-            self.do_13TeV = False
+        #if hasattr(tree, "mu_z0_pv_sintheta"):
+        #    self.do_13TeV = False
 
         print "do 13TeV:", self.do_13TeV
 
@@ -784,6 +785,7 @@ class BLSana:
         for i in range(len(tree.mu_track_pt)):
             if not self.passMuonID(tree, i):
                 continue
+
             if tree.mu_type[i] == 0:
                 good_cb_muons.append(i)
             else:
@@ -870,9 +872,13 @@ class BLSana:
             total_charge += tree.mu_charge[i]
 
         charge_weight = 0
-        if abs(total_charge) != 2:
+        if abs(total_charge) == 2:
             charge_weight = 10
+        elif abs(total_charge) == 0:
+            charge_weight = 0
+        else:
             return None
+
         self.fill_cut_flow(5+charge_weight)
 
         # if has upsilon
@@ -1004,6 +1010,12 @@ class BLSana:
         res = res and abs(d0_sig) < 6
         res = res and abs(z0_) < 1
 
+        if self.m_debug:
+            print "d0: ", d0_sig
+            print "z0: ", z0_
+            print "passed: ", res
+
+
         return res
 
     def passOniaCuts(self, tree, onia_id):
@@ -1062,12 +1074,15 @@ class BLSana:
     def fill_onia(self, tree, good_muons):
         """
          Fill in tree_onia, for chi2 performance studies
+         Use all the onia that passed the criteria
         """
         if self.m_debug:
             print "in fill_onia"
             print "good muons:"+",".join([str(x) for x in good_muons])
         used_muons = []
-        for i in sorted(range(len(tree.onia_chi2)), key=lambda k:tree.onia_chi2[k], reverse=False):
+        #for i in sorted(range(len(tree.onia_chi2)), key=lambda k:tree.onia_chi2[k], reverse=False):
+
+        for i in range(len(tree.onia_chi2)):
             mass_onia = tree.onia_fitted_mass[i]
             if self.m_debug:
                 print "read: {:.0f} {:.2f} {:.2f}".format(i, tree.onia_chi2[i],mass_onia)
@@ -1078,10 +1093,6 @@ class BLSana:
 
             if mu_id1 not in good_muons or\
                mu_id2 not in good_muons:
-                continue
-
-            if mu_id1 in used_muons or\
-               mu_id2 in used_muons:
                 continue
 
             # charge
