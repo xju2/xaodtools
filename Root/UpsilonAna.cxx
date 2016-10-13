@@ -271,6 +271,7 @@ int UpsilonAna::process(Long64_t ientry)
         const xAOD::TrackParticle* id_track = MuonBranch::getTrack( (**mu_itr) );
         if(id_track){
             if(fabs(id_track->eta()) > 2.5) continue;
+            if(id_track->p4().Pt() < 3) continue;
         }
         float charge = (*mu_itr)->charge();
         bool consitent_charge = (id_track->charge() == charge);

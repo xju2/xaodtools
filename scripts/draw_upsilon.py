@@ -17,6 +17,9 @@ if not hasattr(ROOT, "myText"):
 if not hasattr(ROOT, "passMultiLepton"):
     ROOT.gROOT.LoadMacro("/afs/cern.ch/user/x/xju/work/upsilon/code/MyXAODTools/scripts/MultiLeptonDefs_new.cxx")
 
+interested_event = [
+    (307710, -1)
+]
 m_good = True
 
 CHI2_DIMUON_CUT = 3
@@ -58,6 +61,8 @@ class BLSana:
         self.cut_flow = ROOT.TH1F("cut_flow", "cut flow", 100, 0.5, 100.5)
         self.cut_flow_no3mu4 = ROOT.TH1F("cut_flow_no3mu4", "cut flow", 100, 0.5, 100.5)
         self.cut_flow_with_3mu4 = ROOT.TH1F("cut_flow_with3mu4", "cut flow", 100, 0.5, 100.5)
+
+        self.out_events = ""
 
     def set_do13TeV(self, status):
         self.do_13TeV = status
@@ -263,17 +268,6 @@ class BLSana:
             self.do_save = False
             return
 
-        interested_event = [
-            #(208662, 168839095),
-            #(202712, 14264115),
-            #(205071, 120286323),
-            #(200863, 7700025),
-            #(203602, 101453536), 
-            #(298862, 254897812),
-            #(297730, 52169344),
-            #(297730, 323745457),
-            (276329, 226156467)
-                           ]
         imatched = 0
         start_time = time.time()
         #if hasattr(tree, "mu_z0_pv_sintheta"):
@@ -303,6 +297,7 @@ class BLSana:
             if m_good and self.m_debug and (run, event) not in interested_event:
                 continue
 
+
             if m_good and self.m_debug:
                 imatched += 1
 
@@ -311,6 +306,9 @@ class BLSana:
 
             if ientry%50000 == 0:
                 print "processed:", ientry,"with time: {:.2f} min".format((time.time()-start_time)/60.)
+
+            if self.run[0] != 307710:
+                continue
 
             if tree.n_muon < 2: # don't forget mu-mu-e-e
                 continue
@@ -643,7 +641,8 @@ class BLSana:
         ##first select four good muons
         good_cb_muons = []
         good_st_muons = []
-        for i in range(len(tree.mu_track_pt)):
+        #for i in range(len(tree.mu_track_pt)):
+        for i in sorted(range(len(tree.mu_track_pt)), key=lambda k:tree.mu_track_pt[k], reverse=True):
             if not self.passMuonID(tree, i):
                 continue
 
@@ -696,6 +695,7 @@ class BLSana:
         if len(onia_pair_index) < 1:
             return None
         self.fill_cut_flow(4)
+        self.print_event(tree)
 
         if self.m_debug:
             print "onia_pars: "
@@ -796,6 +796,9 @@ class BLSana:
 
         self.out_tree.Write()
         self.tree_onia.Write()
+
+        with open("print_cutflow.txt", 'w') as f:
+            f.write(self.out_events)
         fout.Close()
 
     def passElectronID(self, tree, el_id):
@@ -998,6 +1001,9 @@ class BLSana:
 
                 onia_pair_index.append( (i,j) )
         return onia_pair_index
+
+    def print_event(self, tree):
+        self.out_events += "{:.0f} {:.0f} {:.2f}\n".format(self.run[0], self.event[0], tree.m4l_fitted)
 
 def draw(file_name, post_fix):
     f1 = ROOT.TFile.Open(file_name)
