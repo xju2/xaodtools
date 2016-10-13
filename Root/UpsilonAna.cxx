@@ -301,7 +301,6 @@ int UpsilonAna::process(Long64_t ientry)
     {
         this->buildTwoMuons( *good_muons );
         this->buildFourMuons( *good_muons );
-        tree->Fill();
         physics->Fill();
     }
     delete good_muons;

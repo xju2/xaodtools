@@ -269,6 +269,7 @@ bool CPToolsHelper::SaveProcessedEvents(
     tree.Fill();
     return is_data;
 }
+
 ST::SUSYObjDef_xAOD* CPToolsHelper::GetSUSYTools(bool isData, const char* config_name)
 {
     Info( APP_NAME, "Creating SUSY Tools initialized... " );

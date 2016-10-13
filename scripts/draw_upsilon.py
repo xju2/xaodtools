@@ -696,7 +696,6 @@ class BLSana:
         if len(onia_pair_index) < 1:
             return None
         self.fill_cut_flow(4)
-        self.print_event(tree)
 
         if self.m_debug:
             print "onia_pars: "
@@ -712,6 +711,7 @@ class BLSana:
             charge_weight = 10
         elif abs(total_charge) == 0:
             charge_weight = 0
+            self.print_event(tree)
         else:
             return None
 

@@ -174,7 +174,6 @@ int GammaJetAna::process(Long64_t ientry)
     // invariant mass of the leading jet and photon
     m_mass = ((*leading_ph_id)->p4() + (*leading_jet_id)->p4()).M();
 
-    tree->Fill();
     physics->Fill();
     return 0;
 }
