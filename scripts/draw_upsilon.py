@@ -297,9 +297,8 @@ class BLSana:
             if m_good and self.m_debug and (run, event) not in interested_event:
                 continue
 
-            if self.run[0] != 307710:
-                continue
-
+            #if self.run[0] != 307710:
+            #    continue
 
             if m_good and self.m_debug:
                 imatched += 1
@@ -766,7 +765,7 @@ class BLSana:
         if tree.trig_3mu4:
             self.fill_cut_flow(8+charge_weight)
 
-        if m4l > 50E3 or m4l < 0:
+        if m4l < 50E3 and m4l > 0:
             self.fill_cut_flow(9+charge_weight)
 
         return (m12, m34, quad_id, onia1_id, onia2_id, quad_id, 0)
