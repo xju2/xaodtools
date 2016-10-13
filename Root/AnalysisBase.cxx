@@ -6,6 +6,7 @@ AnalysisBase::AnalysisBase(
         const char* associate_tree_name)
 {
     m_debug = false;
+    m_withGRL = false;
     APP_NAME = NULL;
     trigger_map_.clear();
     event = NULL;
@@ -148,7 +149,7 @@ int AnalysisBase::process(Long64_t ientry)
 
     pv = CPToolsHelper::GetPrimVtx( *vertice );
 
-    if(! cp_tools->PassGRL(*ei) ){
+    if(m_withGRL && ! cp_tools->PassGRL(*ei) ){
         return 1;
     }
     return 0;
@@ -159,4 +160,7 @@ void AnalysisBase::SetVerbose(){
     if(m_objTool) {
         m_objTool->setProperty("DebugMode", m_debug).ignore();
     }
+}
+void AnalysisBase::setGRLTag(bool tag){
+    m_withGRL = tag;
 }

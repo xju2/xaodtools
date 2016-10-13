@@ -20,8 +20,12 @@ if [ -f ${dir_}/$file_ ]; then
     cp $jo .
     cp ${dir_}/$file_ .
 
-    file_name=`cat $file_`
-    echo "jp.AthenaCommonFlags.FilesInput = ['$file_name']" > input.py
+    file_name=""
+    for line in `cat $file_`
+    do
+        file_name="'$line',$file_name"
+    done
+    echo "jp.AthenaCommonFlags.FilesInput = [$file_name]" > input.py
     echo "my input: `cat input.py`"
 
     athena.py VFitZmmOnAOD_jobOptions_AutoConfig_template.py

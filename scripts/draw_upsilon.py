@@ -687,37 +687,11 @@ class BLSana:
             return None
 
         m4l = tree.quad_fitted_mass[quad_id]
-        if m4l > 50E3 or m4l < 0:
-            return None
-        #self.cut_flow.Fill(3)
+        #if m4l > 50E3 or m4l < 0:
+        #    return None
 
         # onia cuts
         onia_pair_index = self.find_onia_pair(tree, good_muons, self.passOniaCuts)
-        #onia_pair_index = []
-        #for i in range(len(tree.onia_fitted_mass)):
-        #    mu_id1 = tree.onia_id1[i]
-        #    mu_id2 = tree.onia_id2[i]
-        #    if mu_id1 not in good_muons or\
-        #       mu_id2 not in good_muons:
-        #        continue
-
-        #    if not self.passOniaCuts(tree, i):
-        #        continue
-        #    for j in range(i+1, len(tree.onia_fitted_mass)):
-        #        mu_id3 = tree.onia_id1[j]
-        #        mu_id4 = tree.onia_id2[j]
-        #        if mu_id3 not in good_muons or\
-        #           mu_id4 not in good_muons:
-        #            continue
-
-        #        if mu_id3 in [mu_id1, mu_id2] or\
-        #           mu_id4 in [mu_id1, mu_id2]:
-        #            continue
-
-        #        if not self.passOniaCuts(tree, j):
-        #            continue
-
-        #        onia_pair_index.append( (i,j) )
 
         if len(onia_pair_index) < 1:
             return None
@@ -790,6 +764,10 @@ class BLSana:
 
         if tree.trig_3mu4:
             self.fill_cut_flow(8+charge_weight)
+
+        if m4l > 50E3 or m4l < 0:
+            self.fill_cut_flow(9+charge_weight)
+
         return (m12, m34, quad_id, onia1_id, onia2_id, quad_id, 0)
 
     def get_dis(self, x1, y1, z1, x2, y2, z2):

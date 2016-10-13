@@ -156,7 +156,8 @@ void MuonBranch::Fill(const xAOD::Muon& muon,
     float d0_sig = -9999;
     if(m_track) {
         d0 = m_track->d0();
-        z0_sintheta = (m_track->z0() + m_track->vz() - primvertex_z) * TMath::Sin(muon.p4().Theta());
+        // z0_sintheta = (m_track->z0() + m_track->vz() - primvertex_z) * TMath::Sin(muon.p4().Theta());
+        z0_sintheta = (m_track->z0() + m_track->vz() - primvertex_z) * TMath::Sin(m_track->p4().Theta());
         d0_sig = xAOD::TrackingHelpers::d0significance(m_track, evtInfo->beamPosSigmaX(), evtInfo->beamPosSigmaY(), evtInfo->beamPosSigmaXY());
     }
     d0_->push_back(d0);
@@ -166,6 +167,8 @@ void MuonBranch::Fill(const xAOD::Muon& muon,
 
 const xAOD::TrackParticle* MuonBranch::getTrack(const xAOD::Muon& muon)
 {
+    // return tracks from inner detector
+/***
     const xAOD::TrackParticle* track = NULL;
     if (muon.muonType() == xAOD::Muon::SiliconAssociatedForwardMuon) {
         track = muon.trackParticle(xAOD::Muon::ExtrapolatedMuonSpectrometerTrackParticle);
@@ -173,6 +176,8 @@ const xAOD::TrackParticle* MuonBranch::getTrack(const xAOD::Muon& muon)
         track = muon.primaryTrackParticle();
     }
     return track;
+***/
+    return muon.trackParticle(xAOD::Muon::InnerDetectorTrackParticle);
 }
 
 int MuonBranch::matchPV(const xAOD::Muon& muon, const xAOD::VertexContainer& vertice)

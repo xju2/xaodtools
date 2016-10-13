@@ -48,7 +48,7 @@ def submit_tree(exe, out_log_name):
 
     check_dir(base_dir+"/histograms/")
     for input_name in input_all:
-        input_basename = "merged_"+os.path.basename(input_name)+".root"
+        input_basename = "mini_"+os.path.basename(input_name)+".root"
         out_name = base_dir+"/histograms/"+os.path.basename(input_basename).replace(".root", "_hist.root")
         input_name = os.path.dirname(input_name)+"/"+input_basename
         run_cmd = exe + " " +input_name+" "+out_name

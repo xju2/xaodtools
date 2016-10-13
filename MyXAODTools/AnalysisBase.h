@@ -51,10 +51,12 @@ public:
 
     virtual int process(Long64_t ientry);
     bool isPassGRL();
+    void setGRLTag(bool);
 
 protected:
     bool m_isData;
     bool m_debug;
+    bool m_withGRL;
     string  m_susy_config;
     const char* APP_NAME;
     map<string, bool> trigger_map_;
