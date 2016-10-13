@@ -62,7 +62,7 @@ int main( int argc, char* argv[] )
 
     if ((argc > 1 && string(argv[1]) == "help") ||(argc < 3))
     {
-        cout << argv[0] << " analysisName toberun.txt number_evts isData=1 debug=0" << endl;
+        cout << argv[0] << " analysisName toberun.txt number_evts isData=1 debug=0 noGRL=0" << endl;
         cout << "analysisName: gammajet, upsilon" << endl;
         exit(1);
     }
@@ -132,6 +132,7 @@ int main( int argc, char* argv[] )
 
     int isData = 0;
     bool do_debug = false;
+    bool no_grl = false;
 
     for (int i= 4 ; i<argc ; i++) {
         const char* key = strtok(argv[i],"=") ;
@@ -139,6 +140,7 @@ int main( int argc, char* argv[] )
         Info( APP_NAME,  "processing key %s  with value %s", key, val );
         if (strcmp(key,"isData")==0) isData = atoi(val);
         if (strcmp(key,"debug")==0) do_debug = (bool)atoi(val);
+        if (strcmp(key,"noGRL")==0) no_grl = (bool)atoi(val);
     }
 
     Info( APP_NAME, "Number of events to process: %i", static_cast<int>( entries ) );
@@ -150,6 +152,9 @@ int main( int argc, char* argv[] )
     ana->SetEvent(&event); // don't change the order with following commands
     ana->SaveProcessedInfo(total_evts_pro, sum_of_evt_w, sum_of_evt_w_sq);
     ana->GetSUSYTool();
+    if (no_grl){
+        ana->setGRLTag(false);
+    }
 
     if(do_debug) ana->SetVerbose();
 

@@ -297,6 +297,9 @@ class BLSana:
             if m_good and self.m_debug and (run, event) not in interested_event:
                 continue
 
+            if self.run[0] != 307710:
+                continue
+
 
             if m_good and self.m_debug:
                 imatched += 1
@@ -307,8 +310,6 @@ class BLSana:
             if ientry%50000 == 0:
                 print "processed:", ientry,"with time: {:.2f} min".format((time.time()-start_time)/60.)
 
-            if self.run[0] != 307710:
-                continue
 
             if tree.n_muon < 2: # don't forget mu-mu-e-e
                 continue
@@ -1003,7 +1004,7 @@ class BLSana:
         return onia_pair_index
 
     def print_event(self, tree):
-        self.out_events += "{:.0f} {:.0f} {:.2f}\n".format(self.run[0], self.event[0], tree.m4l_fitted)
+        self.out_events += "{:.0f} {:.0f}\n".format(self.run[0], self.event[0])
 
 def draw(file_name, post_fix):
     f1 = ROOT.TFile.Open(file_name)

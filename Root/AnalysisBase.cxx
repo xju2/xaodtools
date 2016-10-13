@@ -6,7 +6,7 @@ AnalysisBase::AnalysisBase(
         const char* associate_tree_name)
 {
     m_debug = false;
-    m_withGRL = false;
+    m_withGRL = true;
     APP_NAME = NULL;
     trigger_map_.clear();
     event = NULL;
