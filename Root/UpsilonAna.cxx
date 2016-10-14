@@ -3,6 +3,7 @@
 #include "MyXAODTools/UpsilonAna.h"
 #include "MyXAODTools/Helper.h"
 #include "CPAnalysisExamples/errorcheck.h"
+#include "xAODBase/IParticleHelpers.h"
 
 #include "xAODEgamma/ElectronContainer.h"
 #include "xAODEgamma/ElectronAuxContainer.h"
@@ -62,6 +63,7 @@ int UpsilonAna::initial_tools(){
     m_muonSelectionTool =  unique_ptr<CP::MuonSelectionTool>(new CP::MuonSelectionTool(toolName));
     m_muonSelectionTool->setProperty( "MaxEta", 2.7);
     m_muonSelectionTool->setProperty( "MuQuality", 3);
+    m_muonSelectionTool->setProperty( "TurnOffMomCorr", true);
     CHECK( m_muonSelectionTool->initialize().isSuccess() );
     return 0;
 }
@@ -271,11 +273,12 @@ int UpsilonAna::process(Long64_t ientry)
     std::pair<xAOD::MuonContainer*, xAOD::ShallowAuxContainer*> muonShadow = xAOD::shallowCopyContainer(*muons);
     muons_copy = muonShadow.first;
     muons_copyaux = muonShadow.second;
-    /**
-    if (! xAOD::setOriginalObjectLink(*muons, *copy) ) {
-        ATH_MSG_WARNING("Failed to set original object links on " << muonkey);
+    
+    if (! xAOD::setOriginalObjectLink(*muons, *muons_copy) ) {
+        //ATH_MSG_WARNING("Failed to set original object links on " << muonkey);
+        ;
     }
-    **/
+   
 
     // CHECK( m_objTool->GetMuons(muons_copy, muons_copyaux, true) );
     // sort(muons_copy->begin(), muons_copy->end(), descend_on_pt);
@@ -345,11 +348,11 @@ void UpsilonAna::buildTwoMuons(const MuonVect& muons)
 
     for(int i = 0; i < (int) muons.size(); i++) {
         const xAOD::Muon* muon1 = dynamic_cast<const xAOD::Muon*>( muons.at(i) );
-        float mu_charge_1 = muon1->charge();
+        // float mu_charge_1 = muon1->charge();
 
         for(int j = i+1; j < (int) muons.size(); ++j) {
             const xAOD::Muon* muon2 = dynamic_cast<const xAOD::Muon*>( muons.at(j) );
-            float mu_charge_2 = muon2->charge();
+            // float mu_charge_2 = muon2->charge();
             // if( (mu_charge_1 + mu_charge_2 ) != 0) continue;
 
             this->fillOniaInfo(*muon1, *muon2);
