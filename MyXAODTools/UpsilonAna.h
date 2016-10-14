@@ -3,9 +3,11 @@
 
 #include <vector>
 #include <string>
-#include <map>
+#include <memory>
 
 #include "MyXAODTools/AnalysisBase.h"
+#include "AsgTools/ToolHandle.h"
+#include "MuonSelectorTools/MuonSelectionTool.h"
 
 using namespace std;
 typedef vector<const xAOD::MuonContainer::base_value_type*> MuonVect;
@@ -22,6 +24,7 @@ public:
 
     int process(Long64_t ientry); // main program
 private:
+    int initial_tools();
     void buildTwoMuons(const MuonVect& muons);
     void buildFourMuons(const MuonVect& muons);
     void fillOniaInfo(const xAOD::Muon& muon1, const xAOD::Muon& muon2);
@@ -92,6 +95,7 @@ private:
    std::vector<float>* m_quad_fitted_eta;
    std::vector<float>* m_quad_fitted_phi;
 
+   unique_ptr<CP::MuonSelectionTool> m_muonSelectionTool;
 };
 
 #endif

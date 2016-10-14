@@ -48,10 +48,22 @@ UpsilonAna::UpsilonAna(): AnalysisBase()
     };
     CreateBranch();
     AttachBranchToTree();
+
+    initial_tools();
 }
 
 
 UpsilonAna::~UpsilonAna(){
+
+}
+
+int UpsilonAna::initial_tools(){
+    string toolName("veryLooseMuon_Upsilon");
+    m_muonSelectionTool =  unique_ptr<CP::MuonSelectionTool>(new CP::MuonSelectionTool(toolName));
+    m_muonSelectionTool->setProperty( "MaxEta", 2.7);
+    m_muonSelectionTool->setProperty( "MuQuality", 3);
+    CHECK( m_muonSelectionTool->initialize().isSuccess() );
+    return 0;
 }
 
 void UpsilonAna::CreateBranch()
@@ -239,7 +251,7 @@ int UpsilonAna::process(Long64_t ientry)
     }
     if(sc != 0) return sc;
     event_br->Fill(*ei);
-   
+
     m_bphy4_quad = NULL;
     m_bphy4_pair = NULL;
     // obtain the fitted BPHY4
@@ -251,16 +263,27 @@ int UpsilonAna::process(Long64_t ientry)
     }
 
     // get muons
+    const xAOD::MuonContainer* muons(0);
+    const string& muonkey = "Muons";
+    CHECK( event->retrieve(muons, muonkey) );
     xAOD::MuonContainer* muons_copy = NULL;
     xAOD::ShallowAuxContainer* muons_copyaux = NULL;
-    CHECK( m_objTool->GetMuons(muons_copy, muons_copyaux, true) );
-    sort(muons_copy->begin(), muons_copy->end(), descend_on_pt);
+    std::pair<xAOD::MuonContainer*, xAOD::ShallowAuxContainer*> muonShadow = xAOD::shallowCopyContainer(*muons);
+    muons_copy = muonShadow.first;
+    muons_copyaux = muonShadow.second;
+    /**
+    if (! xAOD::setOriginalObjectLink(*muons, *copy) ) {
+        ATH_MSG_WARNING("Failed to set original object links on " << muonkey);
+    }
+    **/
+
+    // CHECK( m_objTool->GetMuons(muons_copy, muons_copyaux, true) );
+    // sort(muons_copy->begin(), muons_copy->end(), descend_on_pt);
 
     int n_muon = 0;
     int imuon = -1;
     MuonVect* good_muons = new MuonVect();
-    int n_pos = 0;
-    int n_neg = 0;
+    int n_combined = 0;
 
     for(auto mu_itr = muons_copy->begin(); mu_itr != muons_copy->end(); ++mu_itr)
     {
@@ -268,10 +291,21 @@ int UpsilonAna::process(Long64_t ientry)
         if( (*mu_itr)->muonType() != xAOD::Muon::Combined &&
             (*mu_itr)->muonType() != xAOD::Muon::SegmentTagged ) continue;
 
+        if( (*mu_itr)->muonType() == xAOD::Muon::Combined ) n_combined ++;
+
         const xAOD::TrackParticle* id_track = MuonBranch::getTrack( (**mu_itr) );
         if(id_track){
             if(fabs(id_track->eta()) > 2.5) continue;
             if(id_track->p4().Pt() < 3) continue;
+        }
+
+        // only track quality cuts!
+        if (! m_muonSelectionTool->passedIDCuts(*id_track) )
+        {
+            if(m_debug){
+                cout << "Failed: passedIDCut" << endl;
+            }
+            continue;
         }
         float charge = (*mu_itr)->charge();
         bool consitent_charge = (id_track->charge() == charge);
@@ -280,8 +314,6 @@ int UpsilonAna::process(Long64_t ientry)
         if( (bool) dec_baseline(**mu_itr) ){
             good_muons->push_back( (*mu_itr) );
             n_muon ++;
-            if(charge < 0) n_neg ++;
-            else n_pos ++;
 
             muon_br->Fill(**mu_itr, ei, vertice);
             int muIndex = (*mu_itr)->auxdataConst<int>("BPHY4MuonIndex");
@@ -296,8 +328,7 @@ int UpsilonAna::process(Long64_t ientry)
             muon_br->ptvarcone30_->push_back( (*mu_itr)->auxdataConst<float>("ptvarcone30") );
         }
     }
-    //if (n_pos >= 2 && n_neg >= 2)
-    if (n_muon >= 4)
+    if (n_muon >= 4 && n_combined > 2)
     {
         this->buildTwoMuons( *good_muons );
         this->buildFourMuons( *good_muons );

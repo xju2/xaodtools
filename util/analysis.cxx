@@ -1,19 +1,7 @@
 // System include(s):
-#include <memory>
-#include <cstdlib>
-#include <iostream>
-#include <fstream>
-#include <vector>
-#include <map>
-#include <typeinfo>
-#include <math.h>
-
-// ROOT include(s):
-#include <TFile.h>
-#include <TError.h>
 #include <TString.h>
 #include <TChain.h>
-#include <TH1F.h>
+// #include <TH1F.h>
 
 // Infrastructure include(s):
 #ifdef ROOTCORE
@@ -26,34 +14,11 @@
 
 // EDM include(s):
 #include "xAODEventInfo/EventInfo.h"
-
-#include "xAODMuon/MuonContainer.h"
-#include "xAODEgamma/ElectronContainer.h"
-#include "xAODEgamma/ElectronAuxContainer.h"
-#include "xAODEgamma/PhotonContainer.h"
-#include "xAODJet/JetContainer.h"
-#include "xAODJet/JetAuxContainer.h"
-#include "xAODMissingET/MissingETContainer.h"
-#include "xAODMissingET/MissingETAuxContainer.h"
-#include "xAODTracking/VertexContainer.h"
-#include "xAODTracking/TrackParticleContainer.h"
-
-#include "xAODCore/ShallowCopy.h"
-
-// Local include(s):
 #include "CPAnalysisExamples/errorcheck.h"
-#include "SUSYTools/SUSYObjDef_xAOD.h"
-
-// Other includes
-// #include "PATInterfaces/SystematicList.h"
-#include "PATInterfaces/SystematicVariation.h"
-#include "PATInterfaces/SystematicRegistry.h"
-#include "PATInterfaces/SystematicCode.h"
 
 #include "MyXAODTools/GammaJetAna.h"
 #include "MyXAODTools/UpsilonAna.h"
 
-#include <TError.h>
 using namespace std;
 
 int main( int argc, char* argv[] )

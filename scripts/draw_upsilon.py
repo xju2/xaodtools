@@ -18,7 +18,7 @@ if not hasattr(ROOT, "passMultiLepton"):
     ROOT.gROOT.LoadMacro("/afs/cern.ch/user/x/xju/work/upsilon/code/MyXAODTools/scripts/MultiLeptonDefs_new.cxx")
 
 interested_event = [
-    (307710, -1)
+    (195847, 9013)
 ]
 m_good = True
 
@@ -314,8 +314,9 @@ class BLSana:
                 continue
 
             # add trigger info
-            self.trig_3mu4[0] = int(tree.trig_3mu4)
-            ##
+            if hasattr(tree, "trig_3mu4"):
+                self.trig_3mu4[0] = int(tree.trig_3mu4)
+
             if self.upsilon_first and tree.n_muon < 4:
                 results = self.select_upsilon(tree)
             else:
@@ -641,12 +642,15 @@ class BLSana:
         ##first select four good muons
         good_cb_muons = []
         good_st_muons = []
+        combined_type_cut = 0
+        if not self.do_13TeV:
+            combined_type_cut = 1
         #for i in range(len(tree.mu_track_pt)):
         for i in sorted(range(len(tree.mu_track_pt)), key=lambda k:tree.mu_track_pt[k], reverse=True):
             if not self.passMuonID(tree, i):
                 continue
 
-            if tree.mu_type[i] == 0:
+            if tree.mu_type[i] == combined_type_cut:
                 good_cb_muons.append(i)
             else:
                 good_st_muons.append(i)
@@ -686,8 +690,8 @@ class BLSana:
             return None
 
         m4l = tree.quad_fitted_mass[quad_id]
-        #if m4l > 50E3 or m4l < 0:
-        #    return None
+        if m4l > 50E3 or m4l < 0:
+            return None
 
         # onia cuts
         onia_pair_index = self.find_onia_pair(tree, good_muons, self.passOniaCuts)
@@ -762,7 +766,7 @@ class BLSana:
         if self.m_debug:
             print "mass: ", m12, m34, m4l
 
-        if tree.trig_3mu4:
+        if hasattr(tree, 'trig_3mu4') and tree.trig_3mu4:
             self.fill_cut_flow(8+charge_weight)
 
         if m4l < 50E3 and m4l > 0:
