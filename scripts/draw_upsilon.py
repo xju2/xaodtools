@@ -35,6 +35,36 @@ M12CUT_HI = 9.7E3
 M34CUT_LOW = 2E3
 M34CUT_HI = 50E3
 
+# author information
+author_cuts_reco = {
+    1 : "MuonBoy", # 0
+    2 : "STACO",   # 1
+    4 : "MuTag",   # 2
+    8 : "MuidSA",  # 3
+    16 : "MuidCo", # 4
+    32 : "MuGirl", # 5
+    64 : "MuGirlLowBeta", # 6
+    128 : "CaloMuonId",   # 7
+    256 : "CaloTag",      # 8
+    512 : "CaloLikelihood", # 9
+    1024 : "MuTagIMO",      # 10
+    2048 : "MuonCombinedRefit",  # 11
+    4096 : "ExtrapolateMuonToIP", # 12
+}
+MUON_AUTHORS = [
+    "unknown", # 0
+    "MuidCo",  # 1
+    "STACO",   # 2
+    "MuTag",   # 3
+    "MuTagIMO",# 4
+    "MuidSA",  # 5
+    "MuGirl",  # 6
+    "MuGirlLowBeta", # 7
+    "CaloTag",       # 8
+    "CaloLikelihood", # 9
+    "ExtrapolatMuonToIP", #10
+]
+
 class BLSana:
     """
     select 4muons
@@ -117,14 +147,21 @@ class BLSana:
         self.m2_trackD0PV = array('f', [0])
         self.m3_trackD0PV = array('f', [0])
         self.m4_trackD0PV = array('f', [0])
+
         self.m1_trackD0SigPV = array('f', [0])
         self.m2_trackD0SigPV = array('f', [0])
         self.m3_trackD0SigPV = array('f', [0])
         self.m4_trackD0SigPV = array('f', [0])
+
         self.m1_trackZ0PV = array('f', [0])
         self.m2_trackZ0PV = array('f', [0])
         self.m3_trackZ0PV = array('f', [0])
         self.m4_trackZ0PV = array('f', [0])
+
+        self.m1_type = array('i', [0])
+        self.m2_type = array('i', [0])
+        self.m3_type = array('i', [0])
+        self.m4_type = array('i', [0])
 
         self.u1_chi2 = array('f', [0])
         self.u2_chi2 = array('f', [0])
@@ -180,6 +217,21 @@ class BLSana:
         self.out_tree.Branch("m3_trackZ0PV", self.m3_trackZ0PV, "m3_trackZ0PV/F")
         self.out_tree.Branch("m4_trackZ0PV", self.m4_trackZ0PV, "m4_trackZ0PV/F")
 
+        self.out_tree.Branch("m1_type", self.m1_type, "m1_type/I")
+        self.out_tree.Branch("m2_type", self.m2_type, "m2_type/I")
+        self.out_tree.Branch("m3_type", self.m3_type, "m3_type/I")
+        self.out_tree.Branch("m4_type", self.m4_type, "m4_type/I")
+
+        # authors of each muon
+        self.m1_author = array('f', [0])
+        self.m2_author = array('f', [0])
+        self.m3_author = array('f', [0])
+        self.m4_author = array('f', [0])
+        self.out_tree.Branch("m1_author", self.m1_author, "m1_author/F")
+        self.out_tree.Branch("m2_author", self.m2_author, "m2_author/F")
+        self.out_tree.Branch("m3_author", self.m3_author, "m3_author/F")
+        self.out_tree.Branch("m4_author", self.m4_author, "m4_author/F")
+
         self.out_tree.Branch("u1_chi2", self.u1_chi2, "u1_chi2/F")
         self.out_tree.Branch("u2_chi2", self.u2_chi2, "u2_chi2/F")
 
@@ -193,6 +245,9 @@ class BLSana:
 
         self.charge = array('f', [0])
         self.out_tree.Branch("charge", self.charge, "charge/F")
+
+    def clear_tree(self):
+        pass
 
     def book_upsilon(self):
         self.tree_onia = ROOT.TTree("upsilon", "upsilon")
@@ -278,6 +333,7 @@ class BLSana:
         for ientry in xrange(nentries):
             tree.GetEntry(ientry)
             self.clear_upsilon()
+            self.clear_tree()
 
             if hasattr(tree, "Run"):
                 run = tree.Run
@@ -421,6 +477,7 @@ class BLSana:
                 self.m2_trackZ0PV[0] = tree.mu_z0_sintheta[ tree.quad_id2[quad_id] ]
                 self.m3_trackZ0PV[0] = tree.mu_z0_sintheta[ tree.quad_id3[quad_id] ]
                 self.m4_trackZ0PV[0] = tree.mu_z0_sintheta[ tree.quad_id4[quad_id] ]
+
             elif abs(quad_type) == 0 and hasattr(tree, "mu_d0_pv_sig"):
                 self.m1_trackD0PV[0] = tree.mu_d0_pv[ tree.quad_id1[quad_id] ]
                 self.m2_trackD0PV[0] = tree.mu_d0_pv[ tree.quad_id2[quad_id] ]
@@ -443,6 +500,27 @@ class BLSana:
                 self.charge[0] = tree.mu_charge[mu1_id]+tree.mu_charge[mu2_id]+tree.mu_charge[mu3_id]+tree.mu_charge[mu4_id]
             else:
                 self.charge[0] = tree.mu_charge[mu1_id]+tree.mu_charge[mu2_id]+tree.el_charge[mu3_id]+tree.el_charge[mu4_id]
+
+            # charge of muons
+            if abs(quad_type) == 0:
+                self.m1_type[0] = tree.mu_type[ mu1_id ]
+                self.m2_type[0] = tree.mu_type[ mu2_id ]
+                self.m3_type[0] = tree.mu_type[ mu3_id ]
+                self.m4_type[0] = tree.mu_type[ mu4_id ]
+
+                # add author information
+                self.m1_author[0] = tree.mu_author[mu1_id]
+                self.m2_author[0] = tree.mu_author[mu2_id]
+                self.m3_author[0] = tree.mu_author[mu3_id]
+                self.m4_author[0] = tree.mu_author[mu4_id]
+                #for author in self.is_author( tree.mu_author[mu1_id] ):
+                #    self.m1_author.push_back(author)
+                #for author in self.is_author( tree.mu_author[mu2_id] ):
+                #    self.m2_author.push_back(author)
+                #for author in self.is_author( tree.mu_author[mu3_id] ):
+                #    self.m3_author.push_back(author)
+                #for author in self.is_author( tree.mu_author[mu4_id] ):
+                #    self.m4_author.push_back(author)
 
             self.out_tree.Fill()
 
@@ -650,10 +728,13 @@ class BLSana:
             if not self.passMuonID(tree, i):
                 continue
 
-            if tree.mu_type[i] == combined_type_cut:
+            type_muon = self.get_muon_type(tree, i)
+            if type_muon == combined_type_cut:
                 good_cb_muons.append(i)
-            else:
+            elif type_muon == 2:
                 good_st_muons.append(i)
+            else:
+                continue
 
         if len(good_cb_muons) + len(good_st_muons) > 3:
             self.fill_cut_flow(2)
@@ -861,7 +942,6 @@ class BLSana:
             print "z0: ", z0_
             print "passed: ", res
 
-
         return res
 
     def passOniaCuts(self, tree, onia_id):
@@ -1008,6 +1088,37 @@ class BLSana:
 
     def print_event(self, tree):
         self.out_events += "{:.0f} {:.0f}\n".format(self.run[0], self.event[0])
+
+    @staticmethod
+    def is_author(author_val):
+        """ check the type of the author,
+        return a list of its authors."""
+        has_author = False
+        authors_list = []
+        for i,key in enumerate( sorted(author_cuts.keys()) ):
+            if author_val&key:
+                authors_list.append(i)
+                has_author = True
+
+        if has_author:
+            return authors_list
+        else:
+            return [-1]
+
+    def get_muon_type(self, tree, mu_id):
+        """
+        define muon type as the following:
+            ST muons: author = 4 or 6
+            Combined muons: 1 or 2
+        """
+        author = tree.mu_author[mu_id]
+        if author == 1 or author == 2:
+            return 0
+        elif author == 4 or author == 6:
+            return 2
+        else:
+            print "I don't know this author:", author
+
 
 def draw(file_name, post_fix):
     f1 = ROOT.TFile.Open(file_name)

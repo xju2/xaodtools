@@ -314,22 +314,21 @@ int UpsilonAna::process(Long64_t ientry)
         bool consitent_charge = (id_track->charge() == charge);
         if(!consitent_charge) continue;
 
-        if( (bool) dec_baseline(**mu_itr) ){
-            good_muons->push_back( (*mu_itr) );
-            n_muon ++;
+        n_muon ++;
 
-            muon_br->Fill(**mu_itr, ei, vertice);
-            int muIndex = (*mu_itr)->auxdataConst<int>("BPHY4MuonIndex");
+        good_muons->push_back( (*mu_itr) );
 
-            if(m_debug){
-                cout << "Type: " << (*mu_itr)->muonType() << endl;
-                cout << "Index: " << muIndex << endl;
-                cout << "pT: " << (*mu_itr)->p4().Pt()/1E3 << endl;
-            }
-            muon_br->eloss_->push_back( (*mu_itr)->auxdataConst<float>("EnergyLoss") );
-            muon_br->etcone30_->push_back( (*mu_itr)->auxdataConst<float>("etcone30") );
-            muon_br->ptvarcone30_->push_back( (*mu_itr)->auxdataConst<float>("ptvarcone30") );
+        muon_br->Fill(**mu_itr, ei, vertice);
+        int muIndex = (*mu_itr)->auxdataConst<int>("BPHY4MuonIndex");
+
+        if(m_debug){
+            cout << "Type: " << (*mu_itr)->muonType() << endl;
+            cout << "Index: " << muIndex << endl;
+            cout << "pT: " << (*mu_itr)->p4().Pt()/1E3 << endl;
         }
+        muon_br->eloss_->push_back( (*mu_itr)->auxdataConst<float>("EnergyLoss") );
+        muon_br->etcone30_->push_back( (*mu_itr)->auxdataConst<float>("etcone30") );
+        muon_br->ptvarcone30_->push_back( (*mu_itr)->auxdataConst<float>("ptvarcone30") );
     }
     if (n_muon >= 4 && n_combined > 2)
     {
@@ -407,7 +406,7 @@ void UpsilonAna::fillOniaInfo(const xAOD::Muon& muon1, const xAOD::Muon& muon2)
     MuonVect* muons = new MuonVect();
     muons->push_back( &muon1 );
     muons->push_back( &muon2 );
-    
+
     float onia_mass_fitted = -999;
     float onia_x = -999;
     float onia_y = -999;
@@ -446,7 +445,7 @@ void UpsilonAna::fillOniaInfo(const xAOD::Muon& muon1, const xAOD::Muon& muon2)
     m_onia_track_eta->push_back( track_tlv_total.Eta() );
     m_onia_track_phi->push_back( track_tlv_total.Phi() );
     m_onia_track_mass->push_back( track_tlv_total.M() );
-    
+
     delete muons;
 }
 
