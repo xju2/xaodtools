@@ -94,6 +94,9 @@ class BLSana:
 
         self.out_events = ""
 
+        # use new type
+        self.use_new_type = True
+
     def set_do13TeV(self, status):
         self.do_13TeV = status
 
@@ -102,6 +105,9 @@ class BLSana:
 
     def set_debug(self, status):
         self.m_debug = status
+
+    def set_newtype(self, new_type):
+        self.use_new_type = new_type
 
     def book_tree(self):
         self.out_tree = ROOT.TTree("bls", "bls")
@@ -269,6 +275,9 @@ class BLSana:
         self.tree_onia.Branch("mu_z0_2", self.up_z0_2)
         self.tree_onia.Branch("trig_3mu4", self.trig_3mu4, "trig_3mu4/I")
 
+        self.up_pass_dionia = array('i', [0])
+        self.tree_onia.Branch("pass_diOnia", self.up_pass_dionia, "pass_diOnia/I")
+
     def clear_upsilon(self):
         self.up_mass.clear()
         self.up_chi2.clear()
@@ -276,6 +285,7 @@ class BLSana:
         self.up_d0_2.clear()
         self.up_z0_1.clear()
         self.up_z0_2.clear()
+        self.up_pass_dionia[0] = 0
 
     def book_ss(self):
         self.tree_ss = ROOT.TTree("ss", "ss")
@@ -503,10 +513,16 @@ class BLSana:
 
             # charge of muons
             if abs(quad_type) == 0:
-                self.m1_type[0] = tree.mu_type[ mu1_id ]
-                self.m2_type[0] = tree.mu_type[ mu2_id ]
-                self.m3_type[0] = tree.mu_type[ mu3_id ]
-                self.m4_type[0] = tree.mu_type[ mu4_id ]
+                if self.use_new_type:
+                    self.m1_type[0] = self.get_muon_type(tree, mu1_id)
+                    self.m2_type[0] = self.get_muon_type(tree, mu2_id)
+                    self.m3_type[0] = self.get_muon_type(tree, mu3_id)
+                    self.m4_type[0] = self.get_muon_type(tree, mu4_id)
+                else:
+                    self.m1_type[0] = tree.mu_type[ mu1_id ]
+                    self.m2_type[0] = tree.mu_type[ mu2_id ]
+                    self.m3_type[0] = tree.mu_type[ mu3_id ]
+                    self.m4_type[0] = tree.mu_type[ mu4_id ]
 
                 # add author information
                 self.m1_author[0] = tree.mu_author[mu1_id]
@@ -723,12 +739,16 @@ class BLSana:
         combined_type_cut = 0
         if not self.do_13TeV:
             combined_type_cut = 1
-        #for i in range(len(tree.mu_track_pt)):
+
         for i in sorted(range(len(tree.mu_track_pt)), key=lambda k:tree.mu_track_pt[k], reverse=True):
             if not self.passMuonID(tree, i):
                 continue
 
-            type_muon = self.get_muon_type(tree, i)
+            if self.use_new_type:
+                type_muon = self.get_muon_type(tree, i)
+            else:
+                type_muon = tree.mu_type[i]
+
             if type_muon == combined_type_cut:
                 good_cb_muons.append(i)
             elif type_muon == 2:
@@ -767,28 +787,29 @@ class BLSana:
             quad_id = i
             break
 
-        if quad_id < 0:
-            return None
+        pass_dionia = False
+        if quad_id >= 0:
+            m4l = tree.quad_fitted_mass[quad_id]
+            if m4l < 50E3 and m4l > 0:
+                # onia cuts
+                onia_pair_index = self.find_onia_pair(tree, good_muons, self.passOniaCuts)
+                if len(onia_pair_index) < 1:
+                    pass_dionia = True
 
-        m4l = tree.quad_fitted_mass[quad_id]
-        if m4l > 50E3 or m4l < 0:
-            return None
+        # neutral charge
+        total_charge = 0
+        for i in good_muons:
+            total_charge += tree.mu_charge[i]
 
-        # onia cuts
-        onia_pair_index = self.find_onia_pair(tree, good_muons, self.passOniaCuts)
-
-        if len(onia_pair_index) < 1:
+        self.up_pass_dionia[0] = int(pass_dionia and total_charge == 0)
+        self.tree_onia.Fill()
+        if not pass_dionia:
             return None
         self.fill_cut_flow(4)
 
         if self.m_debug:
             print "onia_pars: "
             print onia_pair_index
-
-        # neutral charge
-        total_charge = 0
-        for i in good_muons:
-            total_charge += tree.mu_charge[i]
 
         charge_weight = 0
         if abs(total_charge) == 2:
@@ -834,7 +855,12 @@ class BLSana:
         # count number of combined muons
         ncombined = 0
         for i in good_muons:
-            if tree.mu_type[i] == 0:
+            if self.use_new_type:
+                type_muon = self.get_muon_type(tree, i)
+            else:
+                type_muon = tree.mu_type[i]
+
+            if type_muon == 0:
                 ncombined += 1
 
         if ncombined == 4:
@@ -1052,7 +1078,7 @@ class BLSana:
             self.up_z0_1.push_back(tree.mu_z0_sintheta[mu_id1])
             self.up_z0_2.push_back(tree.mu_z0_sintheta[mu_id2])
 
-        self.tree_onia.Fill()
+        #self.tree_onia.Fill()
 
     def find_onia_pair(self, tree, good_muons, pass_cuts):
         """
@@ -1241,6 +1267,7 @@ if __name__ == "__main__":
     parser.add_option("--do8TeV", action="store_true", dest="do8TeV",help="Perform 8 TeV analysis",default=False)
     parser.add_option("--uf", action="store_true", dest="uf",help="select upsilon first",default=False)
     parser.add_option("-v", action="store_true", dest="verbose",help="debug mode",default=False)
+    parser.add_option("--oldMuonType", action="store_true", dest="oldMuonType", help="make: use old defition of muon type", default=False)
 
     (options, args) = parser.parse_args()
     if len(args) < 3:
@@ -1267,6 +1294,9 @@ if __name__ == "__main__":
 
         if options.verbose:
             bls_ana.set_debug(True)
+
+        if options.oldMuonType:
+            bls_ana.set_newtype(False)
 
         bls_ana.book_hists()
         bls_ana.book_tree()
