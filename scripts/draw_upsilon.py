@@ -259,6 +259,7 @@ class BLSana:
         self.tree_onia = ROOT.TTree("upsilon", "upsilon")
 
         self.up_mass = ROOT.vector('float')()
+        self.up_pt = ROOT.vector('float')()
         self.up_chi2 = ROOT.vector('float')()
         self.up_d0_1 = ROOT.vector('float')()
         self.up_d0_2 = ROOT.vector('float')()
@@ -268,6 +269,7 @@ class BLSana:
         self.tree_onia.Branch("run", self.run, "run/I")
         self.tree_onia.Branch("event", self.event, "event/I")
         self.tree_onia.Branch("mass", self.up_mass)
+        self.tree_onia.Branch("pt", self.up_pt)
         self.tree_onia.Branch("chi2", self.up_chi2)
         self.tree_onia.Branch("mu_d0_1", self.up_d0_1)
         self.tree_onia.Branch("mu_d0_2", self.up_d0_2)
@@ -280,6 +282,7 @@ class BLSana:
 
     def clear_upsilon(self):
         self.up_mass.clear()
+        self.up_pt.clear()
         self.up_chi2.clear()
         self.up_d0_1.clear()
         self.up_d0_2.clear()
@@ -793,7 +796,7 @@ class BLSana:
             if m4l < 50E3 and m4l > 0:
                 # onia cuts
                 onia_pair_index = self.find_onia_pair(tree, good_muons, self.passOniaCuts)
-                if len(onia_pair_index) < 1:
+                if len(onia_pair_index) > 0:
                     pass_dionia = True
 
         # neutral charge
@@ -954,9 +957,9 @@ class BLSana:
         if self.do_13TeV:
             d0_sig = tree.mu_d0_sig[mu_id]
             z0_ = tree.mu_z0_sintheta[mu_id]
-        elif hasattr(tree, "mu_d0_pv_sig"):
-            d0_sig = tree.mu_d0_pv_sig[mu_id]
-            z0_ = tree.mu_z0_pv_sintheta[mu_id]
+        #elif hasattr(tree, "mu_d0_pv_sig"):
+        #    d0_sig = tree.mu_d0_pv_sig[mu_id]
+        #    z0_ = tree.mu_z0_pv_sintheta[mu_id]
         else:
             return True
 
@@ -1072,6 +1075,7 @@ class BLSana:
             used_muons.append(mu_id2)
 
             self.up_mass.push_back(mass_onia/1E3)
+            self.up_pt.push_back(tree.onia_track_pt[i]/1E3)
             self.up_chi2.push_back(tree.onia_chi2[i])
             self.up_d0_1.push_back(tree.mu_d0_sig[mu_id1])
             self.up_d0_2.push_back(tree.mu_d0_sig[mu_id2])

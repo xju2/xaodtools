@@ -10,17 +10,15 @@ from array import array
 
 import sys
 import math
+from optparse import OptionParser
 
 import AtlasStyle
 if not hasattr(ROOT, "my,Text"):
     ROOT.gROOT.LoadMacro("/afs/cern.ch/user/x/xju/tool/AtlasUtils.C")
     ROOT.gROOT.LoadMacro("/afs/cern.ch/user/x/xju/tool/loader.c")
 
-
 ROOT.gROOT.SetBatch()
-
 class Fit2L:
-
     def __init__(self, file_name, br_name="mass"):
         self.file_name = file_name
         self.br_name = br_name
@@ -33,11 +31,49 @@ class Fit2L:
         self.dummy_hists = []
         self.chi2_cut = 10000
 
+        # dionia selection or onia selection
+        self.dionia_selection = False
+        # different onia_pt cuts, 0:noCut, 1:<10, 2:10,20, 3:>20
+        self.onia_pt_cut = 1
+        # with 3mu4 trigger or not
+        self.with_3mu4 = True
+
+    def pass_onia_pt_cut(self, pT):
+        pT_cut = int(self.onia_pt_cut)
+        if pT_cut == 1:
+            return (pT < 10)
+        elif pT_cut == 2:
+            return (pT >= 10 and pT < 20)
+        elif pT_cut == 3:
+            return pT > 20
+        else:
+            return True
+
+    def print_onia_pt_cut(self):
+        pT_cut = int(self.onia_pt_cut)
+        if pT_cut == 1:
+            return "p_{T}^{onia} in [0, 10) GeV"
+        elif pT_cut == 2:
+            return "p_{T}^{onia} in [10, 20) GeV"
+        elif pT_cut == 3:
+            return "p_{T}^{onia} in [20, #infty) GeV"
+        else:
+            return "p_{T}^{onia} in [-#infty, #infty] GeV"
+
+    def print_dionia_selection(self):
+        if self.dionia_selection:
+            return "di-onia selection"
+        else:
+            return "onia selection"
+
+    def get_ws_name(self):
+        return "ws_chi2Cut"+str(self.chi2_cut)+"_DiOnia"+str(self.dionia_selection)+"_pTCut"+str(self.onia_pt_cut)+"_withTrigger"+str(self.with_3mu4)+".root"
+
     def build_model(self):
-        #mean = RooRealVar("mean", "mass of 1S", 9.46, 9.2, 9.7)
-        #sigma = RooRealVar("sigma", "sigma of gaussian", 0.14, 0.09, 0.3)
-        mean = RooRealVar("mean", "mass of 1S", 9.48617)
-        sigma = RooRealVar("sigma", "sigma of gaussian", 0.16821)
+        mean = RooRealVar("mean", "mass of 1S", 9.46, 9.2, 9.7)
+        sigma = RooRealVar("sigma", "sigma of gaussian", 0.14, 0.09, 0.3)
+        #mean = RooRealVar("mean", "mass of 1S", 9.50)
+        #sigma = RooRealVar("sigma", "sigma of gaussian", 0.20)
         gaussian = ROOT.RooGaussian("gauss", "gauss", self.obs, mean, sigma)
 
         ## try Crystal Ball
@@ -70,13 +106,13 @@ class Fit2L:
         p2 = RooRealVar("p2", "p2", -1E6, 1E6)
         p3 = RooRealVar("p3", "p3", -1E6, 1E6)
         p4 = RooRealVar("p4", "p4", -1E6, 1E6)
-        #p0 = RooRealVar("p0", "p0", 8.25477e-02)
-        #p1 = RooRealVar("p1", "p1", -3.95646e-02)
-        #p2 = RooRealVar("p2", "p2", -3.60626e-02)
+        #p0 = RooRealVar("p0", "p0", -9.99765e+05)
+        #p1 = RooRealVar("p1", "p1", 3.08493e+05)
+        #p2 = RooRealVar("p2", "p2", -1.56217e+04)
         #p3 = RooRealVar("p3", "p3", -1.35696e-02)
         #p4 = RooRealVar("p4", "p4", -1.46353e-02)
-        bkg = ROOT.RooChebychev("bkg", "bkg", self.obs, RooArgList(p0, p1, p2, p3, p4))
-        #bkg = ROOT.RooPolynomial("bkg", "bkg", self.obs, RooArgList(p0, p1, p2))
+        #bkg = ROOT.RooChebychev("bkg", "bkg", self.obs, RooArgList(p0, p1, p2, p3, p4))
+        bkg = ROOT.RooPolynomial("bkg", "bkg", self.obs, RooArgList(p0, p1, p2))
         ebkg = ROOT.RooExtendPdf("ebkg", "ebkg", bkg, n_bkg)
         model = ROOT.RooAddPdf("model", "model", RooArgList(esig, esig2, esig3, ebkg))
         getattr(self.ws, "import")(model)
@@ -86,6 +122,7 @@ class Fit2L:
         tree = fin.Get("upsilon")
         nentries = tree.GetEntries()
         print "total: ", nentries
+        print "onia pT cut: ", self.onia_pt_cut
         obs_set = RooArgSet(self.obs)
         data = ROOT.RooDataSet("data", "data", obs_set)
         for ientry in xrange(nentries):
@@ -97,16 +134,25 @@ class Fit2L:
                 if tree.chi2[i] > self.chi2_cut:
                     continue
                 # apply trigger requirement
-                if not tree.trig_3mu4:
+                if self.with_3mu4 and not tree.trig_3mu4:
+                    continue
+                # apply dionia selection
+                if self.dionia_selection and tree.pass_diOnia != 1:
+                    continue
+                # apply onia pT cut
+                pT = tree.pt[i]
+                if not self.pass_onia_pt_cut(pT):
                     continue
 
                 self.obs.setVal(m4l)
                 data.add(obs_set)
 
         getattr(self.ws, "import")(data)
+        print "selected events: ", data.sumEntries()
         fin.Close()
 
     def fit(self):
+        print "my configuration:",self.get_ws_name()
         if not hasattr(self, "ws"):
             self.ws = ROOT.RooWorkspace("combined", "combined")
 
@@ -150,12 +196,12 @@ class Fit2L:
         except:
             print nll_condition,nll_uncondition
 
-        self.ws.writeToFile("combined_"+str(self.chi2_cut)+".root")
+        self.ws.writeToFile(self.get_ws_name())
 
     def plot(self):
         ## plot
         if not hasattr(self, "ws"):
-            f1 = ROOT.TFile.Open("combined_"+str(self.chi2_cut)+".root")
+            f1 = ROOT.TFile.Open(self.get_ws_name())
             self.ws = f1.Get("combined")
 
         self.ws.loadSnapshot("splusb")
@@ -224,10 +270,14 @@ class Fit2L:
         ROOT.myText(x_start, y_start-0.05*2, 1, "N(1S) = {:.1f}".format(nsig))
         ROOT.myText(x_start, y_start-0.05*3, 1, "N(bkg) = {:.1f}".format(nbkg))
         ROOT.myText(x_start, y_start-0.05*4, 1, "S/sqrt(B):{:.1f}".format(nsig/math.sqrt(nbkg)))
+
         ROOT.myText(0.2, y_start, 1, "m = {:.2f} GeV".format(self.ws.var("mean").getVal()))
         ROOT.myText(0.2, y_start-0.05, 1, "#sigma = {:.2f} GeV".format(self.ws.var("sigma").getVal()))
+        ROOT.myText(0.2, y_start-0.05*2, 1, "total events {:.0f}".format(self.ws.obj("data").sumEntries()))
+        ROOT.myText(0.2, y_start-0.05*3, 1, "{}".format(self.print_onia_pt_cut()))
+        ROOT.myText(0.2, y_start-0.05*4, 1, "{}".format(self.print_dionia_selection()))
 
-        canvas.SaveAs("fit_"+str(self.chi2_cut)+".pdf")
+        canvas.SaveAs(self.get_ws_name().replace("root", "pdf").replace("ws_", "fit_"))
         self.ws.obj("s2").Print()
         self.ws.obj("s3").Print()
 
@@ -238,19 +288,33 @@ class Fit2L:
         self.dummy_hists.append(h1)
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print sys.argv[0], " file_name [br_name]"
+    usage = sys.argv[0]+" file_name br_name"
+    parser = OptionParser(usage=usage)
+    parser.add_option('--dionia', action="store_true", dest="dionia", help="apply dionia selection", default=False)
+    parser.add_option('--oniaPt', dest='oniapt', help="onia pT cut, 0/1/2/3", default=0)
+    parser.add_option('--noTrigger', action="store_true", dest='notrigger', help="don't apply trigger", default=False)
+
+    (options, args) = parser.parse_args()
+    if len(args) < 2:
+        parser.print_help()
         exit(1)
 
-    file_name = sys.argv[1]
+    file_name = args[0]
     br_name = "mass"
     if len(sys.argv) > 2:
-        br_name = sys.argv[2]
+        br_name = args[1]
 
     #cuts = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 8, 10, 10000]
     cuts = [3.]
     for cut in cuts:
         fit_4l = Fit2L(file_name, br_name)
+        if options.dionia:
+            fit_4l.dionia_selection = True
+
+        if options.notrigger:
+            fit_4l.with_3mu4 = False
+
+        fit_4l.onia_pt_cut = options.oniapt
         fit_4l.chi2_cut = cut
         fit_4l.fit()
         fit_4l.plot()
