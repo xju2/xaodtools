@@ -734,7 +734,7 @@ class BLSana:
 
     def select_v04(self, tree):
         """
-        corresponding to Note v0.4, announced on Sep.27,2016
+        corresponding to Note v0p7, apply pT > 4 GeV on leading two muons
         """
         ##first select four good muons
         good_cb_muons = []
@@ -801,8 +801,11 @@ class BLSana:
 
         # neutral charge
         total_charge = 0
+        n_muon_with_pT_gt_4GeV = 0
         for i in good_muons:
             total_charge += tree.mu_charge[i]
+            if tree.mu_track_pt[i] > 4E3:
+                n_muon_with_pT_gt_4GeV += 1
 
         self.up_pass_dionia[0] = int(pass_dionia and total_charge == 0)
         self.tree_onia.Fill()
@@ -825,6 +828,9 @@ class BLSana:
 
         self.fill_cut_flow(5+charge_weight)
 
+        # if pass 4 GeV cut
+        if n_muon_with_pT_gt_4GeV < 2:
+            return None
         # if has upsilon
         chi2_upsilon = 9E9
         id_upsilon = [-1, -1, -1, -1, -1, -1]
@@ -1009,10 +1015,10 @@ class BLSana:
         if tree.mu_charge[mu_id1] + tree.mu_charge[mu_id2] != 0:
             return False
 
-        mu_pt1 = tree.mu_track_pt[mu_id1]
-        mu_pt2 = tree.mu_track_pt[mu_id2]
-        if mu_pt1 <= 4E3 or mu_pt2 <= 4E3:
-            return False
+        #mu_pt1 = tree.mu_track_pt[mu_id1]
+        #mu_pt2 = tree.mu_track_pt[mu_id2]
+        #if mu_pt1 <= 4E3 or mu_pt2 <= 4E3:
+        #    return False
 
         return True
 
