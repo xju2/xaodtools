@@ -169,6 +169,7 @@ class BLSana:
         self.m3_type = array('i', [0])
         self.m4_type = array('i', [0])
 
+
         self.u1_chi2 = array('f', [0])
         self.u2_chi2 = array('f', [0])
 
@@ -251,6 +252,16 @@ class BLSana:
 
         self.charge = array('f', [0])
         self.out_tree.Branch("charge", self.charge, "charge/F")
+
+        # quality of muons
+        self.m1_quality = array('i', [0])
+        self.m2_quality = array('i', [0])
+        self.m3_quality = array('i', [0])
+        self.m4_quality = array('i', [0])
+        self.out_tree.Branch("m1_quality", self.m1_quality, "m1_quality/I")
+        self.out_tree.Branch("m2_quality", self.m2_quality, "m2_quality/I")
+        self.out_tree.Branch("m3_quality", self.m3_quality, "m3_quality/I")
+        self.out_tree.Branch("m4_quality", self.m4_quality, "m4_quality/I")
 
     def clear_tree(self):
         pass
@@ -532,14 +543,12 @@ class BLSana:
                 self.m2_author[0] = tree.mu_author[mu2_id]
                 self.m3_author[0] = tree.mu_author[mu3_id]
                 self.m4_author[0] = tree.mu_author[mu4_id]
-                #for author in self.is_author( tree.mu_author[mu1_id] ):
-                #    self.m1_author.push_back(author)
-                #for author in self.is_author( tree.mu_author[mu2_id] ):
-                #    self.m2_author.push_back(author)
-                #for author in self.is_author( tree.mu_author[mu3_id] ):
-                #    self.m3_author.push_back(author)
-                #for author in self.is_author( tree.mu_author[mu4_id] ):
-                #    self.m4_author.push_back(author)
+
+                if hasattr(tree, "mu_quality"):
+                    self.m1_quality[0] = tree.mu_quality[mu1_id]
+                    self.m2_quality[0] = tree.mu_quality[mu1_id]
+                    self.m3_quality[0] = tree.mu_quality[mu1_id]
+                    self.m4_quality[0] = tree.mu_quality[mu1_id]
 
             self.out_tree.Fill()
 
