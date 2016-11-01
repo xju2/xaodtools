@@ -4,12 +4,24 @@
 #include "CPAnalysisExamples/errorcheck.h"
 #include "xAODTracking/TrackParticlexAODHelpers.h"
 #include "MyXAODTools/CPToolsHelper.h"
+#include "MuonSelectorTools/MuonSelectionTool.h"
 
 const char* MuonBranch::APP_NAME = "MuonBranch";
 
 MuonBranch::MuonBranch(){
     m_track = NULL;
     CreateBranch();
+    initial_tools();
+}
+
+int MuonBranch::initial_tools(){
+    string toolName("Muon_4Branch");
+    m_muonSelectionTool =  unique_ptr<CP::MuonSelectionTool>(new CP::MuonSelectionTool(toolName));
+    m_muonSelectionTool->setProperty( "MaxEta", 2.7);
+    m_muonSelectionTool->setProperty( "MuQuality", 4);
+    m_muonSelectionTool->setProperty( "TurnOffMomCorr", true);
+    CHECK( m_muonSelectionTool->initialize().isSuccess() );
+    return 0;
 }
 
 bool MuonBranch::CreateBranch()
@@ -27,7 +39,6 @@ bool MuonBranch::CreateBranch()
     track_phi_    = new vector<float>();
     track_e_      = new vector<float>();
 
-
     charge_ = new vector<float>();
     type_   = new vector<int>();
     d0_     = new vector<float>();
@@ -39,6 +50,7 @@ bool MuonBranch::CreateBranch()
     ptvarcone30_ = new vector<float>();
 
     pvID_ = new vector<int>;
+    quality_ = new vector<int>;
     return true;
 }
 
@@ -67,6 +79,7 @@ MuonBranch::~MuonBranch(){
     delete ptvarcone30_;
 
     delete pvID_;
+    delete quality_;
 }
 
 void MuonBranch::ClearBranch(){
@@ -91,11 +104,12 @@ void MuonBranch::ClearBranch(){
     z0_sintheta_->clear();
     d0_sig_->clear();
 
-    eloss_->clear();
-    etcone30_->clear();
+    eloss_      ->clear();
+    etcone30_   ->clear();
     ptvarcone30_->clear();
 
     pvID_   ->clear();
+    quality_->clear();
 }
 
 void MuonBranch::AttachBranchToTree(TTree& tree){
@@ -125,6 +139,7 @@ void MuonBranch::AttachBranchToTree(TTree& tree){
     tree.Branch("mu_ptvarcone30", &ptvarcone30_);
 
     tree.Branch("mu_pvID", &pvID_);
+    tree.Branch("mu_quality", &quality_);
 }
 
 void MuonBranch::Fill(const xAOD::Muon& muon,
@@ -163,12 +178,13 @@ void MuonBranch::Fill(const xAOD::Muon& muon,
     d0_->push_back(d0);
     z0_sintheta_->push_back(z0_sintheta);
     d0_sig_->push_back(d0_sig);
+
+    quality_->push_back( (int)m_muonSelectionTool->getQuality(muon) );
 }
 
 const xAOD::TrackParticle* MuonBranch::getTrack(const xAOD::Muon& muon)
 {
-    // return tracks from inner detector
-/***
+/*** return primary track, not used in 4mu analysis
     const xAOD::TrackParticle* track = NULL;
     if (muon.muonType() == xAOD::Muon::SiliconAssociatedForwardMuon) {
         track = muon.trackParticle(xAOD::Muon::ExtrapolatedMuonSpectrometerTrackParticle);
@@ -177,6 +193,7 @@ const xAOD::TrackParticle* MuonBranch::getTrack(const xAOD::Muon& muon)
     }
     return track;
 ***/
+    // return tracks from inner detector
     return muon.trackParticle(xAOD::Muon::InnerDetectorTrackParticle);
 }
 

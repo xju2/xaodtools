@@ -10,6 +10,7 @@
 #include "xAODEgamma/PhotonContainer.h"
 #include "xAODJet/JetContainer.h"
 #include "xAODJet/JetAuxContainer.h"
+#include "MuonSelectorTools/MuonSelectionTool.h"
 
 
 UpsilonAna::UpsilonAna(): AnalysisBase()
@@ -20,21 +21,21 @@ UpsilonAna::UpsilonAna(): AnalysisBase()
 
     trigger_map_ = {
         // single Muon
-        {"HLT_mu20_iloose_L1MU15", false},
-        {"HLT_mu24_ivarloose_L1MU15", false},
-        {"HLT_mu24_ivarmedium", false},
-        {"HLT_mu24_imedium", false},
-        {"HLT_mu26_ivarmedium", false},
-        {"HLT_mu26_imedium", false},
+        // {"HLT_mu20_iloose_L1MU15", false},
+        // {"HLT_mu24_ivarloose_L1MU15", false},
+        // {"HLT_mu24_ivarmedium", false},
+        // {"HLT_mu24_imedium", false},
+        // {"HLT_mu26_ivarmedium", false},
+        // {"HLT_mu26_imedium", false},
         // Di muon
-        {"HLT_2mu10", false},
-        {"HLT_mu18_mu8noL1", false},
-        {"HLT_2mu10_nomucomb", false},
-        {"HLT_mu20_mu8noL1", false},
-        {"HLT_mu20_nomucomb_mu6noL1_nscan03", false},
-        {"HLT_2mu14_nomucomb", false},
-        {"HLT_mu22_mu8noL1", false},
-        {"HLT_2mu14", false},
+        // {"HLT_2mu10", false},
+        // {"HLT_mu18_mu8noL1", false},
+        // {"HLT_2mu10_nomucomb", false},
+        // {"HLT_mu20_mu8noL1", false},
+        // {"HLT_mu20_nomucomb_mu6noL1_nscan03", false},
+        // {"HLT_2mu14_nomucomb", false},
+        // {"HLT_mu22_mu8noL1", false},
+        // {"HLT_2mu14", false},
         // Trig Muons
         {"HLT_3mu6", false},
         {"HLT_3mu6_msonly", false},
@@ -59,12 +60,12 @@ UpsilonAna::~UpsilonAna(){
 }
 
 int UpsilonAna::initial_tools(){
-    string toolName("veryLooseMuon_Upsilon");
-    m_muonSelectionTool =  unique_ptr<CP::MuonSelectionTool>(new CP::MuonSelectionTool(toolName));
-    m_muonSelectionTool->setProperty( "MaxEta", 2.7);
-    m_muonSelectionTool->setProperty( "MuQuality", 3);
-    m_muonSelectionTool->setProperty( "TurnOffMomCorr", true);
-    CHECK( m_muonSelectionTool->initialize().isSuccess() );
+    // string toolName("veryLooseMuon_Upsilon");
+    // m_muonSelectionTool =  unique_ptr<CP::MuonSelectionTool>(new CP::MuonSelectionTool(toolName));
+    // m_muonSelectionTool->setProperty( "MaxEta", 2.7);
+    // m_muonSelectionTool->setProperty( "MuQuality", 3);
+    // m_muonSelectionTool->setProperty( "TurnOffMomCorr", true);
+    // CHECK( m_muonSelectionTool->initialize().isSuccess() );
     return 0;
 }
 
@@ -273,12 +274,12 @@ int UpsilonAna::process(Long64_t ientry)
     std::pair<xAOD::MuonContainer*, xAOD::ShallowAuxContainer*> muonShadow = xAOD::shallowCopyContainer(*muons);
     muons_copy = muonShadow.first;
     muons_copyaux = muonShadow.second;
-    
+
     if (! xAOD::setOriginalObjectLink(*muons, *muons_copy) ) {
         //ATH_MSG_WARNING("Failed to set original object links on " << muonkey);
         ;
     }
-   
+
 
     // CHECK( m_objTool->GetMuons(muons_copy, muons_copyaux, true) );
     // sort(muons_copy->begin(), muons_copy->end(), descend_on_pt);
@@ -303,7 +304,7 @@ int UpsilonAna::process(Long64_t ientry)
         }
 
         // only track quality cuts!
-        if (! m_muonSelectionTool->passedIDCuts(*id_track) )
+        if (! muon_br->m_muonSelectionTool->passedIDCuts(*id_track) )
         {
             if(m_debug){
                 cout << "Failed: passedIDCut" << endl;

@@ -10,9 +10,12 @@
 #include "xAODTracking/Vertex.h"
 #include "xAODTracking/VertexContainer.h"
 
-
 #include "MyXAODTools/BranchCreatorBase.h"
 using namespace std;
+
+namespace CP{
+class MuonSelectionTool;
+}
 
 class MuonBranch : public BranchCreatorBase
 {
@@ -22,7 +25,6 @@ public:
 
     void AttachBranchToTree(TTree& );
     void ClearBranch();
-    bool CreateBranch();
     void Fill(const xAOD::Muon& muon, const xAOD::EventInfo* evtInfo,
             const xAOD::Vertex* pv = NULL);
 
@@ -30,12 +32,16 @@ public:
             const xAOD::EventInfo* evtInfo, const xAOD::VertexContainer* vertice);
 
     int matchPV(const xAOD::Muon& muon, const xAOD::VertexContainer& vertice);
+private:
+    bool CreateBranch();
+    int initial_tools();
 
 public:
     static const xAOD::TrackParticle* getTrack(const xAOD::Muon& muon);
 
 public:
     static const char* APP_NAME;
+    unique_ptr<CP::MuonSelectionTool> m_muonSelectionTool;
 
 private:
     const xAOD::TrackParticle* m_track;
@@ -55,7 +61,6 @@ private:
     vector<float>* track_phi_;
     vector<float>* track_e_;
 
-
     vector<float>* charge_;
     vector<int>* type_;
     vector<float>* d0_;
@@ -63,6 +68,7 @@ private:
     vector<float>* d0_sig_;
 
     vector<int>* pvID_;
+    vector<int>* quality_;
 
 public:
     // These variables have to be filled seperately

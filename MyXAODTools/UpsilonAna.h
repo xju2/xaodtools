@@ -7,7 +7,7 @@
 
 #include "MyXAODTools/AnalysisBase.h"
 #include "AsgTools/ToolHandle.h"
-#include "MuonSelectorTools/MuonSelectionTool.h"
+// #include "MuonSelectorTools/MuonSelectionTool.h"
 
 using namespace std;
 typedef vector<const xAOD::MuonContainer::base_value_type*> MuonVect;
@@ -95,7 +95,7 @@ private:
    std::vector<float>* m_quad_fitted_eta;
    std::vector<float>* m_quad_fitted_phi;
 
-   unique_ptr<CP::MuonSelectionTool> m_muonSelectionTool;
+   // unique_ptr<CP::MuonSelectionTool> m_muonSelectionTool;
 };
 
 #endif
