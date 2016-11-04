@@ -1,4 +1,4 @@
-/*
+/* PrescaleTool: bug in deconstruction
  *
  *
  */
@@ -67,6 +67,9 @@ private:
     unique_ptr<JetCleaningTool> m_jetCleaningTool;
     unique_ptr<JetSmearing::JetMCSmearingTool> m_mySmearingTool;
     unique_ptr<JetSmearing::PreScaleTool> m_prescaleTool;
+    // JetCleaningTool* m_jetCleaningTool;
+    // JetSmearing::PreScaleTool* m_prescaleTool;
+    // JetSmearing::JetMCSmearingTool* m_mySmearingTool;
     TH2F* lightJetResponse;
     TH2F* bJetResponse;
     const string m_singleJetTrigger[16];

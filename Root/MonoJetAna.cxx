@@ -75,8 +75,8 @@ MonoJetAna::MonoJetAna():
 
 
 MonoJetAna::~MonoJetAna(){
-    // if(lightJetResponse) delete lightJetResponse;
-    // if(bJetResponse) delete bJetResponse;
+    if(lightJetResponse) delete lightJetResponse;
+    if(bJetResponse) delete bJetResponse;
 
     if(m_jetP4) delete m_jetP4;
     if(m_doSmearing && m_smearedData){
@@ -85,11 +85,11 @@ MonoJetAna::~MonoJetAna(){
 }
 
 int MonoJetAna::initial_tools(){
-    m_jetCleaningTool = unique_ptr<JetCleaningTool>( new JetCleaningTool("JetCleaningToolTight") );
+    m_jetCleaningTool.reset( new JetCleaningTool("JetCleaningToolTight") );
 
     if (m_doSmearing){
         unsigned int test = 1000;
-        m_mySmearingTool = unique_ptr<JetSmearing::JetMCSmearingTool>( new JetSmearing::JetMCSmearingTool("MonoJetSmearingTool") );
+        m_mySmearingTool.reset( new JetSmearing::JetMCSmearingTool("MonoJetSmearingTool") );
         m_mySmearingTool->setProperty("NumberOfSmearedEvents",test);
         m_mySmearingTool->setProperty("DoPhiSmearing", true);
         m_mySmearingTool->initialize();
@@ -111,8 +111,9 @@ int MonoJetAna::initial_tools(){
 
 
         // setup pre-scale tool
-        m_prescaleTool = unique_ptr<JetSmearing::PreScaleTool>( new JetSmearing::PreScaleTool("PreScaleTool") );
-        CHECK(m_prescaleTool->setProperty("HistoPath", "$ROOTCOREBIN/data/JetSmearing/PreScales/prescale_histos_combined_2015-2016.root"));
+        m_prescaleTool.reset( new JetSmearing::PreScaleTool("PreScaleTool") );
+        // m_prescaleTool = new JetSmearing::PreScaleTool("PreScaleTool");
+        CHECK(m_prescaleTool->setProperty("HistoPath", maindir+"/data/JetSmearing/PreScales/prescale_histos_combined_2015-2016.root"));
         CHECK(m_prescaleTool->initialize());
     }
     return 0;
