@@ -151,17 +151,17 @@ const xAOD::Vertex* CPToolsHelper::GetPrimVtx(const xAOD::VertexContainer& verti
     return nullptr;
 }
 
-void CPToolsHelper::GetTrackQuality(const xAOD::TrackParticle* track, 
-        const xAOD::EventInfo& evtInfo, 
+void CPToolsHelper::GetTrackQuality(const xAOD::TrackParticle* track,
+        const xAOD::EventInfo& evtInfo,
         const xAOD::VertexContainer& vertices,
         float& d0, float& z0, float& zp)
 {
   // d0
-  d0 = xAOD::TrackingHelpers::d0significance( track , 
-          evtInfo.beamPosSigmaX(), 
-          evtInfo.beamPosSigmaY(), 
+  d0 = xAOD::TrackingHelpers::d0significance( track ,
+          evtInfo.beamPosSigmaX(),
+          evtInfo.beamPosSigmaY(),
           evtInfo.beamPosSigmaXY() );
-  // z0 
+  // z0
   const xAOD::Vertex* pv = GetPrimVtx(vertices);
   if(pv != nullptr){
       double primvertex_z = pv ? pv->z() : 0;
@@ -170,8 +170,8 @@ void CPToolsHelper::GetTrackQuality(const xAOD::TrackParticle* track,
   }
 }
 
-void CPToolsHelper::GetTrackQuality(const xAOD::Electron& input, 
-        const xAOD::EventInfo& evtInfo, 
+void CPToolsHelper::GetTrackQuality(const xAOD::Electron& input,
+        const xAOD::EventInfo& evtInfo,
         const xAOD::VertexContainer& vertices,
         float& d0, float& z0, float& zp)
 {

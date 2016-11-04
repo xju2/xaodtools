@@ -20,12 +20,12 @@ AnalysisBase::AnalysisBase(
     physics = new TTree(tree_name, tree_name);
 
     // initiate tools
-    cp_tools = NULL;
-    event_br = new EventInfoCreator();
-    muon_br = new MuonBranch();
-    el_br = new ElectronBranch();
-    jet_br = new JetBranch();
-    ph_br = new PhotonBranch();
+    cp_tools =  unique_ptr<CPToolsHelper>( new CPToolsHelper() );
+    event_br =  unique_ptr<EventInfoCreator>( new EventInfoCreator() );
+    muon_br =   unique_ptr<MuonBranch>( new MuonBranch() );
+    el_br =     unique_ptr<ElectronBranch>( new ElectronBranch() );
+    jet_br =    unique_ptr<JetBranch>( new JetBranch() );
+    ph_br =     unique_ptr<PhotonBranch>( new PhotonBranch() );
     m_objTool = NULL;
 
     CreateBranch();
@@ -40,12 +40,6 @@ AnalysisBase::~AnalysisBase()
         physics->Write();
         f_out->Close();
     }
-    if (cp_tools) delete cp_tools;
-    if (event_br) delete event_br;
-    if (muon_br) delete muon_br;
-    if (el_br) delete el_br;
-    if (jet_br) delete jet_br;
-    if (ph_br) delete ph_br;
 }
 
 void AnalysisBase::CreateBranch()
@@ -140,9 +134,6 @@ int AnalysisBase::process(Long64_t ientry)
 
     CHECK( event->retrieve(vertice, "PrimaryVertices") );
 
-    if(cp_tools == NULL){
-        cp_tools = new CPToolsHelper();
-    }
 
     if(! cp_tools->HasPrimaryVertex(*vertice, 1))
         return 1;

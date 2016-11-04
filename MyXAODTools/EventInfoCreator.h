@@ -9,7 +9,7 @@
 #include "MyXAODTools/BranchCreatorBase.h"
 
 using namespace std;
-class EventInfoCreator
+class EventInfoCreator: public BranchCreatorBase
 {
 
 public:

@@ -20,7 +20,6 @@ if not hasattr(ROOT, "passMultiLepton"):
 interested_event = [
     (195847, 9013)
 ]
-m_good = True
 
 CHI2_DIMUON_CUT = 3
 CHI2_DIELE_CUT = 8
@@ -97,17 +96,8 @@ class BLSana:
         # use new type
         self.use_new_type = True
 
-    def set_do13TeV(self, status):
-        self.do_13TeV = status
-
-    def set_uf(self, status):
-        self.upsilon_first = status
-
-    def set_debug(self, status):
-        self.m_debug = status
-
-    def set_newtype(self, new_type):
-        self.use_new_type = new_type
+        # use new pT
+        self.use_new_pT = True
 
     def book_tree(self):
         self.out_tree = ROOT.TTree("bls", "bls")
@@ -372,15 +362,15 @@ class BLSana:
             self.fill_cut_flow(1)
 
 
-            if m_good and self.m_debug and imatched == len(interested_event):
+            if self.m_debug and imatched == len(interested_event):
                 break
-            if m_good and self.m_debug and (run, event) not in interested_event:
+            if self.m_debug and (run, event) not in interested_event:
                 continue
 
             #if self.run[0] != 307710:
             #    continue
 
-            if m_good and self.m_debug:
+            if self.m_debug:
                 imatched += 1
 
             if self.m_debug:
@@ -838,7 +828,7 @@ class BLSana:
         self.fill_cut_flow(5+charge_weight)
 
         # if pass 4 GeV cut
-        if n_muon_with_pT_gt_4GeV < 2:
+        if self.use_new_pT and n_muon_with_pT_gt_4GeV < 2:
             return None
         # if has upsilon
         chi2_upsilon = 9E9
@@ -1024,10 +1014,10 @@ class BLSana:
         if tree.mu_charge[mu_id1] + tree.mu_charge[mu_id2] != 0:
             return False
 
-        #mu_pt1 = tree.mu_track_pt[mu_id1]
-        #mu_pt2 = tree.mu_track_pt[mu_id2]
-        #if mu_pt1 <= 4E3 or mu_pt2 <= 4E3:
-        #    return False
+        mu_pt1 = tree.mu_track_pt[mu_id1]
+        mu_pt2 = tree.mu_track_pt[mu_id2]
+        if not self.use_new_pT and (mu_pt1 <= 4E3 or mu_pt2 <= 4E3):
+            return False
 
         return True
 
@@ -1281,20 +1271,20 @@ def compare_sideband(file_name, br_name="x_chi2"):
     canvas.SaveAs("cmp_"+br_name+".pdf")
 
 if __name__ == "__main__":
+
     usage = sys.argv[0]+" make/draw/cmp file_index,file2 out_name"
-    parser = OptionParser(usage=usage)
+    parser = OptionParser(usage=usage, description="apply final cuts for upsilon analysis")
     parser.add_option("--do8TeV", action="store_true", dest="do8TeV",help="Perform 8 TeV analysis",default=False)
     parser.add_option("--uf", action="store_true", dest="uf",help="select upsilon first",default=False)
     parser.add_option("-v", action="store_true", dest="verbose",help="debug mode",default=False)
     parser.add_option("--oldMuonType", action="store_true", dest="oldMuonType", help="make: use old defition of muon type", default=False)
+    parser.add_option("--oldPtCut", action="store_true", dest="oldPtCut", help="make: use old pT cut", default=False)
 
     (options, args) = parser.parse_args()
     if len(args) < 3:
         parser.print_help()
         exit(0)
 
-    base_name = "/afs/cern.ch/user/x/xju/work/upsilon/run/data12_v1/split_and_merge/merged_"
-    #input_files = [base_name+x+".root" for x in string.ascii_lowercase]
     option = args[0]
     out_name = args[2]
     print option
@@ -1306,16 +1296,19 @@ if __name__ == "__main__":
         input_name = args[1].split(',')
         bls_ana = BLSana(out_name)
         if options.do8TeV:
-            bls_ana.set_do13TeV(False)
+            bls_ana.do_13TeV = False
 
         if options.uf:
-            bls_ana.set_uf(True)
+            bls_ana.upsilon_first = True
 
         if options.verbose:
-            bls_ana.set_debug(True)
+            bls_ana.m_debug = True
 
         if options.oldMuonType:
-            bls_ana.set_newtype(False)
+            bls_ana.use_new_type = False
+
+        if options.oldPtCut:
+            bls_ana.use_new_pT = False
 
         bls_ana.book_hists()
         bls_ana.book_tree()

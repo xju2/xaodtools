@@ -10,15 +10,22 @@ def check(file_name, tree_name, run_name, event_name):
     nentries = tree.GetEntries()
 
     seen = Set([])
+    dup = []
+    has_dup = False
     for ientry in range(nentries):
         tree.GetEntry(ientry)
         run = getattr(tree, run_name)
         event = getattr(tree, event_name)
         if (run,event) in seen:
-            return True
+            print run,event,"is seen"
+            dup.append( (run,event) )
+            has_dup = True
         seen.add( (run,event) )
 
-    return False
+    print "duplications:", len(dup)
+    print dup
+    return has_dup
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 5:
@@ -29,4 +36,3 @@ if __name__ == "__main__":
         print "has duplicated events!"
     else:
         print "no duplication"
-    

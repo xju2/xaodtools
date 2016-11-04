@@ -44,6 +44,8 @@ public:
     // Track quality
     static bool GetTrackSumPt(const xAOD::Vertex& vertex,
             float& sum_px, float& sum_py);
+
+    // Get d0, z0 and zp=z0*sin(theta) for any track
     static void GetTrackQuality(const xAOD::Electron& el,
             const xAOD::EventInfo& ei,
             const xAOD::VertexContainer& vertices,
@@ -56,6 +58,8 @@ public:
             const xAOD::EventInfo& ei,
             const xAOD::VertexContainer& vertices,
             float& d0, float& z0, float& zp);
+
+    // Get primary vertex
     static const xAOD::Vertex* GetPrimVtx(const xAOD::VertexContainer& vertices);
 
     static bool GetProcessEventsInfo(const char* file_name,

@@ -20,8 +20,8 @@ usage = "%prog [option] table"
 parser = OptionParser(description="calculate lumonisity", usage=usage)
 parser.add_option("-r", "--range", dest='range', default="None", help="set range of runs: 310015,311481")
 parser.add_option("-l", "--list", dest='list', default="None", help="give a list of runs  310969,311170")
-
 options,args = parser.parse_args()
+
 if len(args) < 1:
     print parser.print_help()
     exit(1)

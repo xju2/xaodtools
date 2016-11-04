@@ -10,12 +10,11 @@ class BranchCreatorBase{
 public:
     BranchCreatorBase();
     virtual ~BranchCreatorBase();
-    virtual void AttachBranchToTree(TTree& ){}
-    // virtual void Fill(const xAOD::IParticle& ){}
-    virtual void ClearBranch(){}
-    void CreateBranch() {}
+    void AttachBranchToTree(TTree& ){}
+    void ClearBranch(){}
+    void CreateBranch() { m_isBranchCreated = true; }
 
-private:
-    // string name_;
+protected:
+    bool m_isBranchCreated;
 };
 #endif

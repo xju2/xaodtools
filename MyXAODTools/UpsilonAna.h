@@ -1,3 +1,7 @@
+/* This code is to read BPHY4 derivation and apply the 4mu selections
+ * Analysis note can be found at: https://cds.cern.ch/record/2154910
+ * output ntuple is then further analyzed by draw_upsilon.py in *scripts*
+ */
 #ifndef __MYXAODTOOLS_UPSILONANA_H__
 #define __MYXAODTOOLS_UPSILONANA_H__
 

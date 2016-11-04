@@ -35,7 +35,7 @@ void EventInfoCreator::ClearBranch(){
 void EventInfoCreator::Fill(const xAOD::EventInfo& ei){
     run_number_ = ei.runNumber();
     event_number_ = ei.eventNumber();
-    if(ei.eventType(xAOD::EventInfo::IS_SIMULATION)) 
+    if(ei.eventType(xAOD::EventInfo::IS_SIMULATION))
     {
         mc_channel_number_= ei.mcChannelNumber();
         const vector<float>& weights = ei.mcEventWeights();

@@ -1,53 +1,27 @@
-/*
- * =====================================================================================
- *
- *       Filename:  SmearedInfo.h
- *
- *    Description:  
- *
- *        Version:  1.0
- *        Created:  10/27/2015 07:58:39 PM
- *       Revision:  none
- *       Compiler:  gcc
- *
- *         Author:  Xiangyang Ju (), xiangyang.ju@gmail.com
- *   Organization:  
- *
- * =====================================================================================
- */
+#ifndef __MYXAODTOOLS_SMEAREDINFO_H__
+#define __MYXAODTOOLS_SMEAREDINFO_H__
 
-#ifndef __MYXAODTOOLS_SMEAREDINFO_H_
-#define __MYXAODTOOLS_SMEAREDINFO_H_
-
-#include <vector>
-#include "MyXAODTools/BranchCreatorBase.h"
-
-class SmearedInfoBranch : public BranchCreatorBase 
+typedef struct SmearedInfo 
 {
-public:
-    SmearedInfoBranch();
-    virtual ~SmearedInfoBranch();
-
-    typedef struct SmearedInfo 
-    {
-        double leading_jet_pt_;
-        double met_;
-        double min_jets_met_;
-        double dphi_EP_;
-        int n_good_jets_;
-    } SmearedInfo;
-
-    void AttachBranchToTree(TTree& );
-    void ClearBranch();
-    bool CreateBranch();
-    void Fill(const SmearedInfo& smeared);
-
-private:
-    double leading_jet_pt_;
-    double met_;
-    double min_jets_met_;
-    double dphi_EP_;
-    int n_good_jets_;
-};
+    float leading_jet_pt_;
+    float leading_jet_eta_;
+    float leading_jet_phi_;
+    float sub_leading_jet_pt_;
+    float sub_leading_jet_eta_;
+    float sub_leading_jet_phi_;
+    float HT_;
+    float met_;
+    float sum_et_;
+    float min_jets_met_;
+    float dphi_EP_;
+    uint32_t n_good_jets_;
+    uint32_t n_vertices_;
+    float l3rd_jet_pt_;
+    float l3rd_jet_eta_;
+    float l3rd_jet_phi_;
+    float l4th_jet_pt_;
+    float l4th_jet_eta_;
+    float l4th_jet_phi_;
+} SmearedInfo;
 
 #endif

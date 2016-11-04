@@ -11,13 +11,14 @@
 #include "xAODTracking/VertexContainer.h"
 
 #include "MyXAODTools/BranchCreatorBase.h"
+
 using namespace std;
 
 namespace CP{
 class MuonSelectionTool;
 }
 
-class MuonBranch : public BranchCreatorBase
+class MuonBranch: public BranchCreatorBase
 {
 public:
     MuonBranch();

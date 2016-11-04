@@ -6,11 +6,12 @@
 const char* JetBranch::APP_NAME = "JetBranch";
 
 JetBranch::JetBranch(){
-    CreateBranch();
+    m_isBranchCreated = false;
 }
 
 bool JetBranch::CreateBranch()
 {
+    m_isBranchCreated = true;
     emF_ = new vector<float>();
     hecF_ = new vector<float>();
     larQ_ = new vector<float>();
@@ -31,41 +32,48 @@ bool JetBranch::CreateBranch()
 }
 
 JetBranch::~JetBranch(){
-    delete emF_;
-    delete hecF_;
-    delete larQ_;
-    delete hecQ_;
-    delete sumpttrk_;
-    delete frac_sampling_max_;
-    delete negE_;
-    delete avg_larQF_;
-    delete frac_sampling_max_index_;
-    delete jet_isBadTight_;
-    delete jet_timing_;
-    delete p4_;
+    if(m_isBranchCreated){
+        delete emF_;
+        delete hecF_;
+        delete larQ_;
+        delete hecQ_;
+        delete sumpttrk_;
+        delete frac_sampling_max_;
+        delete negE_;
+        delete avg_larQF_;
+        delete frac_sampling_max_index_;
+        delete jet_isBadTight_;
+        delete jet_timing_;
+        delete p4_;
 
-    delete jetCleaningTool_;
+        delete jetCleaningTool_;
+    }
 }
 
 void JetBranch::ClearBranch(){
     total_ = 0;
+    if(m_isBranchCreated){
+        emF_->clear();
+        hecF_->clear();
+        larQ_->clear();
+        hecQ_->clear();
+        sumpttrk_->clear();
+        frac_sampling_max_->clear();
+        negE_->clear();
+        avg_larQF_->clear();
+        frac_sampling_max_index_->clear();
+        jet_isBadTight_->clear();
+        p4_->clear();
 
-    emF_->clear();
-    hecF_->clear();
-    larQ_->clear();
-    hecQ_->clear();
-    sumpttrk_->clear();
-    frac_sampling_max_->clear();
-    negE_->clear();
-    avg_larQF_->clear();
-    frac_sampling_max_index_->clear();
-    jet_isBadTight_->clear();
-    p4_->clear();
-
-    jet_timing_->clear();
+        jet_timing_->clear();
+    }
 }
 
-void JetBranch::AttachBranchToTree(TTree& tree){
+void JetBranch::AttachBranchToTree(TTree& tree)
+{
+    if(!m_isBranchCreated){
+        CreateBranch();
+    }
     tree.Branch("n_jets", &total_, "n_jets/I");
     tree.Branch("jet_emf", &emF_);
     tree.Branch("jet_hecf", &hecF_);

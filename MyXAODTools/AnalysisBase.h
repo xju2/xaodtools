@@ -6,6 +6,7 @@
 #   include "xAODRootAccess/Init.h"
 #   include "xAODRootAccess/TEvent.h"
 #endif // ROOTCORE
+#include <memory>
 
 #include <TFile.h>
 #include <TTree.h>
@@ -25,7 +26,10 @@ static SG::AuxElement::Decorator<char> dec_signal("signal");
 static SG::AuxElement::Decorator<char> dec_passOR("passOR");
 static SG::AuxElement::Decorator<char> dec_bad("bad");
 static SG::AuxElement::Decorator<char> dec_bjet("bjet");
+static SG::AuxElement::Decorator<char> dec_cosmic("cosmic");
+static SG::AuxElement::Decorator<char> dec_tightBad("tightBad");
 
+using namespace std;
 class AnalysisBase{
 
 public:
@@ -68,14 +72,14 @@ protected:
     const xAOD::Vertex* pv;
 
     // tools for branch booking
-    EventInfoCreator* event_br;
-    MuonBranch* muon_br;
-    ElectronBranch* el_br;
-    JetBranch* jet_br;
-    PhotonBranch* ph_br;
+    unique_ptr<EventInfoCreator> event_br;
+    unique_ptr<MuonBranch> muon_br;
+    unique_ptr<ElectronBranch> el_br;
+    unique_ptr<JetBranch> jet_br;
+    unique_ptr<PhotonBranch> ph_br;
 
     // tools for CP recommendations
-    CPToolsHelper* cp_tools;
+    unique_ptr<CPToolsHelper> cp_tools;
     ST::SUSYObjDef_xAOD* m_objTool;
 
     // output setup

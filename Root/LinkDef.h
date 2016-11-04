@@ -9,6 +9,12 @@
 #include <MyXAODTools/TrackBranch.h>
 #include <MyXAODTools/ElectronBranch.h>
 #include <MyXAODTools/MuonBranch.h>
+#include <MyXAODTools/SmearedInfo.h>
+
+#ifdef __MAKECINT__
+#pragma link C++ class SmearedInfo+;
+#pragma link C++ class vector<SmearedInfo>+;
+#endif
 
 #ifdef __CINT__
 

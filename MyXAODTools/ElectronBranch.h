@@ -24,7 +24,6 @@ public:
     static const char* APP_NAME;
     int total_;
     vector<TLorentzVector>* p4_;
-    // vector<int>* ele_id_;
 };
 
 #endif

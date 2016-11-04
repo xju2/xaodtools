@@ -11,6 +11,12 @@ parser.add_option("-a", "--aod", dest='daod', default=False, help="check output 
 
 options,args = parser.parse_args()
 
+pwd = os.getcwd()
+#tag_name = "data16_v11_onlyTrack_addQuality"
+tag_name = pwd.split("/")[8]
+print tag_name
+
+
 has_bad = False
 tag="../split_and_merge/x*"
 for file_ in glob.glob(tag):
@@ -25,7 +31,6 @@ for file_ in glob.glob(tag):
 
         if check_size:
             # check if the input is empty
-            tag_name = "data16_v11_onlyTrack_addQuality"
             base_name="root://eosatlas//eos/atlas/unpledged/group-wisc/users/xju/bphys/merged/"+tag_name+"/split_and_merge/"
             root_name = base_name + "merged_"+os.path.basename(file_)+".root"
             f1 = ROOT.TFile.Open(root_name)
