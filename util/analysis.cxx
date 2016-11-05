@@ -140,6 +140,6 @@ int main( int argc, char* argv[] )
     delete ana;
 
     Info( APP_NAME, "Successfully finished analysis; Exitting..." );
-    return 1;
+    return 0;
 }
 

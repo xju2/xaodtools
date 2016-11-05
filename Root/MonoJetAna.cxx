@@ -86,6 +86,8 @@ MonoJetAna::~MonoJetAna(){
 
 int MonoJetAna::initial_tools(){
     m_jetCleaningTool.reset( new JetCleaningTool("JetCleaningToolTight") );
+    CHECK(m_jetCleaningTool->setProperty("CutLevel", "TightBad"));
+    CHECK(m_jetCleaningTool->initialize());
 
     if (m_doSmearing){
         unsigned int test = 1000;
@@ -253,6 +255,10 @@ int MonoJetAna::process(Long64_t ientry)
 
     // require no baseline electron/muon/photon
     if (m_nBaseEl > 0 || m_nBaseMu > 0 || m_nBasePhoton > 0) {
+        if(m_debug){
+            Info(APP_NAME, "has lepton/photon in the event %d %d %d",
+                    m_nBaseEl, m_nBaseMu, m_nBasePhoton);
+        }
         return 2;
     }
 
@@ -322,9 +328,20 @@ int MonoJetAna::process(Long64_t ientry)
     m_minDphiJetsMET = min_dphi;
 
     // at least one leading jet
-    if( m_nGoodJets < 1 || m_jetP4->at(0).Pt()/1E3 < 100 ||
+    if( m_nGoodJets < 1 || m_jetP4->at(0).Pt()/1E3 < 200 ||
         dec_tightBad(*leading_jet) != 1 ||
-        fabs(m_jetP4->at(0).Eta()) >= 2.4 ) return 3;
+        fabs(m_jetP4->at(0).Eta()) >= 2.4 )
+    { 
+
+        if(m_debug){
+            if(m_nGoodJets < 1){
+                Info(APP_NAME, "no good leading jet");
+            } else {
+                Info(APP_NAME, "leading-jet pT is low %.2f, pass tightBad %d, eta: %.2f", m_jetP4->at(0).Pt()/1E3, (int)dec_tightBad(*leading_jet), m_jetP4->at(0).Eta() );
+            }
+        }
+        return 3;
+    }
 
     // obtain prescale factor for the event
     if(m_doSmearing){
@@ -357,6 +374,8 @@ int MonoJetAna::process(Long64_t ientry)
             }
         }
     }
+    // Fill your tree!!!!
+    physics->Fill();
     return 0;
 }
 
@@ -371,7 +390,7 @@ bool MonoJetAna::get_smeared_info(
     smeared_info.leading_jet_pt_ = (float)jets->at(0)->p4().Pt();
     smeared_info.leading_jet_eta_ = (float)jets->at(0)->p4().Eta();
     smeared_info.leading_jet_phi_ = (float)jets->at(0)->p4().Phi();
-    if( smeared_info.leading_jet_pt_ < 100E3 ||
+    if( smeared_info.leading_jet_pt_ < 200E3 ||
         fabs(smeared_info.leading_jet_eta_) >= 2.4 ||
         dec_tightBad(*(jets->at(0))) != 1 ||
         jets->at(0)->auxdata< char >(smearJet) == false

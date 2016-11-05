@@ -1,1 +1,1 @@
-run_upsilon.sh
+run_monojet.sh

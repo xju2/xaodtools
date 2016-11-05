@@ -24,6 +24,7 @@
 #pragma link C++ nestedclass;
 
 #pragma link C++ class vector<TLorentzVector>;
+#pragma link C++ class vector<SmearedInfo>+;
 #pragma link C++ class BranchCreatorBase;
 #pragma link C++ class CPToolsHelper;
 #pragma link C++ class EventCounter;
