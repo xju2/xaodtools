@@ -27,13 +27,16 @@ public:
     MonoJetAna();
     virtual ~MonoJetAna();
 
+    int initialize();
+    void ClearBranch();
+    int process(Long64_t ientry); // main program
+
+    void setSmear(bool smear_);
+
+private:
     void AttachBranchToTree();
     void CreateBranch();
-    void ClearBranch();
 
-    int process(Long64_t ientry); // main program
-private:
-    int initial_tools();
     bool get_smeared_info(
             xAOD::JetContainer* jets,
             xAOD::MuonContainer* muons,

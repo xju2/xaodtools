@@ -48,29 +48,30 @@ UpsilonAna::UpsilonAna(): AnalysisBase()
         {"HLT_3mu6", false},
         {"HLT_3mu6_msonly", false}
     };
-    CreateBranch();
-    AttachBranchToTree();
 
-    initial_tools();
 }
-
 
 UpsilonAna::~UpsilonAna(){
 
 }
 
-int UpsilonAna::initial_tools(){
+int UpsilonAna::initialize(){
     // string toolName("veryLooseMuon_Upsilon");
     // m_muonSelectionTool =  unique_ptr<CP::MuonSelectionTool>(new CP::MuonSelectionTool(toolName));
     // m_muonSelectionTool->setProperty( "MaxEta", 2.7);
     // m_muonSelectionTool->setProperty( "MuQuality", 3);
     // m_muonSelectionTool->setProperty( "TurnOffMomCorr", true);
     // CHECK( m_muonSelectionTool->initialize().isSuccess() );
+    initializeBasicTools();
+
+    CreateBranch();
+    AttachBranchToTree();
     return 0;
 }
 
 void UpsilonAna::CreateBranch()
 {
+    CreateBasicBranch();
     // Onia information
     m_onia_muon1id = new std::vector<int>;
     m_onia_muon2id = new std::vector<int>;
@@ -127,7 +128,7 @@ void UpsilonAna::CreateBranch()
 }
 
 void UpsilonAna::ClearBranch(){
-    AnalysisBase::ClearBranch();
+    ClearBasicBranch();
 
     // Onia information
     m_n_onia = 0;
@@ -186,7 +187,7 @@ void UpsilonAna::ClearBranch(){
 
 void UpsilonAna::AttachBranchToTree()
 {
-    AnalysisBase::AttachBranchToTree();
+    AttachBasicToTree();
 
     event_br->AttachBranchToTree(*physics);
     muon_br ->AttachBranchToTree(*physics);
@@ -248,7 +249,7 @@ void UpsilonAna::AttachBranchToTree()
 
 int UpsilonAna::process(Long64_t ientry)
 {
-    int sc = AnalysisBase::process(ientry);
+    int sc = Start(ientry);
     if(m_debug) {
         Info(APP_NAME, " UpsilonAna: processing");
     }

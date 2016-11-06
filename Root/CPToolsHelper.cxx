@@ -274,7 +274,7 @@ ST::SUSYObjDef_xAOD* CPToolsHelper::GetSUSYTools(bool isData, const char* config
 {
     Info( APP_NAME, "Creating SUSY Tools initialized... " );
     // create SUSYTools and config it
-    ST::SUSYObjDef_xAOD* objTool = new ST::SUSYObjDef_xAOD("SUSYObjDef_Upsilon");
+    ST::SUSYObjDef_xAOD* objTool = new ST::SUSYObjDef_xAOD("SUSYObjDef");
     objTool->msg().setLevel(MSG::ERROR);   // MSG::VERBOSE
 
     // Configure the SUSYObjDef instance
@@ -283,7 +283,6 @@ ST::SUSYObjDef_xAOD* CPToolsHelper::GetSUSYTools(bool isData, const char* config
 
     // general configuration
     string maindir(getenv("ROOTCOREBIN"));
-    // string config_file = Form("%s/data/MyXAODTools/upsilon.conf", maindir.c_str());
     if(! objTool->setProperty("ConfigFile", config_name) ) return NULL;
 
     // pileup reweight
@@ -292,8 +291,8 @@ ST::SUSYObjDef_xAOD* CPToolsHelper::GetSUSYTools(bool isData, const char* config
     if(! objTool->setProperty("PRWConfigFiles", prw_conf) ) return NULL;
 
     vector<string> prw_lumicalc;
-    prw_lumicalc.push_back(maindir+"/data/MyXAODTools/ilumicalc_histograms_None_276262-284484_final_20.7.root");
-    prw_lumicalc.push_back(maindir+"/data/MyXAODTools/ilumicalc_histograms_None_297730-303892.root");
+    prw_lumicalc.push_back(maindir+"/data/MyXAODTools/ilumicalc_histograms_None_276262-284484_final_20.7.root"); // 2015
+    prw_lumicalc.push_back(maindir+"/data/MyXAODTools/ilumicalc_histograms_None_297730-311481_OflLumi-13TeV-005.root"); // 2016
     if(! objTool->setProperty("PRWLumiCalcFiles", prw_lumicalc) ) return NULL;
 
     if( objTool->initialize() != StatusCode::SUCCESS){

@@ -17,11 +17,13 @@ public:
     GammaJetAna();
     virtual ~GammaJetAna();
 
+    int initialize();
+    void ClearBranch();
+    int process(Long64_t ientry); // main program
+
+private:
     void AttachBranchToTree();
     void CreateBranch();
-    void ClearBranch();
-
-    int process(Long64_t ientry); // main program
 
 private:
     const float LEADING_PHOTON_CUT;

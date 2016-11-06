@@ -28,7 +28,7 @@ int main( int argc, char* argv[] )
 
     if ((argc > 1 && string(argv[1]) == "help") ||(argc < 3))
     {
-        cout << argv[0] << " analysisName toberun.txt number_evts isData=1 debug=0 noGRL=0" << endl;
+        cout << argv[0] << " analysisName toberun.txt number_evts isData=1 debug=0 noGRL=0 doSmear=1" << endl;
         cout << "analysisName: gammajet, upsilon, monojet" << endl;
         exit(1);
     }
@@ -85,9 +85,10 @@ int main( int argc, char* argv[] )
     } else if(anaName == "monojet") {
         ana = new MonoJetAna();
     }else{
-        Error("cannot find algorithm: %s", anaName.Data());
+        Error(APP_NAME, "cannot find algorithm: %s", anaName.Data());
         return 1;
     }
+
 
     // Decide how many events to run over:
     Long64_t entries = event.getEntries();
@@ -101,6 +102,7 @@ int main( int argc, char* argv[] )
     int isData = 0;
     bool do_debug = false;
     bool no_grl = false;
+    bool do_smear = true;
 
     for (int i= 4 ; i<argc ; i++) {
         const char* key = strtok(argv[i],"=") ;
@@ -109,6 +111,18 @@ int main( int argc, char* argv[] )
         if (strcmp(key,"isData")==0) isData = atoi(val);
         if (strcmp(key,"debug")==0) do_debug = (bool)atoi(val);
         if (strcmp(key,"noGRL")==0) no_grl = (bool)atoi(val);
+        if (strcmp(key,"doSmear")==0) do_smear = (bool)atoi(val);
+    }
+
+    // setup each analysis!
+    if (no_grl){
+        ana->setGRLTag(false);
+    }
+
+    // smearing for monojet only
+    if( anaName == "monojet"){
+        MonoJetAna* monojet_ana = dynamic_cast<MonoJetAna*>(ana);
+        monojet_ana->setSmear(do_smear);
     }
 
     Info( APP_NAME, "Number of events to process: %i", static_cast<int>( entries ) );
@@ -118,13 +132,20 @@ int main( int argc, char* argv[] )
     event.getEntry(0);
 
     ana->SetEvent(&event); // don't change the order with following commands
-    ana->SaveProcessedInfo(total_evts_pro, sum_of_evt_w, sum_of_evt_w_sq);
-    ana->GetSUSYTool();
-    if (no_grl){
-        ana->setGRLTag(false);
-    }
 
+    // save total number of events first, which also tells if it's Data/MC
+    // SUSYTool needs it's information to be properly initialized!
+    ana->SaveProcessedInfo(total_evts_pro, sum_of_evt_w, sum_of_evt_w_sq);
+
+    if(ana->initialize() != 0) {
+        Error(APP_NAME, "cannot initialize %s", anaName.Data());
+        delete ana;
+        exit(1);
+    }
     if(do_debug) ana->SetVerbose();
+
+    // ana->GetSUSYTool();
+
 
     for( Long64_t entry = 0; entry < entries; ++entry )
     {

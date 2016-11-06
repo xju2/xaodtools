@@ -22,13 +22,15 @@ public:
     UpsilonAna();
     virtual ~UpsilonAna();
 
-    void AttachBranchToTree();
-    void CreateBranch();
-    void ClearBranch();
+    virtual int initialize();
+    virtual void ClearBranch();
 
-    int process(Long64_t ientry); // main program
+    virtual int process(Long64_t ientry); // main program
+
 private:
-    int initial_tools();
+    void CreateBranch();
+    void AttachBranchToTree();
+
     void buildTwoMuons(const MuonVect& muons);
     void buildFourMuons(const MuonVect& muons);
     void fillOniaInfo(const xAOD::Muon& muon1, const xAOD::Muon& muon2);

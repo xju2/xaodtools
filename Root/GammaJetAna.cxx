@@ -25,11 +25,12 @@ GammaJetAna::GammaJetAna():
         {"HLT_g120_loose", false},
         {"HLT_g200_etcut", false}
     };
-    CreateBranch();
-    AttachBranchToTree();
-    h_cutflow = new TH1F("h_cutflow", "cut flow", 101, -0.5, 100.5);
 }
 
+int GammaJetAna::initialize(){
+    initializeBasicTools();
+    CreateBranch();
+}
 
 GammaJetAna::~GammaJetAna(){
     if(f_out){
@@ -43,18 +44,20 @@ GammaJetAna::~GammaJetAna(){
 
 void GammaJetAna::CreateBranch()
 {
+    CreateBasicBranch();
+    h_cutflow = new TH1F("h_cutflow", "cut flow", 101, -0.5, 100.5);
     return ;
 }
 
 void GammaJetAna::ClearBranch(){
-    AnalysisBase::ClearBranch();
+    ClearBasicBranch();
     m_mass = -999;
 }
 
 
 void GammaJetAna::AttachBranchToTree()
 {
-    AnalysisBase::AttachBranchToTree();
+    AttachBasicToTree();
 
     event_br->AttachBranchToTree(*physics);
     jet_br  ->AttachBranchToTree(*physics);
@@ -66,7 +69,7 @@ void GammaJetAna::AttachBranchToTree()
 int GammaJetAna::process(Long64_t ientry)
 {
     h_cutflow->Fill(0);
-    int sc = AnalysisBase::process(ientry);
+    int sc = Start(ientry);
     if(m_debug) {
         Info(APP_NAME, " GammaJetAna: processing");
     }

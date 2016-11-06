@@ -39,23 +39,31 @@ public:
             const char* associate_tree_name="associate");
     virtual ~AnalysisBase();
 
+    virtual int initialize() = 0;
+    virtual void ClearBranch() = 0;
+    virtual int process(Long64_t ientry) = 0;
+
+    void setSUSYConfig(const string& config);
     void SetEvent(xAOD::TEvent* event);
     void SetVerbose();
 
     bool SaveProcessedInfo(uint64_t total_evts, double sum_of_weight, double sum_of_w_sq);
-    void GetSUSYTool(const char* config=NULL);
     static bool descend_on_pt(xAOD::IParticle* p1, xAOD::IParticle* p2){
         return p1->pt() > p2->pt();
     }
 
-    // bookings of tree
-    virtual void AttachBranchToTree();
-    virtual void CreateBranch();
-    virtual void ClearBranch();
 
-    virtual int process(Long64_t ientry);
     bool isPassGRL();
     void setGRLTag(bool);
+protected: // methods
+
+    bool GetSUSYTool(const char* config=NULL);
+    // bookings of tree
+    int initializeBasicTools();
+    void AttachBasicToTree();
+    void CreateBasicBranch();
+    void ClearBasicBranch();
+    int Start(Long64_t ientry);
 
 protected:
     bool m_isData;
@@ -64,6 +72,7 @@ protected:
     string  m_susy_config;
     const char* APP_NAME;
     map<string, bool> trigger_map_;
+    uint64_t m_totalEvents;
 
     // points to physics objects
     xAOD::TEvent* event;

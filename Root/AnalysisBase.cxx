@@ -19,17 +19,24 @@ AnalysisBase::AnalysisBase(
     tree = new TTree(associate_tree_name, associate_tree_name);
     physics = new TTree(tree_name, tree_name);
 
+
+}
+
+int AnalysisBase::initializeBasicTools()
+{
     // initiate tools
     cp_tools =  unique_ptr<CPToolsHelper>( new CPToolsHelper() );
-    event_br =  unique_ptr<EventInfoCreator>( new EventInfoCreator() );
-    muon_br =   unique_ptr<MuonBranch>( new MuonBranch() );
-    el_br =     unique_ptr<ElectronBranch>( new ElectronBranch() );
-    jet_br =    unique_ptr<JetBranch>( new JetBranch() );
-    ph_br =     unique_ptr<PhotonBranch>( new PhotonBranch() );
-    m_objTool = NULL;
+    if(! GetSUSYTool()){
+        return 1;
+    }
+    return 0;
+    // create branches for analysis
+    // CreateBranch();
+    // AttachBranchToTree();
+}
 
-    CreateBranch();
-    AttachBranchToTree();
+void AnalysisBase::setSUSYConfig(const string& config){
+    m_susy_config = config;
 }
 
 AnalysisBase::~AnalysisBase()
@@ -42,8 +49,13 @@ AnalysisBase::~AnalysisBase()
     }
 }
 
-void AnalysisBase::CreateBranch()
+void AnalysisBase::CreateBasicBranch()
 {
+    event_br =  unique_ptr<EventInfoCreator>( new EventInfoCreator() );
+    muon_br =   unique_ptr<MuonBranch>( new MuonBranch() );
+    el_br =     unique_ptr<ElectronBranch>( new ElectronBranch() );
+    jet_br =    unique_ptr<JetBranch>( new JetBranch() );
+    ph_br =     unique_ptr<PhotonBranch>( new PhotonBranch() );
     return ;
 }
 
@@ -61,21 +73,24 @@ bool AnalysisBase::SaveProcessedInfo(
         m_isData = CPToolsHelper::SaveProcessedEvents(
                 *tree, *ei, total_evts, sum_of_weight, sum_of_w_sq);
     }
+    m_totalEvents = total_evts;
     return true;
 }
 
-void AnalysisBase::GetSUSYTool(const char* config)
+bool AnalysisBase::GetSUSYTool(const char* config)
 {
     if(m_susy_config != ""){
         m_objTool = CPToolsHelper::GetSUSYTools(m_isData, m_susy_config.c_str());
     } else if(!config){
         m_objTool = CPToolsHelper::GetSUSYTools(m_isData, config);
     } else {
+        Error(APP_NAME, "failed to get SUSYTool");
+        return false;
     }
-    return;
+    return true;
 }
 
-void AnalysisBase::AttachBranchToTree()
+void AnalysisBase::AttachBasicToTree()
 {
     // Trigger Info
     for(auto& kv : trigger_map_){
@@ -91,7 +106,7 @@ void AnalysisBase::AttachBranchToTree()
     }
 }
 
-void AnalysisBase::ClearBranch()
+void AnalysisBase::ClearBasicBranch()
 {
     for(auto keys: trigger_map_) {
         keys.second = false;
@@ -105,31 +120,35 @@ void AnalysisBase::ClearBranch()
     if(ph_br)       ph_br   ->ClearBranch();
 }
 
-int AnalysisBase::process(Long64_t ientry)
+int AnalysisBase::Start(Long64_t ientry)
 {
     event->getEntry( ientry );
+    CHECK(m_objTool->ApplyPRWTool());
+
     CHECK( event->retrieve( ei, "EventInfo" ) );
     //Hack...
     // if(ei->eventNumber() != 1773037184) return 1;
 
     if(m_debug) Info(APP_NAME, " AnalysisBase:processing: %d %llu", (int) ei->runNumber(), ei->eventNumber());
-
-    CHECK(m_objTool->ApplyPRWTool());
-
+    if( ientry%1000 == 0) {
+        Info(APP_NAME, "processed %lld, %.2f %%", ientry, 100.*ientry/m_totalEvents);
+    }
 
     for(auto& kv : trigger_map_)
     {
-        if(m_objTool->IsTrigPassed(kv.first.c_str())) 
+        if(m_objTool->IsTrigPassed(kv.first.c_str()))
         {
             if(m_debug) Info(APP_NAME, "fired the trigger %s", kv.first.c_str());
             pass_trigger_ = kv.second = true;
         } else {
             kv.second = false;
         }
+        /**
         if(m_debug){
             Info(APP_NAME, "%s trigger: %d %d", kv.first.c_str(),
                     (int) kv.second, (int) pass_trigger_);
         }
+        **/
     }
 
     CHECK( event->retrieve(vertice, "PrimaryVertices") );

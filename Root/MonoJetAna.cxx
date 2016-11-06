@@ -28,7 +28,7 @@ MonoJetAna::MonoJetAna():
         "HLT_j60", "HLT_j55", "HLT_j25", "HLT_j15"
     }
 {
-    m_doSmearing = true;
+    m_doSmearing = false;
     if(APP_NAME==NULL) APP_NAME = "MonoJetAna";
     string maindir(getenv("ROOTCOREBIN"));
     m_susy_config = Form("%s/data/MyXAODTools/monojet.conf", maindir.c_str());
@@ -67,24 +67,20 @@ MonoJetAna::MonoJetAna():
         {"HLT_j380", false},
         {"HLT_j400", false}
     };
+
+}
+
+int MonoJetAna::initialize()
+{
+    if( initializeBasicTools() != 0 ){
+        return 1;
+    }
+    lightJetResponse = NULL;
+    bJetResponse = NULL;
     CreateBranch();
     AttachBranchToTree();
 
-    initial_tools();
-}
-
-
-MonoJetAna::~MonoJetAna(){
-    if(lightJetResponse) delete lightJetResponse;
-    if(bJetResponse) delete bJetResponse;
-
-    if(m_jetP4) delete m_jetP4;
-    if(m_doSmearing && m_smearedData){
-        delete m_smearedData;
-    }
-}
-
-int MonoJetAna::initial_tools(){
+    // initiate tools
     m_jetCleaningTool.reset( new JetCleaningTool("JetCleaningToolTight") );
     CHECK(m_jetCleaningTool->setProperty("CutLevel", "TightBad"));
     CHECK(m_jetCleaningTool->initialize());
@@ -121,8 +117,19 @@ int MonoJetAna::initial_tools(){
     return 0;
 }
 
+MonoJetAna::~MonoJetAna(){
+    if(lightJetResponse) delete lightJetResponse;
+    if(bJetResponse) delete bJetResponse;
+
+    if(m_jetP4) delete m_jetP4;
+    if(m_doSmearing && m_smearedData){
+        delete m_smearedData;
+    }
+}
+
 void MonoJetAna::CreateBranch()
 {
+    CreateBasicBranch();
     m_jetP4 = new vector<TLorentzVector>;
     if (m_doSmearing){
         m_smearedData = new vector<SmearedInfo>();
@@ -131,8 +138,8 @@ void MonoJetAna::CreateBranch()
 }
 
 void MonoJetAna::ClearBranch(){
+    ClearBasicBranch();
 
-    AnalysisBase::ClearBranch();
     m_jetP4->clear();
     m_nGoodJets = 0;
     m_nJetsBtagged = 0;
@@ -150,7 +157,7 @@ void MonoJetAna::ClearBranch(){
 
 void MonoJetAna::AttachBranchToTree()
 {
-    AnalysisBase::AttachBranchToTree();
+    AttachBasicToTree();
 
     event_br->AttachBranchToTree(*physics);
 
@@ -176,7 +183,7 @@ void MonoJetAna::AttachBranchToTree()
 
 int MonoJetAna::process(Long64_t ientry)
 {
-    int sc = AnalysisBase::process(ientry);
+    int sc = Start(ientry);
     if(m_debug) {
         Info(APP_NAME, " MonoJetAna: processing");
     }
@@ -366,6 +373,7 @@ int MonoJetAna::process(Long64_t ientry)
         std::vector<std::unique_ptr<SmearData > > smrMc;
         m_mySmearingTool->DoSmearing(smrMc,*jets_copy);
         for (auto& SmearedEvent : smrMc){
+            // clear up smeared data, or the program will consume infinite memory!
             xAOD::JetContainer* theJetContainer =  SmearedEvent->jetContainer;
             SmearedInfo smeared;
             if (get_smeared_info(theJetContainer, muons_copy, electrons_copy, ph_copy, smeared)
@@ -396,9 +404,9 @@ bool MonoJetAna::get_smeared_info(
         jets->at(0)->auxdata< char >(smearJet) == false
     ) return false;
 
-    auto* met = new xAOD::MissingETContainer;
-    auto* metAux = new xAOD::MissingETAuxContainer;
-    met->setStore(metAux);
+    unique_ptr<xAOD::MissingETContainer> met(new xAOD::MissingETContainer() );
+    unique_ptr<xAOD::MissingETAuxContainer> metAux(new xAOD::MissingETAuxContainer() );
+    met->setStore(metAux.get());
     m_objTool->GetMET(*met,
                 jets,
                 electrons,
@@ -414,7 +422,9 @@ bool MonoJetAna::get_smeared_info(
     smeared_info.met_ =(float) (*met_it)->met();
     smeared_info.sum_et_ =(float) (*met_it)->sumet();
     // since xe80 used for the analysis, cut on 80 GeV to reduce size of pseudo-data.
-    if(smeared_info.met_ < 200E3) return false;
+    if(smeared_info.met_ < 200E3){
+        return false;
+    }
     float min_dphi_jetMET  = 9999;
     int n_good_jets = 0;
     smeared_info.HT_ = 0.0;
@@ -452,9 +462,9 @@ bool MonoJetAna::get_smeared_info(
     smeared_info.n_good_jets_ = n_good_jets;
 
     /* Track Missing Et */
-    auto* met_track = new xAOD::MissingETContainer;
-    auto* metAux_track = new xAOD::MissingETAuxContainer;
-    met_track->setStore(metAux_track);
+    unique_ptr<xAOD::MissingETContainer> met_track(new xAOD::MissingETContainer);
+    unique_ptr<xAOD::MissingETAuxContainer> metAux_track(new xAOD::MissingETAuxContainer);
+    met_track->setStore(metAux_track.get());
     m_objTool->GetTrackMET(*met_track,
                 jets,
                 electrons,
@@ -463,9 +473,9 @@ bool MonoJetAna::get_smeared_info(
     xAOD::MissingETContainer::const_iterator met_track_it = met_track->find("Track");
     smeared_info.dphi_EP_ = fabs(TVector2::Phi_mpi_pi((*met_track_it)->phi() - (*met_it)->phi()));
 
-    delete met;
-    delete metAux;
-    delete met_track;
-    delete metAux_track;
     return true;
+}
+
+void MonoJetAna::setSmear(bool smear_){
+    m_doSmearing = smear_;
 }
