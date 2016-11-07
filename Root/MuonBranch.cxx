@@ -20,6 +20,7 @@ int MuonBranch::initial_tools(){
     m_muonSelectionTool->setProperty( "MaxEta", 2.7);
     m_muonSelectionTool->setProperty( "MuQuality", 4);
     m_muonSelectionTool->setProperty( "TurnOffMomCorr", true);
+    m_muonSelectionTool->setProperty( "TrtCutOff", true);
     CHECK( m_muonSelectionTool->initialize().isSuccess() );
     return 0;
 }

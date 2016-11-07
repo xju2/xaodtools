@@ -89,7 +89,7 @@ protected:
 
     // tools for CP recommendations
     unique_ptr<CPToolsHelper> cp_tools;
-    ST::SUSYObjDef_xAOD* m_objTool;
+    unique_ptr<ST::SUSYObjDef_xAOD> m_objTool;
 
     // output setup
     TFile* f_out;

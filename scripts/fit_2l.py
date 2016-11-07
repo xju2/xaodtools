@@ -37,6 +37,8 @@ class Fit2L:
         self.onia_pt_cut = 1
         # with 3mu4 trigger or not
         self.with_3mu4 = True
+        # only unprescaled runs
+        self.only_unprescaled = True
 
     def pass_onia_pt_cut(self, pT):
         pT_cut = int(self.onia_pt_cut)
@@ -112,16 +114,23 @@ class Fit2L:
         p2 = RooRealVar("p2", "p2", -1E6, 1E6)
         p3 = RooRealVar("p3", "p3", -1E6, 1E6)
         p4 = RooRealVar("p4", "p4", -1E6, 1E6)
-        #p0 = RooRealVar("p0", "p0", -4.56380e+03)
-        #p1 = RooRealVar("p1", "p1", 1.48976e+03)
-        #p2 = RooRealVar("p2", "p2", -7.60820e+01)
-        #p3 = RooRealVar("p3", "p3", -1.35696e-02)
-        #p4 = RooRealVar("p4", "p4", -1.46353e-02)
+        #p0 = RooRealVar("p0", "p0", 1.00121e-01)
+        #p1 = RooRealVar("p1", "p1", -3.51406e-02)
+        #p2 = RooRealVar("p2", "p2", 5.92968e-03)
+        #p3 = RooRealVar("p3", "p3", -6.53710e-03)
+        #p4 = RooRealVar("p4", "p4", 9.76852e-03)
         bkg = ROOT.RooChebychev("bkg", "bkg", self.obs, RooArgList(p0, p1, p2, p3, p4))
         #bkg = ROOT.RooPolynomial("bkg", "bkg", self.obs, RooArgList(p0, p1, p2))
         ebkg = ROOT.RooExtendPdf("ebkg", "ebkg", bkg, n_bkg)
         model = ROOT.RooAddPdf("model", "model", RooArgList(esig, esig2, esig3, ebkg))
         getattr(self.ws, "import")(model)
+
+    def is_unprescaled_runs(self, tree):
+        run_ = tree.run
+        res = True
+        if run_ >= 297730 and run_ < 307619:
+            res = False
+        return res
 
     def get_data(self):
         fin = ROOT.TFile.Open(self.file_name)
@@ -133,6 +142,9 @@ class Fit2L:
         data = ROOT.RooDataSet("data", "data", obs_set)
         for ientry in xrange(nentries):
             tree.GetEntry(ientry)
+            if self.only_unprescaled and not self.is_unprescaled_runs(tree):
+                continue
+
             for i,m4l in enumerate(getattr(tree, self.br_name)):
                 #m4l = m4l/1000
                 if m4l > self.obs.getMax() or m4l < self.obs.getMin():
@@ -308,6 +320,7 @@ if __name__ == "__main__":
     parser.add_option('--oniaPt', dest='oniapt', help="onia pT cut, 0/1/2/3", default=0)
     parser.add_option('--noTrigger', action="store_true", dest='notrigger', help="don't apply trigger", default=False)
     parser.add_option('--title', dest='title', help="title of x-axis", default="m_{#mu#mu} [GeV]")
+    parser.add_option('--allRuns', dest='allruns', help="use all runs", default=False, action="store_true")
 
 
     (options, args) = parser.parse_args()
@@ -329,6 +342,9 @@ if __name__ == "__main__":
 
         if options.notrigger:
             fit_4l.with_3mu4 = False
+
+        if options.allruns:
+            fit_4l.only_unprescaled = False
 
         fit_4l.onia_pt_cut = options.oniapt
         fit_4l.chi2_cut = cut

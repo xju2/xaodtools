@@ -30,9 +30,6 @@ int AnalysisBase::initializeBasicTools()
         return 1;
     }
     return 0;
-    // create branches for analysis
-    // CreateBranch();
-    // AttachBranchToTree();
 }
 
 void AnalysisBase::setSUSYConfig(const string& config){
@@ -80,9 +77,9 @@ bool AnalysisBase::SaveProcessedInfo(
 bool AnalysisBase::GetSUSYTool(const char* config)
 {
     if(m_susy_config != ""){
-        m_objTool = CPToolsHelper::GetSUSYTools(m_isData, m_susy_config.c_str());
+        m_objTool.reset( CPToolsHelper::GetSUSYTools(m_isData, m_susy_config.c_str()) );
     } else if(!config){
-        m_objTool = CPToolsHelper::GetSUSYTools(m_isData, config);
+        m_objTool.reset( CPToolsHelper::GetSUSYTools(m_isData, config) );
     } else {
         Error(APP_NAME, "failed to get SUSYTool");
         return false;
@@ -123,6 +120,8 @@ void AnalysisBase::ClearBasicBranch()
 int AnalysisBase::Start(Long64_t ientry)
 {
     event->getEntry( ientry );
+
+    // check if isData flag is set true when running data, or program will complain!
     CHECK(m_objTool->ApplyPRWTool());
 
     CHECK( event->retrieve( ei, "EventInfo" ) );
@@ -143,16 +142,9 @@ int AnalysisBase::Start(Long64_t ientry)
         } else {
             kv.second = false;
         }
-        /**
-        if(m_debug){
-            Info(APP_NAME, "%s trigger: %d %d", kv.first.c_str(),
-                    (int) kv.second, (int) pass_trigger_);
-        }
-        **/
     }
 
     CHECK( event->retrieve(vertice, "PrimaryVertices") );
-
 
     if(! cp_tools->HasPrimaryVertex(*vertice, 1))
         return 1;
@@ -167,7 +159,7 @@ int AnalysisBase::Start(Long64_t ientry)
 
 void AnalysisBase::SetVerbose(){
     m_debug = true;
-    if(m_objTool) {
+    if(m_objTool.get()) {
         m_objTool->setProperty("DebugMode", m_debug).ignore();
     }
 }
