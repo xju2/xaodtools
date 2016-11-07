@@ -21,6 +21,7 @@ int MuonBranch::initial_tools(){
     m_muonSelectionTool->setProperty( "MuQuality", 4);
     m_muonSelectionTool->setProperty( "TurnOffMomCorr", true);
     m_muonSelectionTool->setProperty( "TrtCutOff", true);
+    m_muonSelectionTool->msg().setLevel(MSG::ERROR);
     CHECK( m_muonSelectionTool->initialize().isSuccess() );
     return 0;
 }
