@@ -18,7 +18,8 @@ if not hasattr(ROOT, "passMultiLepton"):
     ROOT.gROOT.LoadMacro("/afs/cern.ch/user/x/xju/work/upsilon/code/MyXAODTools/scripts/MultiLeptonDefs_new.cxx")
 
 interested_event = [
-    (195847, 9013)
+    #(284500, 1105936),
+    (284500, 1302335)
 ]
 
 CHI2_DIMUON_CUT = 3
@@ -88,8 +89,24 @@ class BLSana:
         self.m_debug = False
 
         self.cut_flow = ROOT.TH1F("cut_flow", "cut flow", 100, 0.5, 100.5)
-        self.cut_flow_no3mu4 = ROOT.TH1F("cut_flow_no3mu4", "cut flow", 100, 0.5, 100.5)
-        self.cut_flow_with_3mu4 = ROOT.TH1F("cut_flow_with3mu4", "cut flow", 100, 0.5, 100.5)
+        x_axis = self.cut_flow.GetXaxis()
+        x_axis.SetBinLabel(1, "all")
+        x_axis.SetBinLabel(2, "at least four-lepton")
+        x_axis.SetBinLabel(3, "at least 3CB, at most 1ST")
+        x_axis.SetBinLabel(4, "di-onia")
+        x_axis.SetBinLabel(5, "Q=0")
+        x_axis.SetBinLabel(15, "Q=2")
+        x_axis.SetBinLabel(6, "Y+Q=0")
+        x_axis.SetBinLabel(16, "Y+Q=2")
+        x_axis.SetBinLabel(7, "4 CB")
+        x_axis.SetBinLabel(17, "4 CB")
+        x_axis.SetBinLabel(8, "fired 3mu4")
+        x_axis.SetBinLabel(18, "fired 3mu4")
+        x_axis.SetBinLabel(9, "m4l > 0 and m4l < 50 GeV")
+        x_axis.SetBinLabel(19, "m4l > 0 and m4l < 50 GeV")
+
+        self.cut_flow_no3mu4 = self.cut_flow.Clone("cut_flow_no3mu4")
+        self.cut_flow_with_3mu4 = self.cut_flow.Clone("cut_flow_with3mu4")
 
         self.out_events = ""
 
@@ -751,6 +768,9 @@ class BLSana:
             else:
                 type_muon = tree.mu_type[i]
 
+            if self.m_debug:
+                print "author", tree.mu_author[i],"type: ", type_muon
+
             if type_muon == combined_type_cut:
                 good_cb_muons.append(i)
             elif type_muon == 2:
@@ -792,7 +812,7 @@ class BLSana:
         pass_dionia = False
         if quad_id >= 0:
             m4l = tree.quad_fitted_mass[quad_id]
-            if m4l < 50E3 and m4l > 0:
+            if True and (m4l < 50E3 and m4l > 0):
                 # onia cuts
                 onia_pair_index = self.find_onia_pair(tree, good_muons, self.passOniaCuts)
                 if len(onia_pair_index) > 0:
@@ -821,7 +841,6 @@ class BLSana:
             charge_weight = 10
         elif abs(total_charge) == 0:
             charge_weight = 0
-            self.print_event(tree)
         else:
             return None
 
@@ -859,6 +878,8 @@ class BLSana:
         if id_upsilon[0] < 0:
             return None
         self.fill_cut_flow(6+charge_weight)
+        if total_charge == 0:
+            self.print_event(tree)
 
         # count number of combined muons
         ncombined = 0

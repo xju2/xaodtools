@@ -33,32 +33,30 @@ class Fit2L:
 
         # dionia selection or onia selection
         self.dionia_selection = False
-        # different onia_pt cuts, 0:noCut, 1:<10, 2:10,20, 3:>20
-        self.onia_pt_cut = 1
         # with 3mu4 trigger or not
         self.with_3mu4 = True
         # only unprescaled runs
         self.only_unprescaled = True
 
+        # different onia_pt cuts, 0:noCut, 1:<5, 2:5-10, 3:10,20, 4:>20
+        self.onia_pt_cut = 0
+        self.onia_pt_cuts = [0, 5, 10, 20]
+
     def pass_onia_pt_cut(self, pT):
         pT_cut = int(self.onia_pt_cut)
-        if pT_cut == 1:
-            return (pT < 10)
-        elif pT_cut == 2:
-            return (pT >= 10 and pT < 20)
-        elif pT_cut == 3:
-            return pT > 20
+        if pT_cut >= len(self.onia_pt_cuts):
+            return pT >= self.onia_pt_cuts[ len(self.onia_pt_cuts)-1 ]
+        elif pT_cut > 0:
+            return pT >= self.onia_pt_cuts[pT_cut-1] and pT < self.onia_pt_cuts[pT_cut]
         else:
             return True
 
     def print_onia_pt_cut(self):
         pT_cut = int(self.onia_pt_cut)
-        if pT_cut == 1:
-            return "p_{T}^{onia} in [0, 10) GeV"
-        elif pT_cut == 2:
-            return "p_{T}^{onia} in [10, 20) GeV"
-        elif pT_cut == 3:
-            return "p_{T}^{onia} in [20, #infty) GeV"
+        if pT_cut >= len(self.onia_pt_cuts):
+            return "p_{T}^{onia} in ["+str(self.onia_pt_cuts[ len(self.onia_pt_cuts)-1 ])+", #infty) GeV"
+        elif pT_cut > 0:
+            return "p_{T}^{onia} in ["+str(self.onia_pt_cuts[pT_cut-1])+", "+str(self.onia_pt_cuts[pT_cut])+") GeV"
         else:
             return "p_{T}^{onia} in [-#infty, #infty] GeV"
 
@@ -317,7 +315,7 @@ if __name__ == "__main__":
     usage = sys.argv[0]+" file_name br_name"
     parser = OptionParser(usage=usage)
     parser.add_option('--dionia', action="store_true", dest="dionia", help="apply dionia selection", default=False)
-    parser.add_option('--oniaPt', dest='oniapt', help="onia pT cut, 0/1/2/3", default=0)
+    parser.add_option('--oniaPt', dest='oniapt', help="onia pT cut, 0/1/2/3/4", default=0)
     parser.add_option('--noTrigger', action="store_true", dest='notrigger', help="don't apply trigger", default=False)
     parser.add_option('--title', dest='title', help="title of x-axis", default="m_{#mu#mu} [GeV]")
     parser.add_option('--allRuns', dest='allruns', help="use all runs", default=False, action="store_true")
@@ -348,5 +346,5 @@ if __name__ == "__main__":
 
         fit_4l.onia_pt_cut = options.oniapt
         fit_4l.chi2_cut = cut
-        fit_4l.fit()
+        #fit_4l.fit()
         fit_4l.plot(options.title)
