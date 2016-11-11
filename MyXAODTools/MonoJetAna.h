@@ -76,6 +76,8 @@ private:
     TH2F* lightJetResponse;
     TH2F* bJetResponse;
     const string m_singleJetTrigger[16];
+    const float m_JET_PT_CUT;
+    const float m_MET_ET_CUT;
 };
 
 #endif

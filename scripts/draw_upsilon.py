@@ -1250,7 +1250,11 @@ def draw(file_name, post_fix):
     canvas.SaveAs("m4l_"+post_fix+".pdf")
 
 def compare_sideband(file_name, br_name="x_chi2"):
-
+    """
+    compare the br_name between LHS and RHS of the "signal",
+    one needs to change the h_sig,
+    for now only valid for chi2
+    """
     f1 = ROOT.TFile.Open(file_name)
     tree = f1.Get("bls")
     h_sig = ROOT.TH1F("h_sig", "signal", 10, 0, 50)
@@ -1290,6 +1294,30 @@ def compare_sideband(file_name, br_name="x_chi2"):
     legend.AddEntry(h_right, "RHS", "EP")
     legend.Draw("same")
     canvas.SaveAs("cmp_"+br_name+".pdf")
+
+def draw_ss(file_name, post_fix):
+    """
+    plot m4l distribution with same sign
+    """
+    f1 = ROOT.TFile.Open(file_name)
+    tree = f1.Get("bls")
+    nbins_4l = 50
+    low_4l = 15
+    hi_4l = 25
+    h_m4l_temp = ROOT.TH1F("h_m4l_temp", "m4l;m_{#varUpsilon+#mu+#mu} [GeV];Events / 200 MeV", nbins_4l, low_4l, hi_4l)
+    h_m4l_ss_notrigger = h_m4l_temp.Clone("h_m4l_ss_notrigger")
+    h_m4l_ss_withtrigger = h_m4l_temp.Clone("h_m4l_ss_withtrigger")
+    tree.Draw("m4l_fitted>>h_m4l_ss_notrigger", "abs(charge) == 2")
+    tree.Draw("m4l_fitted>>h_m4l_ss_withtrigger", "abs(charge) == 2 && trig_3mu4 == 1")
+
+    canvas = ROOT.TCanvas("canvas", "canvas", 600, 600)
+    print h_m4l_ss_notrigger.Integral()
+    h_m4l_ss_notrigger.Draw("EP")
+    canvas.SaveAs("m4l_fitted_ss_notrigger.eps")
+
+    print h_m4l_ss_withtrigger.Integral()
+    h_m4l_ss_withtrigger.Draw("EP")
+    canvas.SaveAs("m4l_fitted_ss_withtrigger.eps")
 
 if __name__ == "__main__":
 
@@ -1339,7 +1367,8 @@ if __name__ == "__main__":
 
     elif option == "draw":
         input_name = args[1]
-        draw(input_name, out_name)
+        #draw(input_name, out_name)
+        draw_ss(input_name, out_name)
     else:
         input_name = args[1]
         compare_sideband(input_name, out_name)

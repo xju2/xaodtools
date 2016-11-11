@@ -22,11 +22,13 @@ MonoJetAna::MonoJetAna():
     AnalysisBase(),
     smearJet("smearjet"),
     m_singleJetTrigger{
-        "HLT_j400", "HLT_j380", "HLT_j360", "HLT_j320",
-        "HLT_j300", "HLT_260", "HLT_200", "HLT_j175",
-        "HLT_j150", "HLT_j110", "HLT_j100", "HLT_j85",
-        "HLT_j60", "HLT_j55", "HLT_j25", "HLT_j15"
-    }
+        "HLT_j15", "HLT_j25", "HLT_j55", "HLT_j60",
+        "HLT_j85", "HLT_j100", "HLT_j110", "HLT_j150",
+        "HLT_j175", "HLT_200", "HLT_260", "HLT_j300",
+        "HLT_j320", "HLT_j360", "HLT_j380", "HLT_j400"
+    },
+    m_JET_PT_CUT(100),
+    m_MET_ET_CUT(100)
 {
     m_doSmearing = false;
     if(APP_NAME==NULL) APP_NAME = "MonoJetAna";
@@ -111,7 +113,7 @@ int MonoJetAna::initialize()
         // setup pre-scale tool
         m_prescaleTool.reset( new JetSmearing::PreScaleTool("PreScaleTool") );
         // m_prescaleTool = new JetSmearing::PreScaleTool("PreScaleTool");
-        CHECK(m_prescaleTool->setProperty("HistoPath", maindir+"/data/JetSmearing/PreScales/prescale_histos_combined_2015-2016.root"));
+        CHECK(m_prescaleTool->setProperty("HistoPath", maindir+"/data/JetSmearing/PreScales/prescale_histos_combined_2015-2016_v81-pro20-10.root"));
         CHECK(m_prescaleTool->initialize());
     }
     return 0;
@@ -335,7 +337,7 @@ int MonoJetAna::process(Long64_t ientry)
     m_minDphiJetsMET = min_dphi;
 
     // at least one leading jet
-    if( m_nGoodJets < 1 || m_jetP4->at(0).Pt()/1E3 < 200 ||
+    if( m_nGoodJets < 1 || m_jetP4->at(0).Pt()/1E3 < m_JET_PT_CUT ||
         dec_tightBad(*leading_jet) != 1 ||
         fabs(m_jetP4->at(0).Eta()) >= 2.4 )
     { 
@@ -398,7 +400,7 @@ bool MonoJetAna::get_smeared_info(
     smeared_info.leading_jet_pt_ = (float)jets->at(0)->p4().Pt();
     smeared_info.leading_jet_eta_ = (float)jets->at(0)->p4().Eta();
     smeared_info.leading_jet_phi_ = (float)jets->at(0)->p4().Phi();
-    if( smeared_info.leading_jet_pt_ < 200E3 ||
+    if( smeared_info.leading_jet_pt_/1E3 < m_JET_PT_CUT ||
         fabs(smeared_info.leading_jet_eta_) >= 2.4 ||
         dec_tightBad(*(jets->at(0))) != 1 ||
         jets->at(0)->auxdata< char >(smearJet) == false
@@ -422,7 +424,7 @@ bool MonoJetAna::get_smeared_info(
     smeared_info.met_ =(float) (*met_it)->met();
     smeared_info.sum_et_ =(float) (*met_it)->sumet();
     // since xe80 used for the analysis, cut on 80 GeV to reduce size of pseudo-data.
-    if(smeared_info.met_ < 200E3){
+    if(smeared_info.met_ < m_MET_ET_CUT){
         return false;
     }
     float min_dphi_jetMET  = 9999;

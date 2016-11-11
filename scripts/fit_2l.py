@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+"""
+It's likely the fit cannot converge out of box,
+need to tune the model in build_model()
+"""
 
 import ROOT
 from ROOT import RooRealVar
@@ -13,7 +17,7 @@ import math
 from optparse import OptionParser
 
 import AtlasStyle
-if not hasattr(ROOT, "my,Text"):
+if not hasattr(ROOT, "myText"):
     ROOT.gROOT.LoadMacro("/afs/cern.ch/user/x/xju/tool/AtlasUtils.C")
     ROOT.gROOT.LoadMacro("/afs/cern.ch/user/x/xju/tool/loader.c")
 
@@ -41,6 +45,14 @@ class Fit2L:
         # different onia_pt cuts, 0:noCut, 1:<5, 2:5-10, 3:10,20, 4:>20
         self.onia_pt_cut = 0
         self.onia_pt_cuts = [0, 5, 10, 20]
+
+        # if build new model
+        self.new_model = False
+        self.model_name = "model"
+
+        # workspace components
+        self.data = None
+        self.model = None
 
     def pass_onia_pt_cut(self, pT):
         pT_cut = int(self.onia_pt_cut)
@@ -102,26 +114,29 @@ class Fit2L:
         m3 = ROOT.RooFormulaVar("m3", "mass of 3S", "mean + m3_shift", RooArgList(mean, m3_shift))
         s3 = ROOT.RooFormulaVar("s3", "sigma*(unit+m2_shift)/mean", "@0*(1+@1/9.46)", RooArgList(sigma, m3_shift))
         g3 = ROOT.RooGaussian("g3", "gauss", self.obs, m3, s3)
-        n3 = RooRealVar("n3", "number of 3S" , 1, 0, 1000)
+        n3 = RooRealVar("n3", "number of 3S" , 1, 0, 2000)
         #n3 = ROOT.RooFormulaVar("n3", "number of 3S", "n2*0.45", RooArgList(n2))
         esig3 = ROOT.RooExtendPdf("esig3", "esig3", g3, n3)
 
         n_bkg = RooRealVar("n_bkg", "number of bkg" , 1000, 0, 1E7)
-        p0 = RooRealVar("p0", "p0", -1E6, 1E6)
-        p1 = RooRealVar("p1", "p1", -1E6, 1E6)
-        p2 = RooRealVar("p2", "p2", -1E6, 1E6)
-        p3 = RooRealVar("p3", "p3", -1E6, 1E6)
-        p4 = RooRealVar("p4", "p4", -1E6, 1E6)
-        #p0 = RooRealVar("p0", "p0", 1.00121e-01)
-        #p1 = RooRealVar("p1", "p1", -3.51406e-02)
-        #p2 = RooRealVar("p2", "p2", 5.92968e-03)
+        #p0 = RooRealVar("p0", "p0", -1E6, 1E6)
+        #p1 = RooRealVar("p1", "p1", -1E6, 1E6)
+        #p2 = RooRealVar("p2", "p2", -1E6, 1E6)
+        #p3 = RooRealVar("p3", "p3", -1E6, 1E6)
+        #p4 = RooRealVar("p4", "p4", -1E6, 1E6)
+        p0 = RooRealVar("p0", "p0", 9.93810e-02)
+        p1 = RooRealVar("p1", "p1", -3.51406e-02)
+        p2 = RooRealVar("p2", "p2", 5.92968e-03)
         #p3 = RooRealVar("p3", "p3", -6.53710e-03)
         #p4 = RooRealVar("p4", "p4", 9.76852e-03)
-        bkg = ROOT.RooChebychev("bkg", "bkg", self.obs, RooArgList(p0, p1, p2, p3, p4))
+
+        #bkg = ROOT.RooChebychev("bkg", "bkg", self.obs, RooArgList(p0, p1, p2, p3, p4))
+        bkg = ROOT.RooChebychev("bkg", "bkg", self.obs, RooArgList(p0, p1, p2))
         #bkg = ROOT.RooPolynomial("bkg", "bkg", self.obs, RooArgList(p0, p1, p2))
         ebkg = ROOT.RooExtendPdf("ebkg", "ebkg", bkg, n_bkg)
-        model = ROOT.RooAddPdf("model", "model", RooArgList(esig, esig2, esig3, ebkg))
-        getattr(self.ws, "import")(model)
+        model = ROOT.RooAddPdf(self.model_name, self.model_name, RooArgList(esig, esig2, esig3, ebkg))
+        getattr(self.ws, "import")(model, ROOT.RooFit.RecycleConflictNodes())
+        #getattr(self.ws, "import")(model, ROOT.RooFit.RenameConflictNodes("new"))
 
     def is_unprescaled_runs(self, tree):
         run_ = tree.run
@@ -170,49 +185,53 @@ class Fit2L:
     def fit(self):
         print "my configuration:",self.get_ws_name()
         if not hasattr(self, "ws"):
+            # try to look for the workspace and reused the data
+            f1 = ROOT.TFile.Open(self.get_ws_name())
             self.ws = ROOT.RooWorkspace("combined", "combined")
+            if f1:
+                self.f1 = f1
+                ws = f1.Get("combined")
+                if ws:
+                    getattr(self.ws, "import")(ws.obj('data'))
+                if self.new_model:
+                    print "building new models"
+                    self.build_model()
+                else:
+                    getattr(self.ws, "import")(ws.obj(self.model_name))
+            else:
+                self.build_model()
+                self.get_data()
 
-        self.build_model()
-        self.get_data()
         data = self.ws.obj("data")
-        model = self.ws.obj("model")
+        model = self.ws.obj(self.model_name)
+        model.Print()
         print "total data:", data.sumEntries()
         nll = model.createNLL(data)
 
-        do_bkg_only = False
-        n_sig = self.ws.var("n_sig")
-        n2 = self.ws.var("n2")
-        n3 = self.ws.var("n3")
-        if do_bkg_only:
-            n_sig.setVal(0.0)
-            n2.setVal(0.0)
-            n3.setVal(0.0)
-            n_sig.setConstant()
-            n2.setConstant()
-            n3.setConstant()
-            model.fitTo(data)
-            nll_condition = nll.getVal()
-            model.plotOn(frame, ROOT.RooFit.LineColor(4))
-        else:
-            nll_condition = 0.0
 
-        #n_sig.setVal(50000)
-        n_sig.setConstant(False)
-        #n2.setVal(50000)
-        #n3.setVal(50000)
-        #n2.setConstant(False)
-        #n3.setConstant(False)
+        # first fix signal
+        #self.ws.var("mean").setVal(9.46)
+        #self.ws.var("sigma").setVal(0.18)
+        #self.ws.var("mean").setConstant(True)
+        #self.ws.var("sigma").setConstant(True)
         model.fitTo(data)
+
+        # let signal free with background set constant
+        #self.ws.var('p0').setConstant(True)
+        #self.ws.var('p1').setConstant(True)
+        #self.ws.var('p2').setConstant(True)
+        #self.ws.var('p3').setConstant(True)
+        #self.ws.var("mean").setConstant(False)
+        #self.ws.var("sigma").setConstant(False)
+        #model.fitTo(data)
+
         nll_uncondition = nll.getVal()
         self.ws.saveSnapshot("splusb", self.ws.allVars())
 
-        try:
-            sig = math.sqrt(2*(nll_condition - nll_uncondition))
-            print "significance: ", sig
-        except:
-            print nll_condition,nll_uncondition
-
-        self.ws.writeToFile(self.get_ws_name())
+        if hasattr(self, "f1"):
+            self.f1.Close()
+        else:
+            self.ws.writeToFile(self.get_ws_name())
 
     def plot(self, title):
         ## plot
@@ -302,6 +321,7 @@ class Fit2L:
         ROOT.myText(x_start, y_start-0.05*4, 1, "S/sqrt(B):{:.1f}".format(nsig/math.sqrt(nbkg)))
 
         canvas.SaveAs(self.get_ws_name().replace("root", "pdf").replace("ws_", "fit_"))
+        canvas.SaveAs(self.get_ws_name().replace("root", "eps").replace("ws_", "fit_"))
         self.ws.obj("s2").Print()
         self.ws.obj("s3").Print()
 
@@ -319,6 +339,8 @@ if __name__ == "__main__":
     parser.add_option('--noTrigger', action="store_true", dest='notrigger', help="don't apply trigger", default=False)
     parser.add_option('--title', dest='title', help="title of x-axis", default="m_{#mu#mu} [GeV]")
     parser.add_option('--allRuns', dest='allruns', help="use all runs", default=False, action="store_true")
+    parser.add_option('--newModel', dest='model', help="build new model, regardless of exiting one in the workspace", default=False, action="store_true")
+    #parser.add_option('--chi2', dest='chi2', help="chi2 cut applied in onium", default=None)
 
 
     (options, args) = parser.parse_args()
@@ -331,8 +353,8 @@ if __name__ == "__main__":
     if len(sys.argv) > 2:
         br_name = args[1]
 
-    #cuts = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 8, 10, 10000]
-    cuts = [3.]
+    cuts = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 8, 10, 10000]
+    #cuts = [10000.]
     for cut in cuts:
         fit_4l = Fit2L(file_name, br_name)
         if options.dionia:
@@ -344,7 +366,10 @@ if __name__ == "__main__":
         if options.allruns:
             fit_4l.only_unprescaled = False
 
+        if options.model:
+            fit_4l.new_model = True
+
         fit_4l.onia_pt_cut = options.oniapt
         fit_4l.chi2_cut = cut
-        #fit_4l.fit()
+        fit_4l.fit()
         fit_4l.plot(options.title)

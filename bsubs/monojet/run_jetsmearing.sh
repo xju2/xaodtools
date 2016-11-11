@@ -16,12 +16,6 @@ fi
 which root
 which gcc
 
-script="/afs/cern.ch/user/x/xju/work/upsilon/code/MyXAODTools/scripts/monojet/jetsmearing.py"
-echo $script
-echo $
-#new_input=`echo ${input_} | awk -F/ '{printf("%s/%s/%s",$9,$10,$11)}'`
-#new_input=${GROUPEOSDIR}bphys/merged/$new_input
-#echo "${new_input}"
+script="/afs/cern.ch/user/x/xju/work/upsilon/code/MyXAODTools/scripts/jetsmearing.py"
 
-#python $script make $new_input $output_ --oldPtCut
-python $script $input_ $output_
+python $script $input_ $output_ --get_hist
