@@ -10,13 +10,6 @@ from sets import Set
 import time
 from optparse import OptionParser
 
-if not hasattr(ROOT, "myText"):
-    ROOT.gROOT.LoadMacro("/afs/cern.ch/user/x/xju/tool/AtlasUtils.C")
-    ROOT.gROOT.LoadMacro("/afs/cern.ch/user/x/xju/tool/loader.c")
-
-if not hasattr(ROOT, "passMultiLepton"):
-    ROOT.gROOT.LoadMacro("/afs/cern.ch/user/x/xju/work/upsilon/code/MyXAODTools/scripts/MultiLeptonDefs_new.cxx")
-
 interested_event = [
     #(284500, 1105936),
     (284500, 1302335)
@@ -1333,6 +1326,14 @@ if __name__ == "__main__":
     if len(args) < 3:
         parser.print_help()
         exit(0)
+
+    # load packages here
+    if not hasattr(ROOT, "myText"):
+        ROOT.gROOT.LoadMacro("/afs/cern.ch/user/x/xju/tool/AtlasUtils.C")
+        ROOT.gROOT.LoadMacro("/afs/cern.ch/user/x/xju/tool/loader.c")
+
+    if not hasattr(ROOT, "passMultiLepton"):
+        ROOT.gROOT.LoadMacro("/afs/cern.ch/user/x/xju/work/upsilon/code/MyXAODTools/scripts/MultiLeptonDefs_new.cxx")
 
     option = args[0]
     out_name = args[2]
