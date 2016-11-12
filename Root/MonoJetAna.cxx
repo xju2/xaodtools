@@ -22,10 +22,12 @@ MonoJetAna::MonoJetAna():
     AnalysisBase(),
     smearJet("smearjet"),
     m_singleJetTrigger{
-        "HLT_j15", "HLT_j25", "HLT_j55", "HLT_j60",
-        "HLT_j85", "HLT_j100", "HLT_j110", "HLT_j150",
-        "HLT_j175", "HLT_200", "HLT_260", "HLT_j300",
-        "HLT_j320", "HLT_j360", "HLT_j380", "HLT_j400"
+        // Order matters, don't change.
+        // Don't forget a "j", otherwise you would waste your whole weekend.
+        "HLT_j400", "HLT_j380", "HLT_j360", "HLT_j320",
+        "HLT_j300", "HLT_j260", "HLT_j200", "HLT_j175",
+        "HLT_j150", "HLT_j110", "HLT_j100", "HLT_j85",
+        "HLT_j60",  "HLT_j55",  "HLT_j25",  "HLT_j15"
     },
     m_JET_PT_CUT(100),
     m_MET_ET_CUT(100)
@@ -37,10 +39,10 @@ MonoJetAna::MonoJetAna():
 
     trigger_map_ = {
         {"HLT_xe70", false},
-        {"HLT_xe80_tc_lcw_L1XE50", false},
-        {"HLT_xe90_mht_L1XE50", false},
-        {"HLT_xe100_mht_L1XE50", false},
-        {"HLT_xe110_mht_L1XE50", false},
+        {"HLT_xe80_tc_lcw_L1XE50",  false},
+        {"HLT_xe90_mht_L1XE50",     false},
+        {"HLT_xe100_mht_L1XE50",    false},
+        {"HLT_xe110_mht_L1XE50",    false},
         // electron
         // {"HLT_e24_lhmedium_L1EM18VH", false}, // 2015
         // {"HLT_e24_lhmedium_L1EM20VH", false}, // 2015
