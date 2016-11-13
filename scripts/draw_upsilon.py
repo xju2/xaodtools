@@ -276,6 +276,8 @@ class BLSana:
         self.up_d0_2 = ROOT.vector('float')()
         self.up_z0_1 = ROOT.vector('float')()
         self.up_z0_2 = ROOT.vector('float')()
+        self.up_mupt_1 = ROOT.vector('float')()
+        self.up_mupt_2 = ROOT.vector('float')()
 
         self.tree_onia.Branch("run", self.run, "run/I")
         self.tree_onia.Branch("event", self.event, "event/I")
@@ -287,6 +289,9 @@ class BLSana:
         self.tree_onia.Branch("mu_z0_1", self.up_z0_1)
         self.tree_onia.Branch("mu_z0_2", self.up_z0_2)
         self.tree_onia.Branch("trig_3mu4", self.trig_3mu4, "trig_3mu4/I")
+
+        self.tree_onia.Branch("mu_pt_1", self.up_mupt_1)
+        self.tree_onia.Branch("mu_pt_2", self.up_mupt_2)
 
         self.up_pass_dionia = array('i', [0])
         self.tree_onia.Branch("pass_diOnia", self.up_pass_dionia, "pass_diOnia/I")
@@ -300,6 +305,8 @@ class BLSana:
         self.up_z0_1.clear()
         self.up_z0_2.clear()
         self.up_pass_dionia[0] = 0
+        self.up_mupt_1.clear()
+        self.up_mupt_2.clear()
 
     def book_ss(self):
         self.tree_ss = ROOT.TTree("ss", "ss")
@@ -840,6 +847,7 @@ class BLSana:
         self.fill_cut_flow(5+charge_weight)
 
         # if pass 4 GeV cut
+        # new selection says: any two muons with pT > 4 GeV
         if self.use_new_pT and n_muon_with_pT_gt_4GeV < 2:
             return None
         # if has upsilon
@@ -1100,6 +1108,8 @@ class BLSana:
             self.up_d0_2.push_back(tree.mu_d0_sig[mu_id2])
             self.up_z0_1.push_back(tree.mu_z0_sintheta[mu_id1])
             self.up_z0_2.push_back(tree.mu_z0_sintheta[mu_id2])
+            self.up_mupt_1.push_back(mu_pt1)
+            self.up_mupt_2.push_back(mu_pt2)
 
         #self.tree_onia.Fill()
 
