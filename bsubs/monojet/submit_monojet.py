@@ -33,7 +33,31 @@ def submit(exe, out_log_name):
 
         #print bsubs_cmd
         status,output=commands.getstatusoutput(bsubs_cmd)
-        status = 0
+        if status != 0:
+            bad_jobs += 1
+        else:
+            good_jobs += 1
+
+    print "Good jobs: "+ str(good_jobs)+", "+str(bad_jobs)+" failed!"
+
+def submit_tree(exe, out_log_name):
+    print "executable:", exe
+    print "log file:", out_log_name
+    bad_jobs = 0
+    good_jobs = 0
+    input_dir = base_dir + "/histograms/"
+    input_all = glob.glob(input_dir+"merged*")
+
+    for input_name in input_all:
+
+        out_name = base_dir+"/histograms/hist_qcd_"+os.path.basename(input_name)
+        run_cmd = exe + " " +input_name+" "+out_name
+
+        bsubs_cmd = "bsub -q wisc  -R 'pool>4000' -C 0 -o " + \
+                base_dir+ "/"+ out_log_name+" "+run_cmd
+
+        #print bsubs_cmd
+        status,output=commands.getstatusoutput(bsubs_cmd)
         if status != 0:
             bad_jobs += 1
         else:
@@ -46,6 +70,7 @@ if __name__ == "__main__":
     usage = "%prog log_name"
     parser = OptionParser(description="submit jobs for monojet", usage=usage)
     parser.add_option("--new_file", dest="new_file", default=False, action="store_true", help="create new file")
+    parser.add_option("--read_ntuple", dest="read_ntuple", default=False, action="store_true", help="read ntuple produced by jetsmearing")
     (options,args) = parser.parse_args()
 
     if len(args) < 1:
@@ -56,8 +81,11 @@ if __name__ == "__main__":
 
     if options.new_file:
         exe = exe_base+"run_jetsmearing.sh"
+        submit(exe, out_log_name)
+    elif options.read_ntuple:
+        exe = exe_base+"run_read_minitree.sh"
+        submit_tree(exe, out_log_name)
     else:
         parser.print_help()
         exit(2)
 
-    submit(exe, out_log_name)

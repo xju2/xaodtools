@@ -18,4 +18,5 @@ which gcc
 
 script="/afs/cern.ch/user/x/xju/work/upsilon/code/MyXAODTools/scripts/jetsmearing.py"
 
-python $script $input_ $output_ --get_hist
+python $script $input_ test.root --get_hist
+cp test.root $output_

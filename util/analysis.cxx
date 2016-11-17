@@ -136,6 +136,7 @@ int main( int argc, char* argv[] )
     // save total number of events first, which also tells if it's Data/MC
     // SUSYTool needs it's information to be properly initialized!
     ana->SaveProcessedInfo(total_evts_pro, sum_of_evt_w, sum_of_evt_w_sq);
+    ana->SetTotalEventsToProcess(entries);
 
     if(ana->initialize() != 0) {
         Error(APP_NAME, "cannot initialize %s", anaName.Data());

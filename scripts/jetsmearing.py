@@ -196,6 +196,12 @@ class MiniTree:
                 for data in chain.pseudoData:
                     if self.m_debug:
                         print data.leading_jet_pt_
+                    met[0] = data.met_/1E3
+                    jetpt[0] = data.leading_jet_pt_/1E3
+                    #if met[0] < 200:
+                    #    continue
+                    if jetpt[0] < 200 or met[0] < 80:
+                        continue
 
                     # these are smeared data...
                     h_met_smeared.Fill(met[0], weight[0])
@@ -203,8 +209,6 @@ class MiniTree:
                     h_njets_smeared.Fill(njets[0], weight[0])
                     h_minDphi_smeared.Fill(dphi[0], weight[0])
 
-                    jetpt[0] = data.leading_jet_pt_/1E3
-                    met[0] = data.met_/1E3
                     sumet[0] = data.sum_et_/1E3
                     jeteta[0] = data.leading_jet_eta_
                     subjetpt[0] = data.sub_leading_jet_pt_/1E3
@@ -260,7 +264,7 @@ class MiniTree:
             h_all = fin.Get("h_"+hist_name+"_all")
             h_seed = fin.Get("h_"+hist_name+"_seed")
             h_smeared = fin.Get("h_"+hist_name+"_smeared")
-            plot.compare_hists([h_all, h_seed, h_smeared], tag_names, hist_name)
+            plot.compare_hists([h_all, h_seed, h_smeared], tag_names, "check_"+hist_name)
 
 
 

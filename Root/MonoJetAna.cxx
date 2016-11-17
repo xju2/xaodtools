@@ -29,8 +29,8 @@ MonoJetAna::MonoJetAna():
         "HLT_j150", "HLT_j110", "HLT_j100", "HLT_j85",
         "HLT_j60",  "HLT_j55",  "HLT_j25",  "HLT_j15"
     },
-    m_JET_PT_CUT(100),
-    m_MET_ET_CUT(100)
+    m_JET_PT_CUT(200),
+    m_MET_ET_CUT(200)
 {
     m_doSmearing = false;
     if(APP_NAME==NULL) APP_NAME = "MonoJetAna";
@@ -426,7 +426,7 @@ bool MonoJetAna::get_smeared_info(
     smeared_info.met_ =(float) (*met_it)->met();
     smeared_info.sum_et_ =(float) (*met_it)->sumet();
     // since xe80 used for the analysis, cut on 80 GeV to reduce size of pseudo-data.
-    if(smeared_info.met_ < m_MET_ET_CUT){
+    if(smeared_info.met_/1E3 < m_MET_ET_CUT){
         return false;
     }
     float min_dphi_jetMET  = 9999;

@@ -45,6 +45,15 @@ class Fit2L:
         # different onia_pt cuts, 0:noCut, 1:<5, 2:5-10, 3:10,20, 4:>20
         self.onia_pt_cut = 0
         self.onia_pt_cuts = [0, 5, 10, 20]
+        #self.onia_pt_cuts = [0, 10, 20]
+
+        # different muon pT cuts
+        # suggested by Terry to look at onia mass that have one muon with pT (3, 4) GeV.
+        self.use_low_pt_muon = False
+
+        # it is found that these low pT muons contributes a lot the background 40%
+        # while only gain 15% signal
+        self.no_low_pt = False
 
         # if build new model
         self.new_model = False
@@ -85,7 +94,14 @@ class Fit2L:
             return "no trigger"
 
     def get_ws_name(self):
-        return "ws_chi2Cut"+str(self.chi2_cut)+"_DiOnia"+str(self.dionia_selection)+"_pTCut"+str(self.onia_pt_cut)+"_withTrigger"+str(self.with_3mu4)+".root"
+        res = "ws_chi2Cut"+str(self.chi2_cut)+"_DiOnia"+str(self.dionia_selection)+"_pTCut"+str(self.onia_pt_cut)+"_withTrigger"+str(self.with_3mu4)
+        if self.use_low_pt_muon:
+            res += "_LowPtMuon"
+        if self.no_low_pt:
+            res += "_noLowPtMuon"
+
+        res += ".root"
+        return res
 
     def build_model(self):
         #mean = RooRealVar("mean", "mass of 1S", 9.46, 9.2, 9.7)
@@ -119,14 +135,14 @@ class Fit2L:
         esig3 = ROOT.RooExtendPdf("esig3", "esig3", g3, n3)
 
         n_bkg = RooRealVar("n_bkg", "number of bkg" , 1000, 0, 1E7)
-        #p0 = RooRealVar("p0", "p0", -1E6, 1E6)
-        #p1 = RooRealVar("p1", "p1", -1E6, 1E6)
-        #p2 = RooRealVar("p2", "p2", -1E6, 1E6)
-        #p3 = RooRealVar("p3", "p3", -1E6, 1E6)
-        #p4 = RooRealVar("p4", "p4", -1E6, 1E6)
-        p0 = RooRealVar("p0", "p0", 9.93810e-02)
-        p1 = RooRealVar("p1", "p1", -3.51406e-02)
-        p2 = RooRealVar("p2", "p2", 5.92968e-03)
+        p0 = RooRealVar("p0", "p0", -1E6, 1E6)
+        p1 = RooRealVar("p1", "p1", -1E6, 1E6)
+        p2 = RooRealVar("p2", "p2", -1E6, 1E6)
+        p3 = RooRealVar("p3", "p3", -1E6, 1E6)
+        p4 = RooRealVar("p4", "p4", -1E6, 1E6)
+        #p0 = RooRealVar("p0", "p0", 9.93810e-02)
+        #p1 = RooRealVar("p1", "p1", -3.51406e-02)
+        #p2 = RooRealVar("p2", "p2", 5.92968e-03)
         #p3 = RooRealVar("p3", "p3", -6.53710e-03)
         #p4 = RooRealVar("p4", "p4", 9.76852e-03)
 
@@ -162,14 +178,23 @@ class Fit2L:
                 #m4l = m4l/1000
                 if m4l > self.obs.getMax() or m4l < self.obs.getMin():
                     continue
+                # apply chi2 
                 if tree.chi2[i] > self.chi2_cut:
                     continue
-                # apply trigger requirement
+                # apply trigger 
                 if self.with_3mu4 and not tree.trig_3mu4:
                     continue
                 # apply dionia selection
                 if self.dionia_selection and tree.pass_diOnia != 1:
                     continue
+
+                has_one_lowPt = (tree.mu_pt_1[i] > 3E3 and tree.mu_pt_1[i] < 4E3) or (tree.mu_pt_2[i] > 3E3 and tree.mu_pt_2[i] < 4E3)
+                if self.use_low_pt_muon and not has_one_lowPt:
+                    continue
+
+                if self.no_low_pt and has_one_lowPt:
+                    continue
+
                 # apply onia pT cut
                 pT = tree.pt[i]
                 if not self.pass_onia_pt_cut(pT):
@@ -208,22 +233,9 @@ class Fit2L:
         print "total data:", data.sumEntries()
         nll = model.createNLL(data)
 
+        #self.change_model()
 
-        # first fix signal
-        #self.ws.var("mean").setVal(9.46)
-        #self.ws.var("sigma").setVal(0.18)
-        #self.ws.var("mean").setConstant(True)
-        #self.ws.var("sigma").setConstant(True)
         model.fitTo(data)
-
-        # let signal free with background set constant
-        #self.ws.var('p0').setConstant(True)
-        #self.ws.var('p1').setConstant(True)
-        #self.ws.var('p2').setConstant(True)
-        #self.ws.var('p3').setConstant(True)
-        #self.ws.var("mean").setConstant(False)
-        #self.ws.var("sigma").setConstant(False)
-        #model.fitTo(data)
 
         nll_uncondition = nll.getVal()
         self.ws.saveSnapshot("splusb", self.ws.allVars())
@@ -305,8 +317,11 @@ class Fit2L:
         x_start = 0.60
         # title and mass and sigma
         ROOT.myText(0.2, 0.955, 1, "{},{},{}".format(self.print_onia_pt_cut(), self.print_dionia_selection(), self.print_trigger()))
-        ROOT.myText(0.18, 0.87, 1, "m = {:.2f} GeV".format(self.ws.var("mean").getVal()))
-        ROOT.myText(0.18, 0.87-0.05, 1, "#sigma = {:.2f} GeV".format(self.ws.var("sigma").getVal()))
+        mass_offset = 0.18
+        if self.use_low_pt_muon:
+            mass_offset = 0.7
+        ROOT.myText(mass_offset, 0.87, 1, "m = {:.2f} GeV".format(self.ws.var("mean").getVal()))
+        ROOT.myText(mass_offset, 0.87-0.05, 1, "#sigma = {:.2f} GeV".format(self.ws.var("sigma").getVal()))
         # left side
         ROOT.myText(0.2, y_start, 1, "Total: {:.0f}".format(self.ws.obj("data").sumEntries()))
         ROOT.myText(0.2, y_start-0.05, 1, "N(1S) = {:.1f}".format(self.ws.obj("n_sig").getVal()) )
@@ -325,11 +340,26 @@ class Fit2L:
         self.ws.obj("s2").Print()
         self.ws.obj("s3").Print()
 
-    def add_dummy_entry(self, legend, color, label):
-        h1 = ROOT.TH1F(label, label, 10, 0, 10)
-        h1.SetLineColor(color)
-        legend.AddEntry(h1, label, "L")
-        self.dummy_hists.append(h1)
+    def change_model(self):
+        self.ws.loadSnapshot("splusb")
+        # free signal
+        mean_ = self.ws.var("mean")
+        mean_.setMin(9.2)
+        mean_.setMax(9.7)
+        mean_.setConstant(False)
+        sigma_ = self.ws.var("sigma")
+        sigma_.setMin(0.09)
+        sigma_.setMax(0.3)
+        sigma_.setConstant(False)
+        # fix background
+        self.ws.var("p0").setConstant(True)
+        self.ws.var("p1").setConstant(True)
+        self.ws.var("p2").setConstant(True)
+        if self.ws.var('p3'):
+            self.ws.var('p3').setConstant(True)
+        if self.ws.var('p4'):
+            self.ws.var('p4').setConstant(True)
+
 
 if __name__ == "__main__":
     usage = sys.argv[0]+" file_name br_name"
@@ -340,6 +370,8 @@ if __name__ == "__main__":
     parser.add_option('--title', dest='title', help="title of x-axis", default="m_{#mu#mu} [GeV]")
     parser.add_option('--allRuns', dest='allruns', help="use all runs", default=False, action="store_true")
     parser.add_option('--newModel', dest='model', help="build new model, regardless of exiting one in the workspace", default=False, action="store_true")
+    parser.add_option('--lowPtMuon', dest='lowPt', help="use the onia with at least one muon with pT of (3, 4) GeV", default=False, action="store_true")
+    parser.add_option('--noLowPtMuon', dest='noLowPt', help="use the onia that both muon with pT > 4 GeV", default=False, action="store_true")
     #parser.add_option('--chi2', dest='chi2', help="chi2 cut applied in onium", default=None)
 
 
@@ -353,8 +385,8 @@ if __name__ == "__main__":
     if len(sys.argv) > 2:
         br_name = args[1]
 
-    cuts = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 8, 10, 10000]
-    #cuts = [10000.]
+    #cuts = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 8, 10, 10000]
+    cuts = [3.0]
     for cut in cuts:
         fit_4l = Fit2L(file_name, br_name)
         if options.dionia:
@@ -368,6 +400,16 @@ if __name__ == "__main__":
 
         if options.model:
             fit_4l.new_model = True
+
+        if options.lowPt and options.noLowPt:
+            print "what do you want?? with low pT or without? chose one!"
+            exit(2)
+
+        if options.lowPt:
+            fit_4l.use_low_pt_muon = True
+
+        if options.noLowPt:
+            fit_4l.no_low_pt = True
 
         fit_4l.onia_pt_cut = options.oniapt
         fit_4l.chi2_cut = cut

@@ -70,7 +70,7 @@ bool AnalysisBase::SaveProcessedInfo(
         m_isData = CPToolsHelper::SaveProcessedEvents(
                 *tree, *ei, total_evts, sum_of_weight, sum_of_w_sq);
     }
-    m_totalEvents = total_evts;
+    // m_totalEvents = total_evts;
     return true;
 }
 
@@ -165,4 +165,8 @@ void AnalysisBase::SetVerbose(){
 }
 void AnalysisBase::setGRLTag(bool tag){
     m_withGRL = tag;
+}
+void AnalysisBase::SetTotalEventsToProcess(Long64_t nentries)
+{
+    m_totalEvents = nentries;
 }

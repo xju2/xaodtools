@@ -46,6 +46,7 @@ public:
     void setSUSYConfig(const string& config);
     void SetEvent(xAOD::TEvent* event);
     void SetVerbose();
+    void SetTotalEventsToProcess(Long64_t nentries);
 
     bool SaveProcessedInfo(uint64_t total_evts, double sum_of_weight, double sum_of_w_sq);
     static bool descend_on_pt(xAOD::IParticle* p1, xAOD::IParticle* p2){
@@ -72,7 +73,7 @@ protected:
     string  m_susy_config;
     const char* APP_NAME;
     map<string, bool> trigger_map_;
-    uint64_t m_totalEvents;
+    Long64_t m_totalEvents;
 
     // points to physics objects
     xAOD::TEvent* event;
