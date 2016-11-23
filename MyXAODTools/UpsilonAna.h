@@ -27,6 +27,8 @@ public:
 
     virtual int process(Long64_t ientry); // main program
 
+    void UseBPHY1();
+
 private:
     void CreateBranch();
     void AttachBranchToTree();
@@ -47,6 +49,9 @@ private:
     const xAOD::VertexContainer* m_bphy4_pair;
 
 private:
+    bool m_isBPHY1;
+private:
+
    // Onia information
    int m_n_onia;
    std::vector<int>* m_onia_muon1id;
@@ -101,7 +106,6 @@ private:
    std::vector<float>* m_quad_fitted_eta;
    std::vector<float>* m_quad_fitted_phi;
 
-   // unique_ptr<CP::MuonSelectionTool> m_muonSelectionTool;
 };
 
 #endif

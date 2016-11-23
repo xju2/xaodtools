@@ -107,7 +107,7 @@ class Fit2L:
         #mean = RooRealVar("mean", "mass of 1S", 9.46, 9.2, 9.7)
         #sigma = RooRealVar("sigma", "sigma of gaussian", 0.14, 0.09, 0.3)
         mean = RooRealVar("mean", "mass of 1S", 9.46)
-        sigma = RooRealVar("sigma", "sigma of gaussian", 0.18)
+        sigma = RooRealVar("sigma", "sigma of gaussian", 0.16)
         gaussian = ROOT.RooGaussian("gauss", "gauss", self.obs, mean, sigma)
 
         ## try Crystal Ball
@@ -146,8 +146,8 @@ class Fit2L:
         #p3 = RooRealVar("p3", "p3", -6.53710e-03)
         #p4 = RooRealVar("p4", "p4", 9.76852e-03)
 
-        #bkg = ROOT.RooChebychev("bkg", "bkg", self.obs, RooArgList(p0, p1, p2, p3, p4))
-        bkg = ROOT.RooChebychev("bkg", "bkg", self.obs, RooArgList(p0, p1, p2))
+        bkg = ROOT.RooChebychev("bkg", "bkg", self.obs, RooArgList(p0, p1, p2, p3, p4))
+        #bkg = ROOT.RooChebychev("bkg", "bkg", self.obs, RooArgList(p0, p1, p2))
         #bkg = ROOT.RooPolynomial("bkg", "bkg", self.obs, RooArgList(p0, p1, p2))
         ebkg = ROOT.RooExtendPdf("ebkg", "ebkg", bkg, n_bkg)
         model = ROOT.RooAddPdf(self.model_name, self.model_name, RooArgList(esig, esig2, esig3, ebkg))
@@ -228,6 +228,7 @@ class Fit2L:
                 self.get_data()
 
         data = self.ws.obj("data")
+        self.obs.setRange("fit_range", 8.2, 11.7)
         model = self.ws.obj(self.model_name)
         model.Print()
         print "total data:", data.sumEntries()
@@ -235,7 +236,8 @@ class Fit2L:
 
         #self.change_model()
 
-        model.fitTo(data)
+        model.fitTo(data, ROOT.RooFit.Range("fit_range"))
+        #model.fitTo(data)
 
         nll_uncondition = nll.getVal()
         self.ws.saveSnapshot("splusb", self.ws.allVars())

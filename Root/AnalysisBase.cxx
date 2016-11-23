@@ -146,12 +146,15 @@ int AnalysisBase::Start(Long64_t ientry)
 
     CHECK( event->retrieve(vertice, "PrimaryVertices") );
 
-    if(! cp_tools->HasPrimaryVertex(*vertice, 1))
+    if(! cp_tools->HasPrimaryVertex(*vertice, 1)){
+        Info(APP_NAME, "No primiary vertex found!");
         return 1;
+    }
 
     pv = CPToolsHelper::GetPrimVtx( *vertice );
 
     if(m_withGRL && ! cp_tools->PassGRL(*ei) ){
+        Info(APP_NAME, "failed GRL!");
         return 1;
     }
     return 0;

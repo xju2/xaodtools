@@ -23,7 +23,7 @@ def check(file_name, tree_name, run_name, event_name):
         seen.add( (run,event) )
 
     print "duplications:", len(dup)
-    print dup
+    #print dup
     return has_dup
 
 

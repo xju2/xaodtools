@@ -18,4 +18,4 @@ new_input=${GROUPEOSDIR}bphys/merged/$new_input
 echo "${new_input}"
 
 #python $script make $new_input $output_ --oldPtCut
-python $script make $new_input $output_
+python $script make $new_input $output_ --bphy1

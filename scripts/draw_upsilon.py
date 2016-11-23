@@ -12,7 +12,7 @@ from optparse import OptionParser
 
 interested_event = [
     #(284500, 1105936),
-    (284500, 1302335)
+    (282625, 146741979),
 ]
 
 CHI2_DIMUON_CUT = 3
@@ -80,6 +80,10 @@ class BLSana:
 
         # do debug
         self.m_debug = False
+
+        # use bphy1
+        # look at two-muon events, upsilon or Jpsi
+        self.use_bphy1 = False
 
         self.cut_flow = ROOT.TH1F("cut_flow", "cut flow", 100, 0.5, 100.5)
         x_axis = self.cut_flow.GetXaxis()
@@ -278,6 +282,8 @@ class BLSana:
         self.up_z0_2 = ROOT.vector('float')()
         self.up_mupt_1 = ROOT.vector('float')()
         self.up_mupt_2 = ROOT.vector('float')()
+        self.up_mueta_1 = ROOT.vector('float')()
+        self.up_mueta_2 = ROOT.vector('float')()
 
         self.tree_onia.Branch("run", self.run, "run/I")
         self.tree_onia.Branch("event", self.event, "event/I")
@@ -292,6 +298,8 @@ class BLSana:
 
         self.tree_onia.Branch("mu_pt_1", self.up_mupt_1)
         self.tree_onia.Branch("mu_pt_2", self.up_mupt_2)
+        self.tree_onia.Branch("mu_eta_1", self.up_mueta_1)
+        self.tree_onia.Branch("mu_eta_2", self.up_mueta_2)
 
         self.up_pass_dionia = array('i', [0])
         self.tree_onia.Branch("pass_diOnia", self.up_pass_dionia, "pass_diOnia/I")
@@ -307,6 +315,8 @@ class BLSana:
         self.up_pass_dionia[0] = 0
         self.up_mupt_1.clear()
         self.up_mupt_2.clear()
+        self.up_mueta_1.clear()
+        self.up_mueta_2.clear()
 
     def book_ss(self):
         self.tree_ss = ROOT.TTree("ss", "ss")
@@ -342,7 +352,7 @@ class BLSana:
         self.h_chi_quad = ROOT.TH1F("h_chi2_quad",  ";Quad #chi^{2};", 900, 0, 9E6)
 
     def fill_hists(self, file_names):
-        print "debug:", self.m_debug
+
         tree = ROOT.TChain("physics", "physics")
         for file_ in file_names:
             print "adding.. ", file_
@@ -384,9 +394,6 @@ class BLSana:
             if self.m_debug and (run, event) not in interested_event:
                 continue
 
-            #if self.run[0] != 307710:
-            #    continue
-
             if self.m_debug:
                 imatched += 1
 
@@ -404,160 +411,18 @@ class BLSana:
             if hasattr(tree, "trig_3mu4"):
                 self.trig_3mu4[0] = int(tree.trig_3mu4)
 
-            if self.upsilon_first and tree.n_muon < 4:
-                results = self.select_upsilon(tree)
+            if self.use_bphy1:
+                # do the two muon selections
+                self.select_two_muons(tree)
             else:
-                results = self.select_v04(tree)
-
-            if results is None:
-                continue
-
-            mU, m34, mass_id, onia1_id, onia2_id, quad_id, quad_type = results
-
-            self.h_upsilon.Fill(mU)
-            self.h_jpsi.Fill(m34)
-            self.h_m4l.Fill(tree.quad_fitted_mass[mass_id]/1E3)
-
-            onia1_x = tree.onia_x[onia1_id]
-            onia1_y = tree.onia_y[onia1_id]
-            onia1_z = tree.onia_z[onia1_id]
-            onia2_x = tree.onia_x[onia2_id]
-            onia2_y = tree.onia_y[onia2_id]
-            onia2_z = tree.onia_z[onia2_id]
-            quad_x = tree.quad_x[mass_id]
-            quad_y = tree.quad_y[mass_id]
-            quad_z = tree.quad_z[mass_id]
-
-            dis_v1_quad = self.get_dis(onia1_x, onia1_y, onia1_z, quad_x, quad_y, quad_z)
-            dis_v2_quad = self.get_dis(onia2_x, onia2_y, onia2_z, quad_x, quad_y, quad_z)
-            dis_v1_v2 = self.get_dis(onia1_x, onia1_y, onia1_z, onia2_x, onia2_y, onia2_z)
-            z_v1_v2 = abs(onia1_z-onia2_z)
-
-            dis_quad = math.sqrt(quad_x**2 + quad_y**2 + quad_z**2)
-            chi_quad = tree.quad_chi2[quad_id]
-
-            self.h_dis_v1_quad.Fill(dis_v1_quad)
-            self.h_dis_v2_quad.Fill(dis_v2_quad)
-            self.h_dis_quad.Fill(dis_quad)
-            self.h_chi_quad.Fill(chi_quad)
-
-            self.m4l_fitted[0] =  tree.quad_fitted_mass[mass_id]/1E3
-            self.m4l_track[0] =  tree.quad_track_mass[quad_id]/1E3
-            self.m4l[0] =  tree.quad_mass[quad_id]/1E3
-            self.m12[0] = mU
-            self.m34[0] = m34
-            self.dis_v1_x[0] = dis_v1_quad
-            self.dis_v2_x[0] = dis_v2_quad
-            self.dis_v1_v2[0] = dis_v1_v2
-            self.z_v1_v2[0] = z_v1_v2
-            self.x_dis[0] = dis_quad
-            self.x_chi2[0] = chi_quad
-            self.x_lxy[0] = math.sqrt(quad_x**2 + quad_y**2)
-            self.x_track_pt[0] = tree.quad_track_pt[quad_id]
-            #self.x_fitted_pt[0] = tree.quad_fitted_pt[mass_id]
-            self.x_type[0] = quad_type
-
-            mu1_id =  tree.quad_id1[quad_id]
-            mu2_id =  tree.quad_id2[quad_id]
-            mu3_id =  tree.quad_id3[quad_id]
-            mu4_id =  tree.quad_id4[quad_id]
-
-            self.m1_track_pt[0] = tree.mu_track_pt[ mu1_id ]
-            self.m2_track_pt[0] = tree.mu_track_pt[ mu2_id ]
-            if abs(quad_type) < 1E-6:
-                self.m3_track_pt[0] = tree.mu_track_pt[ mu3_id ]
-                self.m4_track_pt[0] = tree.mu_track_pt[ mu4_id ]
-            else:
-                self.m3_track_pt[0] = tree.el_pt[ mu3_id ]
-                self.m4_track_pt[0] = tree.el_pt[ mu4_id ]
-
-            self.m1_track_eta[0] = tree.mu_track_eta[ mu1_id ]
-            self.m2_track_eta[0] = tree.mu_track_eta[ mu2_id ]
-            if abs(quad_type) < 1E-6:
-                self.m3_track_eta[0] = tree.mu_track_eta[ mu3_id ]
-                self.m4_track_eta[0] = tree.mu_track_eta[ mu4_id ]
-            else:
-                self.m3_track_eta[0] = tree.el_eta[ mu3_id ]
-                self.m4_track_eta[0] = tree.el_eta[ mu4_id ]
-
-            self.m1_pt[0] = tree.mu_pt[ mu1_id ]
-            self.m2_pt[0] = tree.mu_pt[ mu2_id ]
-            if abs(quad_type) < 1E-6:
-                self.m3_pt[0] = tree.mu_pt[ mu3_id ]
-                self.m4_pt[0] = tree.mu_pt[ mu4_id ]
-            else:
-                self.m3_pt[0] = tree.el_pt[ mu3_id ]
-                self.m4_pt[0] = tree.el_pt[ mu4_id ]
-
-            # get momentum
-            self.m1_track_p[0] = tree.mu_track_pt[mu1_id]*ROOT.TMath.CosH(tree.mu_track_eta[mu1_id])
-            self.m2_track_p[0] = tree.mu_track_pt[mu2_id]*ROOT.TMath.CosH(tree.mu_track_eta[mu2_id])
-            self.m3_track_p[0] = tree.mu_track_pt[mu3_id]*ROOT.TMath.CosH(tree.mu_track_eta[mu3_id])
-            self.m4_track_p[0] = tree.mu_track_pt[mu4_id]*ROOT.TMath.CosH(tree.mu_track_eta[mu4_id])
-
-            if self.do_13TeV:
-                self.m1_trackD0PV[0] = tree.mu_d0[ tree.quad_id1[quad_id] ]
-                self.m2_trackD0PV[0] = tree.mu_d0[ tree.quad_id2[quad_id] ]
-                self.m3_trackD0PV[0] = tree.mu_d0[ tree.quad_id3[quad_id] ]
-                self.m4_trackD0PV[0] = tree.mu_d0[ tree.quad_id4[quad_id] ]
-                self.m1_trackD0SigPV[0] = tree.mu_d0_sig[ tree.quad_id1[quad_id] ]
-                self.m2_trackD0SigPV[0] = tree.mu_d0_sig[ tree.quad_id2[quad_id] ]
-                self.m3_trackD0SigPV[0] = tree.mu_d0_sig[ tree.quad_id3[quad_id] ]
-                self.m4_trackD0SigPV[0] = tree.mu_d0_sig[ tree.quad_id4[quad_id] ]
-                self.m1_trackZ0PV[0] = tree.mu_z0_sintheta[ tree.quad_id1[quad_id] ]
-                self.m2_trackZ0PV[0] = tree.mu_z0_sintheta[ tree.quad_id2[quad_id] ]
-                self.m3_trackZ0PV[0] = tree.mu_z0_sintheta[ tree.quad_id3[quad_id] ]
-                self.m4_trackZ0PV[0] = tree.mu_z0_sintheta[ tree.quad_id4[quad_id] ]
-
-            elif abs(quad_type) == 0 and hasattr(tree, "mu_d0_pv_sig"):
-                self.m1_trackD0PV[0] = tree.mu_d0_pv[ tree.quad_id1[quad_id] ]
-                self.m2_trackD0PV[0] = tree.mu_d0_pv[ tree.quad_id2[quad_id] ]
-                self.m3_trackD0PV[0] = tree.mu_d0_pv[ tree.quad_id3[quad_id] ]
-                self.m4_trackD0PV[0] = tree.mu_d0_pv[ tree.quad_id4[quad_id] ]
-                self.m1_trackD0SigPV[0] = tree.mu_d0_pv_sig[ tree.quad_id1[quad_id] ]
-                self.m2_trackD0SigPV[0] = tree.mu_d0_pv_sig[ tree.quad_id2[quad_id] ]
-                self.m3_trackD0SigPV[0] = tree.mu_d0_pv_sig[ tree.quad_id3[quad_id] ]
-                self.m4_trackD0SigPV[0] = tree.mu_d0_pv_sig[ tree.quad_id4[quad_id] ]
-                self.m1_trackZ0PV[0] = tree.mu_z0_pv[ tree.quad_id1[quad_id] ]
-                self.m2_trackZ0PV[0] = tree.mu_z0_pv[ tree.quad_id2[quad_id] ]
-                self.m3_trackZ0PV[0] = tree.mu_z0_pv[ tree.quad_id3[quad_id] ]
-                self.m4_trackZ0PV[0] = tree.mu_z0_pv[ tree.quad_id4[quad_id] ]
-
-            self.u1_chi2[0] = tree.onia_chi2[ onia1_id ]
-            self.u2_chi2[0] = tree.onia_chi2[ onia2_id ]
-
-            # get total charge
-            if quad_type == 0:
-                self.charge[0] = tree.mu_charge[mu1_id]+tree.mu_charge[mu2_id]+tree.mu_charge[mu3_id]+tree.mu_charge[mu4_id]
-            else:
-                self.charge[0] = tree.mu_charge[mu1_id]+tree.mu_charge[mu2_id]+tree.el_charge[mu3_id]+tree.el_charge[mu4_id]
-
-            # charge of muons
-            if abs(quad_type) == 0:
-                if self.use_new_type:
-                    self.m1_type[0] = self.get_muon_type(tree, mu1_id)
-                    self.m2_type[0] = self.get_muon_type(tree, mu2_id)
-                    self.m3_type[0] = self.get_muon_type(tree, mu3_id)
-                    self.m4_type[0] = self.get_muon_type(tree, mu4_id)
+                if self.upsilon_first and tree.n_muon < 4:
+                    results = self.select_upsilon(tree)
                 else:
-                    self.m1_type[0] = tree.mu_type[ mu1_id ]
-                    self.m2_type[0] = tree.mu_type[ mu2_id ]
-                    self.m3_type[0] = tree.mu_type[ mu3_id ]
-                    self.m4_type[0] = tree.mu_type[ mu4_id ]
+                    results = self.select_v04(tree)
 
-                # add author information
-                self.m1_author[0] = tree.mu_author[mu1_id]
-                self.m2_author[0] = tree.mu_author[mu2_id]
-                self.m3_author[0] = tree.mu_author[mu3_id]
-                self.m4_author[0] = tree.mu_author[mu4_id]
+                if results is not None:
+                    self.save_4muon(tree, results)
 
-                if hasattr(tree, "mu_quality"):
-                    self.m1_quality[0] = tree.mu_quality[mu1_id]
-                    self.m2_quality[0] = tree.mu_quality[mu1_id]
-                    self.m3_quality[0] = tree.mu_quality[mu1_id]
-                    self.m4_quality[0] = tree.mu_quality[mu1_id]
-
-            self.out_tree.Fill()
 
     def select_upsilon(self, tree):
         has_upsilon = False
@@ -1057,15 +922,19 @@ class BLSana:
         """
          Fill in tree_onia, for chi2 performance studies
          Use all the onia that passed the criteria
+         ----don't forget to Fill the tree----
         """
         if self.m_debug:
             print "in fill_onia"
             print "good muons:"+",".join([str(x) for x in good_muons])
         used_muons = []
-        #for i in sorted(range(len(tree.onia_chi2)), key=lambda k:tree.onia_chi2[k], reverse=False):
+        has_filled = False
 
         for i in range(len(tree.onia_chi2)):
             mass_onia = tree.onia_fitted_mass[i]
+            if self.use_bphy1:
+                mass_onia = tree.onia_track_mass[i]
+
             if self.m_debug:
                 print "read: {:.0f} {:.2f} {:.2f}".format(i, tree.onia_chi2[i],mass_onia)
             mu_id1 = tree.onia_id1[i]
@@ -1090,7 +959,11 @@ class BLSana:
             if self.m_debug:
                 print "passed pT"
             # mass
-            if mass_onia < M34CUT_LOW or mass_onia > M34CUT_HI:
+            mass_cut = mass_onia > M34CUT_LOW and mass_onia < M34CUT_HI
+            if self.use_bphy1:
+                mass_cut = mass_onia > 8E3 and mass_onia < 12E3
+
+            if not mass_cut:
                 continue
 
             if self.m_debug:
@@ -1110,8 +983,9 @@ class BLSana:
             self.up_z0_2.push_back(tree.mu_z0_sintheta[mu_id2])
             self.up_mupt_1.push_back(mu_pt1)
             self.up_mupt_2.push_back(mu_pt2)
+            has_filled = True
 
-        #self.tree_onia.Fill()
+        return has_filled
 
     def find_onia_pair(self, tree, good_muons, pass_cuts):
         """
@@ -1178,6 +1052,171 @@ class BLSana:
         else:
             print "I don't know this author:", author
 
+    def save_4muon(self, tree, results):
+        mU, m34, mass_id, onia1_id, onia2_id, quad_id, quad_type = results
+
+        self.h_upsilon.Fill(mU)
+        self.h_jpsi.Fill(m34)
+        self.h_m4l.Fill(tree.quad_fitted_mass[mass_id]/1E3)
+
+        onia1_x = tree.onia_x[onia1_id]
+        onia1_y = tree.onia_y[onia1_id]
+        onia1_z = tree.onia_z[onia1_id]
+        onia2_x = tree.onia_x[onia2_id]
+        onia2_y = tree.onia_y[onia2_id]
+        onia2_z = tree.onia_z[onia2_id]
+        quad_x = tree.quad_x[mass_id]
+        quad_y = tree.quad_y[mass_id]
+        quad_z = tree.quad_z[mass_id]
+
+        dis_v1_quad = self.get_dis(onia1_x, onia1_y, onia1_z, quad_x, quad_y, quad_z)
+        dis_v2_quad = self.get_dis(onia2_x, onia2_y, onia2_z, quad_x, quad_y, quad_z)
+        dis_v1_v2 = self.get_dis(onia1_x, onia1_y, onia1_z, onia2_x, onia2_y, onia2_z)
+        z_v1_v2 = abs(onia1_z-onia2_z)
+
+        dis_quad = math.sqrt(quad_x**2 + quad_y**2 + quad_z**2)
+        chi_quad = tree.quad_chi2[quad_id]
+
+        self.h_dis_v1_quad.Fill(dis_v1_quad)
+        self.h_dis_v2_quad.Fill(dis_v2_quad)
+        self.h_dis_quad.Fill(dis_quad)
+        self.h_chi_quad.Fill(chi_quad)
+
+        self.m4l_fitted[0] =  tree.quad_fitted_mass[mass_id]/1E3
+        self.m4l_track[0] =  tree.quad_track_mass[quad_id]/1E3
+        self.m4l[0] =  tree.quad_mass[quad_id]/1E3
+        self.m12[0] = mU
+        self.m34[0] = m34
+        self.dis_v1_x[0] = dis_v1_quad
+        self.dis_v2_x[0] = dis_v2_quad
+        self.dis_v1_v2[0] = dis_v1_v2
+        self.z_v1_v2[0] = z_v1_v2
+        self.x_dis[0] = dis_quad
+        self.x_chi2[0] = chi_quad
+        self.x_lxy[0] = math.sqrt(quad_x**2 + quad_y**2)
+        self.x_track_pt[0] = tree.quad_track_pt[quad_id]
+        self.x_type[0] = quad_type
+
+        mu1_id =  tree.quad_id1[quad_id]
+        mu2_id =  tree.quad_id2[quad_id]
+        mu3_id =  tree.quad_id3[quad_id]
+        mu4_id =  tree.quad_id4[quad_id]
+
+        self.m1_track_pt[0] = tree.mu_track_pt[ mu1_id ]
+        self.m2_track_pt[0] = tree.mu_track_pt[ mu2_id ]
+        if abs(quad_type) < 1E-6:
+            self.m3_track_pt[0] = tree.mu_track_pt[ mu3_id ]
+            self.m4_track_pt[0] = tree.mu_track_pt[ mu4_id ]
+        else:
+            self.m3_track_pt[0] = tree.el_pt[ mu3_id ]
+            self.m4_track_pt[0] = tree.el_pt[ mu4_id ]
+
+        self.m1_track_eta[0] = tree.mu_track_eta[ mu1_id ]
+        self.m2_track_eta[0] = tree.mu_track_eta[ mu2_id ]
+        if abs(quad_type) < 1E-6:
+            self.m3_track_eta[0] = tree.mu_track_eta[ mu3_id ]
+            self.m4_track_eta[0] = tree.mu_track_eta[ mu4_id ]
+        else:
+            self.m3_track_eta[0] = tree.el_eta[ mu3_id ]
+            self.m4_track_eta[0] = tree.el_eta[ mu4_id ]
+
+        self.m1_pt[0] = tree.mu_pt[ mu1_id ]
+        self.m2_pt[0] = tree.mu_pt[ mu2_id ]
+        if abs(quad_type) < 1E-6:
+            self.m3_pt[0] = tree.mu_pt[ mu3_id ]
+            self.m4_pt[0] = tree.mu_pt[ mu4_id ]
+        else:
+            self.m3_pt[0] = tree.el_pt[ mu3_id ]
+            self.m4_pt[0] = tree.el_pt[ mu4_id ]
+
+        # get momentum
+        self.m1_track_p[0] = tree.mu_track_pt[mu1_id]*ROOT.TMath.CosH(tree.mu_track_eta[mu1_id])
+        self.m2_track_p[0] = tree.mu_track_pt[mu2_id]*ROOT.TMath.CosH(tree.mu_track_eta[mu2_id])
+        self.m3_track_p[0] = tree.mu_track_pt[mu3_id]*ROOT.TMath.CosH(tree.mu_track_eta[mu3_id])
+        self.m4_track_p[0] = tree.mu_track_pt[mu4_id]*ROOT.TMath.CosH(tree.mu_track_eta[mu4_id])
+
+        if self.do_13TeV:
+            self.m1_trackD0PV[0] = tree.mu_d0[ tree.quad_id1[quad_id] ]
+            self.m2_trackD0PV[0] = tree.mu_d0[ tree.quad_id2[quad_id] ]
+            self.m3_trackD0PV[0] = tree.mu_d0[ tree.quad_id3[quad_id] ]
+            self.m4_trackD0PV[0] = tree.mu_d0[ tree.quad_id4[quad_id] ]
+            self.m1_trackD0SigPV[0] = tree.mu_d0_sig[ tree.quad_id1[quad_id] ]
+            self.m2_trackD0SigPV[0] = tree.mu_d0_sig[ tree.quad_id2[quad_id] ]
+            self.m3_trackD0SigPV[0] = tree.mu_d0_sig[ tree.quad_id3[quad_id] ]
+            self.m4_trackD0SigPV[0] = tree.mu_d0_sig[ tree.quad_id4[quad_id] ]
+            self.m1_trackZ0PV[0] = tree.mu_z0_sintheta[ tree.quad_id1[quad_id] ]
+            self.m2_trackZ0PV[0] = tree.mu_z0_sintheta[ tree.quad_id2[quad_id] ]
+            self.m3_trackZ0PV[0] = tree.mu_z0_sintheta[ tree.quad_id3[quad_id] ]
+            self.m4_trackZ0PV[0] = tree.mu_z0_sintheta[ tree.quad_id4[quad_id] ]
+
+        elif abs(quad_type) == 0 and hasattr(tree, "mu_d0_pv_sig"):
+            self.m1_trackD0PV[0] = tree.mu_d0_pv[ tree.quad_id1[quad_id] ]
+            self.m2_trackD0PV[0] = tree.mu_d0_pv[ tree.quad_id2[quad_id] ]
+            self.m3_trackD0PV[0] = tree.mu_d0_pv[ tree.quad_id3[quad_id] ]
+            self.m4_trackD0PV[0] = tree.mu_d0_pv[ tree.quad_id4[quad_id] ]
+            self.m1_trackD0SigPV[0] = tree.mu_d0_pv_sig[ tree.quad_id1[quad_id] ]
+            self.m2_trackD0SigPV[0] = tree.mu_d0_pv_sig[ tree.quad_id2[quad_id] ]
+            self.m3_trackD0SigPV[0] = tree.mu_d0_pv_sig[ tree.quad_id3[quad_id] ]
+            self.m4_trackD0SigPV[0] = tree.mu_d0_pv_sig[ tree.quad_id4[quad_id] ]
+            self.m1_trackZ0PV[0] = tree.mu_z0_pv[ tree.quad_id1[quad_id] ]
+            self.m2_trackZ0PV[0] = tree.mu_z0_pv[ tree.quad_id2[quad_id] ]
+            self.m3_trackZ0PV[0] = tree.mu_z0_pv[ tree.quad_id3[quad_id] ]
+            self.m4_trackZ0PV[0] = tree.mu_z0_pv[ tree.quad_id4[quad_id] ]
+
+            self.u1_chi2[0] = tree.onia_chi2[ onia1_id ]
+            self.u2_chi2[0] = tree.onia_chi2[ onia2_id ]
+
+        # get total charge
+        if quad_type == 0:
+            self.charge[0] = tree.mu_charge[mu1_id]+tree.mu_charge[mu2_id]+tree.mu_charge[mu3_id]+tree.mu_charge[mu4_id]
+        else:
+            self.charge[0] = tree.mu_charge[mu1_id]+tree.mu_charge[mu2_id]+tree.el_charge[mu3_id]+tree.el_charge[mu4_id]
+
+        # charge of muons
+        if abs(quad_type) == 0:
+            if self.use_new_type:
+                self.m1_type[0] = self.get_muon_type(tree, mu1_id)
+                self.m2_type[0] = self.get_muon_type(tree, mu2_id)
+                self.m3_type[0] = self.get_muon_type(tree, mu3_id)
+                self.m4_type[0] = self.get_muon_type(tree, mu4_id)
+            else:
+                self.m1_type[0] = tree.mu_type[ mu1_id ]
+                self.m2_type[0] = tree.mu_type[ mu2_id ]
+                self.m3_type[0] = tree.mu_type[ mu3_id ]
+                self.m4_type[0] = tree.mu_type[ mu4_id ]
+
+            # add author information
+            self.m1_author[0] = tree.mu_author[mu1_id]
+            self.m2_author[0] = tree.mu_author[mu2_id]
+            self.m3_author[0] = tree.mu_author[mu3_id]
+            self.m4_author[0] = tree.mu_author[mu4_id]
+
+            if hasattr(tree, "mu_quality"):
+                self.m1_quality[0] = tree.mu_quality[mu1_id]
+                self.m2_quality[0] = tree.mu_quality[mu1_id]
+                self.m3_quality[0] = tree.mu_quality[mu1_id]
+                self.m4_quality[0] = tree.mu_quality[mu1_id]
+
+        self.out_tree.Fill()
+
+    def select_two_muons(self, tree):
+        """
+        select the events have two good muons for performance studies
+        """
+        # first select two good muons
+        good_muons = []
+
+        for i in sorted(range(len(tree.mu_track_pt)), key=lambda k:tree.mu_track_pt[k], reverse=True):
+            if not self.passMuonID(tree, i):
+                continue
+            good_muons.append(i)
+
+        if len(good_muons) >=2 :
+            # only use the leading two muons!
+            if self.fill_onia(tree, good_muons[0:2]):
+                self.tree_onia.Fill()
+        else:
+            pass
 
 def draw(file_name, post_fix):
     f1 = ROOT.TFile.Open(file_name)
@@ -1331,6 +1370,7 @@ if __name__ == "__main__":
     parser.add_option("-v", action="store_true", dest="verbose",help="debug mode",default=False)
     parser.add_option("--oldMuonType", action="store_true", dest="oldMuonType", help="make: use old defition of muon type", default=False)
     parser.add_option("--oldPtCut", action="store_true", dest="oldPtCut", help="make: use old pT cut", default=False)
+    parser.add_option("--bphy1", action="store_true", dest="bphy1", help="use bphy1", default=False)
 
     (options, args) = parser.parse_args()
     if len(args) < 3:
@@ -1369,6 +1409,9 @@ if __name__ == "__main__":
 
         if options.oldPtCut:
             bls_ana.use_new_pT = False
+
+        if options.bphy1:
+            bls_ana.use_bphy1 = True
 
         bls_ana.book_hists()
         bls_ana.book_tree()

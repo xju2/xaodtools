@@ -13,7 +13,9 @@
 #include "MuonSelectorTools/MuonSelectionTool.h"
 
 
-UpsilonAna::UpsilonAna(): AnalysisBase()
+UpsilonAna::UpsilonAna():
+    AnalysisBase(),
+    m_isBPHY1(false)
 {
     if(APP_NAME==NULL) APP_NAME = "UpsilonAna";
     string maindir(getenv("ROOTCOREBIN"));
@@ -56,12 +58,6 @@ UpsilonAna::~UpsilonAna(){
 }
 
 int UpsilonAna::initialize(){
-    // string toolName("veryLooseMuon_Upsilon");
-    // m_muonSelectionTool =  unique_ptr<CP::MuonSelectionTool>(new CP::MuonSelectionTool(toolName));
-    // m_muonSelectionTool->setProperty( "MaxEta", 2.7);
-    // m_muonSelectionTool->setProperty( "MuQuality", 3);
-    // m_muonSelectionTool->setProperty( "TurnOffMomCorr", true);
-    // CHECK( m_muonSelectionTool->initialize().isSuccess() );
     initializeBasicTools();
 
     CreateBranch();
@@ -250,21 +246,30 @@ void UpsilonAna::AttachBranchToTree()
 int UpsilonAna::process(Long64_t ientry)
 {
     int sc = Start(ientry);
+    if(sc != 0) return sc;
     if(m_debug) {
         Info(APP_NAME, " UpsilonAna: processing");
     }
-    if(sc != 0) return sc;
     event_br->Fill(*ei);
 
     m_bphy4_quad = NULL;
     m_bphy4_pair = NULL;
     // obtain the fitted BPHY4
-    if(event->contains<xAOD::VertexContainer>("BPHY4Quads")) {
-        CHECK(event->retrieve(m_bphy4_quad, "BPHY4Quads"));
+    if(!m_isBPHY1){
+        if(event->contains<xAOD::VertexContainer>("BPHY4Quads")) {
+            CHECK(event->retrieve(m_bphy4_quad, "BPHY4Quads"));
+        }
+        if(event->contains<xAOD::VertexContainer>("BPHY4Pairs")){
+            CHECK(event->retrieve(m_bphy4_pair, "BPHY4Pairs"));
+        }
+    } else {
+        if(event->contains<xAOD::VertexContainer>("BPHY1OniaCandidates")){
+            CHECK(event->retrieve(m_bphy4_pair, "BPHY1OniaCandidates"));
+        } else {
+            Info(APP_NAME, "Don't have BPHY1 onia candidate");
+        }
     }
-    if(event->contains<xAOD::VertexContainer>("BPHY4Pairs")){
-        CHECK(event->retrieve(m_bphy4_pair, "BPHY4Pairs"));
-    }
+    
 
     // get muons
     const xAOD::MuonContainer* muons(0);
@@ -287,7 +292,7 @@ int UpsilonAna::process(Long64_t ientry)
 
     int n_muon = 0;
     int imuon = -1;
-    MuonVect* good_muons = new MuonVect();
+    unique_ptr<MuonVect> good_muons(new MuonVect());
     int n_combined = 0;
 
     for(auto mu_itr = muons_copy->begin(); mu_itr != muons_copy->end(); ++mu_itr)
@@ -321,24 +326,31 @@ int UpsilonAna::process(Long64_t ientry)
         good_muons->push_back( (*mu_itr) );
 
         muon_br->Fill(**mu_itr, ei, vertice);
-        int muIndex = (*mu_itr)->auxdataConst<int>("BPHY4MuonIndex");
 
         if(m_debug){
             cout << "Type: " << (*mu_itr)->muonType() << endl;
-            cout << "Index: " << muIndex << endl;
+            // int muIndex = (*mu_itr)->auxdataConst<int>("BPHY4MuonIndex");
+            // cout << "Index: " << muIndex << endl;
             cout << "pT: " << (*mu_itr)->p4().Pt()/1E3 << endl;
         }
         muon_br->eloss_->push_back( (*mu_itr)->auxdataConst<float>("EnergyLoss") );
         muon_br->etcone30_->push_back( (*mu_itr)->auxdataConst<float>("etcone30") );
         muon_br->ptvarcone30_->push_back( (*mu_itr)->auxdataConst<float>("ptvarcone30") );
     }
-    if (n_muon >= 4 && n_combined > 2)
-    {
-        this->buildTwoMuons( *good_muons );
-        this->buildFourMuons( *good_muons );
+    if (
+            (!m_isBPHY1 && n_muon >= 4 && n_combined > 2) || // cuts on BPHY4
+            (m_isBPHY1 && n_muon >= 2)
+    ){
+        this->buildTwoMuons( *good_muons.get() );
+        if(!m_isBPHY1) {
+            this->buildFourMuons( *good_muons.get() );
+        }
         physics->Fill();
+    } else if(m_debug) {
+        Info(APP_NAME, "number of muons: %d", n_muon);
+    } else {
+        ;
     }
-    delete good_muons;
 
     return 0;
 }
@@ -349,12 +361,9 @@ void UpsilonAna::buildTwoMuons(const MuonVect& muons)
 
     for(int i = 0; i < (int) muons.size(); i++) {
         const xAOD::Muon* muon1 = dynamic_cast<const xAOD::Muon*>( muons.at(i) );
-        // float mu_charge_1 = muon1->charge();
 
         for(int j = i+1; j < (int) muons.size(); ++j) {
             const xAOD::Muon* muon2 = dynamic_cast<const xAOD::Muon*>( muons.at(j) );
-            // float mu_charge_2 = muon2->charge();
-            // if( (mu_charge_1 + mu_charge_2 ) != 0) continue;
 
             this->fillOniaInfo(*muon1, *muon2);
             m_onia_muon1id->push_back(i);
@@ -377,8 +386,6 @@ void UpsilonAna::buildFourMuons(const MuonVect& muons)
 
                 for(int l=k+1; l < (int) muons.size(); ++l){
                     const xAOD::Muon* muon4 = dynamic_cast<const xAOD::Muon*>( muons.at(l) );
-                    // if( (muon1->charge() + muon2->charge() + muon3->charge() + muon4->charge()) != 0) continue;
-                    // so far we have four neutral tracks
 
                     // require at least three combined muons
                     int n_combined = 0;
@@ -386,7 +393,6 @@ void UpsilonAna::buildFourMuons(const MuonVect& muons)
                     if( muon2->muonType() == xAOD::Muon::Combined ) n_combined ++;
                     if( muon3->muonType() == xAOD::Muon::Combined ) n_combined ++;
                     if( muon4->muonType() == xAOD::Muon::Combined ) n_combined ++;
-                    // if(n_combined < 3) continue;
 
                     m_quad_nCombined->push_back(n_combined);
                     this->fillQuadInfo(*muon1, *muon2, *muon3, *muon4);
@@ -418,7 +424,7 @@ void UpsilonAna::fillOniaInfo(const xAOD::Muon& muon1, const xAOD::Muon& muon2)
     if(m_bphy4_pair) {
         const xAOD::Vertex* fitted_v = matchFittedVertex(*m_bphy4_pair, *muons);
         if(fitted_v){
-            onia_mass_fitted = fitted_v->auxdataConst<float>("PAIR_mass");
+            onia_mass_fitted = (m_isBPHY1)?0:fitted_v->auxdataConst<float>("PAIR_mass");
             onia_x = fitted_v->x();
             onia_y = fitted_v->y();
             onia_z = fitted_v->z();
@@ -548,4 +554,9 @@ const xAOD::Vertex* UpsilonAna::matchFittedVertex(
         Info(APP_NAME, "cannot find a mattched vertex!");
     }
     return res_vertex;
+}
+
+void UpsilonAna::UseBPHY1(){
+    Info(APP_NAME, "Reading BPHY1 data");
+    m_isBPHY1 = true;
 }

@@ -28,7 +28,7 @@ int main( int argc, char* argv[] )
 
     if ((argc > 1 && string(argv[1]) == "help") ||(argc < 3))
     {
-        cout << argv[0] << " analysisName toberun.txt number_evts isData=1 debug=0 noGRL=0 doSmear=1" << endl;
+        cout << argv[0] << " analysisName toberun.txt number_evts isData=1 debug=0 noGRL=0 doSmear=1 useBphy1=1" << endl;
         cout << "analysisName: gammajet, upsilon, monojet" << endl;
         exit(1);
     }
@@ -103,6 +103,7 @@ int main( int argc, char* argv[] )
     bool do_debug = false;
     bool no_grl = false;
     bool do_smear = true;
+    bool use_bphy1 = false;
 
     for (int i= 4 ; i<argc ; i++) {
         const char* key = strtok(argv[i],"=") ;
@@ -112,6 +113,7 @@ int main( int argc, char* argv[] )
         if (strcmp(key,"debug")==0) do_debug = (bool)atoi(val);
         if (strcmp(key,"noGRL")==0) no_grl = (bool)atoi(val);
         if (strcmp(key,"doSmear")==0) do_smear = (bool)atoi(val);
+        if (strcmp(key,"useBphy1")==0) use_bphy1 = (bool)atoi(val);
     }
 
     // setup each analysis!
@@ -123,6 +125,10 @@ int main( int argc, char* argv[] )
     if( anaName == "monojet"){
         MonoJetAna* monojet_ana = dynamic_cast<MonoJetAna*>(ana);
         monojet_ana->setSmear(do_smear);
+    }
+    if( anaName == "upsilon" && use_bphy1 ){
+        UpsilonAna* upsilon_ana = dynamic_cast<UpsilonAna*>(ana);
+        upsilon_ana->UseBPHY1();
     }
 
     Info( APP_NAME, "Number of events to process: %i", static_cast<int>( entries ) );
