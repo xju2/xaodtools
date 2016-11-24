@@ -196,7 +196,7 @@ int main( int argc, char* argv[] ) {
                 TLorentzVector mu ;
                 mu.SetPxPyPzE((*muon_itr)->px(), (*muon_itr)->py(),
                         (*muon_itr)->pz(), (*muon_itr)->e());
-                if(mu.Pt() > 6e3 && mu.Eta() < 2.5){
+                if(mu.Pt() > 5e3 && mu.Eta() < 2.7){
                     float charge = (*muon_itr)->pdgId()/13.;
                     Candidate* can = new Candidate(index, mu);
                     can->setCharge(charge);
