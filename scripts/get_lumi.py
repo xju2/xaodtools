@@ -36,7 +36,7 @@ if options.range != "None":
     first_run = int(first)
     end_run = int(end)
     for key,value in lumi_dic.iteritems():
-        if key >= first_run and key <= last_run:
+        if key >= first_run and key <= end_run:
             total_lumi += value
             total_runs += 1
 

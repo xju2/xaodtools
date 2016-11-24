@@ -10,6 +10,8 @@
 #include <MyXAODTools/ElectronBranch.h>
 #include <MyXAODTools/MuonBranch.h>
 #include <MyXAODTools/SmearedInfo.h>
+#include <MyXAODTools/Candidate.h>
+#include <MyXAODTools/HZZ4lHelper.h>
 
 #ifdef __MAKECINT__
 #pragma link C++ class SmearedInfo+;
@@ -33,6 +35,8 @@
 #pragma link C++ class TrackBranch;
 #pragma link C++ class ElectronBranch;
 #pragma link C++ class MuonBranch;
+#pragma link C++ class Candidate;
+#pragma link C++ class HZZ4lHelper;
 
 #endif
 #endif

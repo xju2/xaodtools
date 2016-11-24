@@ -1347,6 +1347,7 @@ def draw_ss(file_name, post_fix):
     low_4l = 15
     hi_4l = 25
     h_m4l_temp = ROOT.TH1F("h_m4l_temp", "m4l;m_{#varUpsilon+#mu+#mu} [GeV];Events / 200 MeV", nbins_4l, low_4l, hi_4l)
+
     h_m4l_ss_notrigger = h_m4l_temp.Clone("h_m4l_ss_notrigger")
     h_m4l_ss_withtrigger = h_m4l_temp.Clone("h_m4l_ss_withtrigger")
     tree.Draw("m4l_fitted>>h_m4l_ss_notrigger", "abs(charge) == 2")
