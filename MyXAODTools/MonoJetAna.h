@@ -1,5 +1,4 @@
-/* PrescaleTool: bug in deconstruction
- *
+/*
  *
  */
 #ifndef __MYXAODTOOLS_MONOJETANA_H__

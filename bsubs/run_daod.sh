@@ -19,7 +19,8 @@ which gcc
 
 echo "${ROOTCOREBIN}/bin/x86_64-slc6-gcc49-opt/analysis $input ${output}"
 
-analysis upsilon $input -1 useBphy1=1 >& log
+#analysis upsilon $input -1 useBphy1=1 >& log
+analysis upsilon $input -1 useBphy1=0 >& log
 
 #mv reduced_ntup.root $output
 scp reduced_ntup.root $output

@@ -4,8 +4,9 @@ get upper limit from simple Poisson distribution
 use high mass workspace as input
 """
 
+from optparse import OptionParser
 import ROOT
-import sys
+
 def get_limit(num_expected, cls=0.05):
     limit = num_expected
     if num_expected == 0:
@@ -133,38 +134,46 @@ def process(file_name, mH, lumi=13.3):
     print out
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print sys.argv[0],"arg "
-        print "arg: get_limit number_expected cls;"
-        print "     process file_name mH lumi"
-        sys.exit(1)
+    usage = "%prog [option] n_exp n_obs"
+    parser = OptionParser(description="calculate significance/limits based on Poisson", usage=usage)
+    parser.add_option("--limit", dest="limit", default=False, help="get limits for the number of events", action="store_true")
+    parser.add_option("--p0", dest="p0", default=False, help="get p0", action="store_true")
+    (options,args) = parser.parse_args()
 
-    arg = sys.argv[1]
-    if arg == "get_limit":
-        if len(sys.argv) < 3:
-            print "get_limit number_expected cls"
-            sys.exit(2)
+    if not options.limit and not options.p0:
+        parser.print_help()
+        exit(1)
 
-        num_exp = int(sys.argv[2])
-        if len(sys.argv) > 3:
-            cls = float(sys.argv[3])
-        else:
-            cls = 0.05
+    if options.limit:
+        if len(args) < 1:
+            print "number_expected cls (95%)"
+            exit(2)
 
-        get_limit(num_exp, cls)
-    elif arg == "process":
-        if len(sys.argv) < 4:
-            print "process file_name mH (lumi)"
-            sys.exit(3)
+        try:
+            num_exp = int(args[0])
+            if len(args) > 1:
+                cls = float(args[1])
+            else:
+                cls = 0.05
 
-        file_name = sys.argv[2]
-        mH = float(sys.argv[3])
-        if len(sys.argv) > 4:
-            lumi = float(sys.argv[4])
-        else:
-            lumi = 13.3
+            get_limit(num_exp, cls)
+        except ValueError:
+            if "root" in args[0] and len(args) < 3:
+                print "file_name mH lumi"
+                exit(3)
 
-        process(file_name, mH, lumi)
-    else:
-        print "I don't know"
+            file_name = args[0]
+            mH = float(args[1])
+            lumi = float(args[2])
+            process(file_name, mH, lumi)
+
+    if options.p0:
+        if len(args) < 2:
+            print "n_data n_exp"
+            exit(4)
+        n_obs = int(args[0])
+        n_exp = float(args[1])
+        cdf = ROOT.Math.poisson_cdf_c(n_obs, n_exp)
+        sig = ROOT.RooStats.PValueToSignificance(cdf)
+        print "significance: {:.2f}, p0: {:.2f}%".format(sig, cdf*100)
 

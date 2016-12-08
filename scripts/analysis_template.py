@@ -69,6 +69,7 @@ ANALYSISNAME::ANALYSISNAME():
     m_susy_config = Form("%s/data/MyXAODTools/monojet.conf", maindir.c_str());
 
     trigger_map_ = { // your triggers go here.
+    // {"HLT_xe70", false},
     };
 }
 
@@ -104,6 +105,7 @@ void ANALYSISNAME::AttachBranchToTree()
     AttachBasicToTree();
 
     // event_br->AttachBranchToTree(*physics);
+    // muon_br, el_br, jet_br, ph_br
 
     // set your own branches
     // physics->Branch("has_bad_muon", &m_hasBadMuon, "has_bad_muon/O");
@@ -178,6 +180,7 @@ int ANALYSISNAME::process(Long64_t ientry)
     //     }
     //     if( dec_bad(*mu) ) m_hasBadMuon = true;
     //     if( dec_cosmic(*mu) ) m_hasCosmicMuon = true;
+    //     muon_br->Fill(*mu, ei, vertice);
     //     m_nBaseMu ++;
     // }
     // // photon selections

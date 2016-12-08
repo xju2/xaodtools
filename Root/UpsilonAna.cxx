@@ -22,33 +22,13 @@ UpsilonAna::UpsilonAna():
     m_susy_config = Form("%s/data/MyXAODTools/upsilon.conf", maindir.c_str());
 
     trigger_map_ = {
-        // single Muon
-        // {"HLT_mu20_iloose_L1MU15", false},
-        // {"HLT_mu24_ivarloose_L1MU15", false},
-        // {"HLT_mu24_ivarmedium", false},
-        // {"HLT_mu24_imedium", false},
-        // {"HLT_mu26_ivarmedium", false},
-        // {"HLT_mu26_imedium", false},
-        // Di muon
-        // {"HLT_2mu10", false},
-        // {"HLT_mu18_mu8noL1", false},
-        // {"HLT_2mu10_nomucomb", false},
-        // {"HLT_mu20_mu8noL1", false},
-        // {"HLT_mu20_nomucomb_mu6noL1_nscan03", false},
-        // {"HLT_2mu14_nomucomb", false},
-        // {"HLT_mu22_mu8noL1", false},
-        // {"HLT_2mu14", false},
         // Trig Muons
-        {"HLT_3mu6", false},
-        {"HLT_3mu6_msonly", false},
-        {"HLT_mu18_2mu4noL1", false},
-        {"HLT_mu20_2mu4noL1", false},
+        {"HLT_3mu4_nomucomb_delayed", false},
         {"HLT_3mu4", false},
-        {"HLT_mu6_2mu4", false},
-        {"HLT_mu11_nomucomb_2mu4noL1_nscan03_L1MU11_2MU6", false},
-        {"HLT_mu20_msonly_mu10noL1_msonly_nscan05_noComb", false},
-        {"HLT_3mu6", false},
-        {"HLT_3mu6_msonly", false}
+        {"HLT_3mu4_bDimu", false},
+        {"HLT_3mu4_bUpsi", false},
+        {"HLT_3mu4_bUpsi_delayed", false},
+        {"HLT_mu6_nomucomb_2mu4_nomucomb_delayed_L1MU6_3MU4", false}
     };
 
 }
@@ -287,7 +267,7 @@ int UpsilonAna::process(Long64_t ientry)
     }
 
 
-    // CHECK( m_objTool->GetMuons(muons_copy, muons_copyaux, true) );
+    CHECK( m_objTool->GetMuons(muons_copy, muons_copyaux, true) );
     // sort(muons_copy->begin(), muons_copy->end(), descend_on_pt);
 
     int n_muon = 0;
@@ -317,6 +297,9 @@ int UpsilonAna::process(Long64_t ientry)
             }
             continue;
         }
+        
+        /***** Use Medium working point, as suggested by MCP****/
+        // if (! muon_br->m_muonSelectionTool->accept( (*mu_itr) ) ) continue;
         float charge = (*mu_itr)->charge();
         bool consitent_charge = (id_track->charge() == charge);
         if(!consitent_charge) continue;

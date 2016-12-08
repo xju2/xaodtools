@@ -107,7 +107,7 @@ class Fit2L:
         #mean = RooRealVar("mean", "mass of 1S", 9.46, 9.2, 9.7)
         #sigma = RooRealVar("sigma", "sigma of gaussian", 0.14, 0.09, 0.3)
         mean = RooRealVar("mean", "mass of 1S", 9.46)
-        sigma = RooRealVar("sigma", "sigma of gaussian", 0.16)
+        sigma = RooRealVar("sigma", "sigma of gaussian", 0.18)
         gaussian = ROOT.RooGaussian("gauss", "gauss", self.obs, mean, sigma)
 
         ## try Crystal Ball

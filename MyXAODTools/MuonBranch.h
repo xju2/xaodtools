@@ -2,6 +2,7 @@
 #define __MYXAODTOOLS_MUONBRANCH_H__
 
 #include <vector>
+#include <memory>
 #include <TLorentzVector.h>
 
 #include "xAODMuon/Muon.h"
@@ -36,6 +37,9 @@ public:
 private:
     bool CreateBranch();
     int initial_tools();
+    void addDetailedInfo(const xAOD::Muon& muon);
+    void getPrecisionLayer(const xAOD::Muon& muon, uint8_t& precLayer, uint8_t& precHoleLayer) const;
+    float getQoverPsig(const xAOD::Muon& muon) const;
 
 public:
     static const xAOD::TrackParticle* getTrack(const xAOD::Muon& muon);
@@ -78,6 +82,10 @@ public:
     // TODO: add topoetcone30
     vector<float>* ptvarcone30_;
 
+    // variables used in MuonSelectorTools
+    unique_ptr< vector<float> > m_qOverpSignif;
+    unique_ptr< vector<uint8_t> > m_nPrecLayer;
+    unique_ptr< vector<uint8_t> > m_nPrecHoleLayer;
 };
 
 #endif

@@ -23,7 +23,8 @@ mv jj.txt toberun.txt
 cat toberun.txt
 
 #isData=0 isAtlfast=0 noSys=1 doSmear=0 doPhoton=0 debug=0
-./bin/analysis upsilon toberun.txt -1 isData=${is_data} useBphy1=1
+#./bin/analysis upsilon toberun.txt -1 isData=${is_data} useBphy1=1
+./bin/analysis upsilon toberun.txt -1 isData=${is_data} useBphy1=0
 
 echo "---------------"
 echo "The job is done"

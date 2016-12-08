@@ -16,5 +16,6 @@ public:
 
 protected:
     bool m_isBranchCreated;
+    bool m_addDetails;
 };
 #endif

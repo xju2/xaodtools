@@ -8,18 +8,19 @@
 
 const char* MuonBranch::APP_NAME = "MuonBranch";
 
-MuonBranch::MuonBranch(){
-    m_track = NULL;
-    // delay the creation of vectors/tools until Fill()
+MuonBranch::MuonBranch():
+    m_track(NULL)
+{
     m_isBranchCreated = false;
+    m_addDetails = true;
 }
 
 int MuonBranch::initial_tools(){
     string toolName("Muon_4Branch");
     m_muonSelectionTool =  unique_ptr<CP::MuonSelectionTool>(new CP::MuonSelectionTool(toolName));
     m_muonSelectionTool->setProperty( "MaxEta", 2.7);
-    m_muonSelectionTool->setProperty( "MuQuality", 4);
-    m_muonSelectionTool->setProperty( "TurnOffMomCorr", true);
+    m_muonSelectionTool->setProperty( "MuQuality", (int) xAOD::Muon::Quality::Medium );
+    // m_muonSelectionTool->setProperty( "TurnOffMomCorr", true);
     m_muonSelectionTool->setProperty( "TrtCutOff", true);
     m_muonSelectionTool->msg().setLevel(MSG::ERROR);
     CHECK( m_muonSelectionTool->initialize().isSuccess() );
@@ -30,6 +31,8 @@ bool MuonBranch::CreateBranch()
 {
     m_isBranchCreated = true;
     author_ = new vector<int>();
+    type_   = new vector<int>();
+    quality_ = new vector<int>;
 
     pt_     = new vector<float>();
     eta_    = new vector<float>();
@@ -43,7 +46,6 @@ bool MuonBranch::CreateBranch()
     track_e_      = new vector<float>();
 
     charge_ = new vector<float>();
-    type_   = new vector<int>();
     d0_     = new vector<float>();
     z0_sintheta_ = new vector<float>();
     d0_sig_ = new vector<float>();
@@ -53,7 +55,13 @@ bool MuonBranch::CreateBranch()
     ptvarcone30_ = new vector<float>();
 
     pvID_ = new vector<int>;
-    quality_ = new vector<int>;
+
+    // variables used in MuonSelectorTools
+    if(m_addDetails) {
+        m_qOverpSignif.reset( new vector<float>() );
+        m_nPrecLayer.reset( new vector<uint8_t>() );
+        m_nPrecHoleLayer.reset( new vector<uint8_t>() );
+    }
 
     return true;
 }
@@ -117,6 +125,12 @@ void MuonBranch::ClearBranch(){
 
         pvID_   ->clear();
         quality_->clear();
+
+        if(m_addDetails){
+            m_qOverpSignif  ->clear();
+            m_nPrecLayer    ->clear();
+            m_nPrecHoleLayer->clear();
+        }
     }
 }
 
@@ -153,6 +167,12 @@ void MuonBranch::AttachBranchToTree(TTree& tree)
 
     tree.Branch("mu_pvID", &pvID_);
     tree.Branch("mu_quality", &quality_);
+
+    if(m_addDetails){
+        tree.Branch("mu_qOverPsig",     (m_qOverpSignif.get()) );
+        tree.Branch("mu_nPrecLayer",    (m_nPrecLayer.get()) );
+        tree.Branch("mu_nPrecHoleLayer",    (m_nPrecHoleLayer.get()) );
+    }
 }
 
 void MuonBranch::Fill(const xAOD::Muon& muon,
@@ -193,6 +213,72 @@ void MuonBranch::Fill(const xAOD::Muon& muon,
     d0_sig_->push_back(d0_sig);
 
     quality_->push_back( (int)m_muonSelectionTool->getQuality(muon) );
+    if (m_addDetails) addDetailedInfo(muon);
+}
+
+void MuonBranch::addDetailedInfo(const xAOD::Muon& muon)
+{
+    m_qOverpSignif  ->push_back( getQoverPsig(muon) );
+
+    uint8_t nprecisionLayers, nprecisionHoleLayers;
+    getPrecisionLayer(muon, nprecisionLayers, nprecisionHoleLayers);
+    m_nPrecLayer        ->push_back( nprecisionLayers );
+    m_nPrecHoleLayer    ->push_back( nprecisionHoleLayers );
+}
+
+float MuonBranch::getQoverPsig(const xAOD::Muon& muon) const
+{
+    const xAOD::TrackParticle* idtrack = muon.trackParticle( xAOD::Muon::InnerDetectorTrackParticle );
+    const xAOD::TrackParticle* metrack = muon.trackParticle( xAOD::Muon::ExtrapolatedMuonSpectrometerTrackParticle );
+    if(!idtrack || !metrack) {
+        return -999999.;
+    }
+
+    float mePt = -999999., idPt = -999999.;
+    try{
+        static SG::AuxElement::Accessor<float> mePt_acc("MuonSpectrometerPt");
+        static SG::AuxElement::Accessor<float> idPt_acc("InnerDetectorPt");
+        mePt = mePt_acc(muon);
+        idPt = idPt_acc(muon);
+    } catch ( SG::ExcNoAuxStore b ) {
+        mePt = metrack->pt();
+        idPt = idtrack->pt();
+    }
+
+    float meP  = 1.0 / ( sin(metrack->theta()) / mePt);
+    float idP  = 1.0 / ( sin(idtrack->theta()) / idPt);
+    float qOverPsigma  = sqrt( idtrack->definingParametersCovMatrix()(4,4) + metrack->definingParametersCovMatrix()(4,4) );
+    float qOverPsignif  = fabs( (metrack->charge() / meP) - (idtrack->charge() / idP) ) / qOverPsigma;
+
+    return qOverPsignif;
+}
+
+void MuonBranch::getPrecisionLayer(const xAOD::Muon& muon, uint8_t& precLayer, uint8_t& precHoleLayer) const
+{
+    if ( !muon.summaryValue(precLayer, xAOD::SummaryType::numberOfPrecisionLayers)){
+        precLayer = -1;
+    }
+    if ( !muon.summaryValue(precHoleLayer, xAOD::SummaryType::numberOfPrecisionHoleLayers) ) {
+        precHoleLayer = -1;
+    }
+    // Fix for CSC
+    if( fabs(muon.eta()) > 2.0 ) {
+        precLayer = 0;
+        uint8_t innerSmallHits, innerLargeHits, middleSmallHits, middleLargeHits, outerSmallHits, outerLargeHits;
+        if ( !muon.summaryValue(innerSmallHits, xAOD::MuonSummaryType::innerSmallHits) ||
+                !muon.summaryValue(innerLargeHits, xAOD::MuonSummaryType::innerLargeHits) ||
+                !muon.summaryValue(middleSmallHits, xAOD::MuonSummaryType::middleSmallHits) ||
+                !muon.summaryValue(middleLargeHits, xAOD::MuonSummaryType::middleLargeHits) ||
+                !muon.summaryValue(outerSmallHits, xAOD::MuonSummaryType::outerSmallHits) ||
+                !muon.summaryValue(outerLargeHits, xAOD::MuonSummaryType::outerLargeHits) )
+        {
+            precLayer = -1;
+        } else{
+            if( innerSmallHits>1  || innerLargeHits>1  ) precLayer += 1;
+            if( middleSmallHits>2 || middleLargeHits>2 ) precLayer += 1;
+            if( outerSmallHits>2  || outerLargeHits>2  ) precLayer += 1;
+        }
+    }
 }
 
 const xAOD::TrackParticle* MuonBranch::getTrack(const xAOD::Muon& muon)

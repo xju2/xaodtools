@@ -11,8 +11,7 @@ import time
 from optparse import OptionParser
 
 interested_event = [
-    #(284500, 1105936),
-    (282625, 146741979),
+    (311481, 2364050894),
 ]
 
 CHI2_DIMUON_CUT = 3
@@ -112,6 +111,9 @@ class BLSana:
 
         # use new pT
         self.use_new_pT = True
+
+        # use 4 medium
+        self.do_4medium = False
 
     def book_tree(self):
         self.out_tree = ROOT.TTree("bls", "bls")
@@ -743,6 +745,7 @@ class BLSana:
 
         if id_upsilon[0] < 0:
             return None
+
         self.fill_cut_flow(6+charge_weight)
         if total_charge == 0:
             self.print_event(tree)
@@ -857,6 +860,10 @@ class BLSana:
 
         res = res and abs(d0_sig) < 6
         res = res and abs(z0_) < 1
+
+        if self.do_4medium and\
+           tree.mu_quality[mu_id] > 1:
+            return False
 
         if self.m_debug:
             print "d0: ", d0_sig
@@ -1041,16 +1048,18 @@ class BLSana:
     def get_muon_type(self, tree, mu_id):
         """
         define muon type as the following:
-            ST muons: author = 4 or 6
-            Combined muons: 1 or 2
+            ST muons: author = 6
+            Combined muons: 1
         """
         author = tree.mu_author[mu_id]
-        if author == 1 or author == 2:
+        # author = 2 is STACO, not used in 2016!
+        if author == 1:
             return 0
-        elif author == 4 or author == 6:
+        elif author == 6:
             return 2
         else:
-            print "I don't know this author:", author
+            return -1
+            #print "I don't know this author:", author
 
     def save_4muon(self, tree, results):
         mU, m34, mass_id, onia1_id, onia2_id, quad_id, quad_type = results

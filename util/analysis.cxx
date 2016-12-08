@@ -19,6 +19,7 @@
 #include "MyXAODTools/GammaJetAna.h"
 #include "MyXAODTools/UpsilonAna.h"
 #include "MyXAODTools/MonoJetAna.h"
+#include "MyXAODTools/FakeMuonAna.h"
 
 using namespace std;
 
@@ -29,7 +30,7 @@ int main( int argc, char* argv[] )
     if ((argc > 1 && string(argv[1]) == "help") ||(argc < 3))
     {
         cout << argv[0] << " analysisName toberun.txt number_evts isData=1 debug=0 noGRL=0 doSmear=1 useBphy1=1" << endl;
-        cout << "analysisName: gammajet, upsilon, monojet" << endl;
+        cout << "analysisName: gammajet, upsilon, monojet, fakemuon" << endl;
         exit(1);
     }
 
@@ -84,6 +85,8 @@ int main( int argc, char* argv[] )
         ana = new UpsilonAna();
     } else if(anaName == "monojet") {
         ana = new MonoJetAna();
+    } else if(anaName == "fakemuon") {
+        ana = new FakeMuonAna();
     }else{
         Error(APP_NAME, "cannot find algorithm: %s", anaName.Data());
         return 1;
