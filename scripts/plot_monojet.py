@@ -2,7 +2,7 @@
 __doc__="""
 compare the histograms made from read_monojet_minitree.py
 """
-import tools
+from ploter import Ploter
 import ROOT
 ROOT.gROOT.SetBatch()
 
@@ -82,10 +82,13 @@ def process( dir_name="histograms", scale_qcd=True, is_debug=False):
         out_dir = "plots/"
         out_name = out_dir+hist_name+"_log"+str(is_log)+"_scaled"+str(scale_qcd)+".pdf"
 
-        tools.stack_hists(
+        has_ratio = True
+        plot_helper = Ploter()
+        plot_helper.stack_hists(
             hist_list, tag_list, out_name,
             hist.GetXaxis().GetTitle(),
-            hist.GetYaxis().GetTitle(), is_log, has_data, is_debug)
+            hist.GetYaxis().GetTitle(),
+            is_log, has_data, has_ratio)
 
     print "QCD:",n_qcd
     # close all the files
@@ -100,7 +103,8 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
 
     if len(args) < 1:
-        dir_name = "histograms"
+        parser.print_help()
+        exit(0)
     else:
         dir_name = args[0]
 

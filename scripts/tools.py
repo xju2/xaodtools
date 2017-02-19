@@ -10,6 +10,7 @@ import ROOT
 from array import array
 ROOT.gROOT.SetBatch()
 
+totalObj = []
 def get_ratio_and_error(a, b):
     f = a/b
     error = f*math.sqrt((a+b)/(a*b))
@@ -24,46 +25,30 @@ def make_hist(hist_name, bin_list):
     h1 = ROOT.TH1F(hist_name, hist_name, nbins, array('f', bin_list))
     return h1
 
-def add_ratio_pad(hist_list, y_title, y_min, y_max, reverse=False):
-    """
-    hist_list = [Data, MC1, MC2]
-    plot Data/MC1, Data/MC2
-    @para=reverse, plot MC1/Data
-    """
-    if len(hist_list) < 2:
-        print "less than 2 histograms, kidding?"
-        return None
+def prepare_2pad_canvas(cname, width=600, height=600):
 
-    pad1 = ROOT.TPad("pad1", "pad1", 0, 0.15, 1.0, 1.0)
-    pad2 = ROOT.TPad("pad2", "pad2", 0, 0.01, 1, 0.286)
-    pad1.Draw()
-    pad2.Draw()
+    VerticalCanvasSplit = 0.4
+    can = ROOT.TCanvas(cname,cname,width,height)
+    totalObj.append(can)
+    p1 = ROOT.TPad("p1_"+cname,cname,0.0, VerticalCanvasSplit,1.0,1.0)
+    p2 = ROOT.TPad("p2_"+cname,cname,0.0,0.0, 1.0, VerticalCanvasSplit)
+    p1.SetBottomMargin(0)
+    p1.SetTopMargin(0.09)
+    p1.SetLeftMargin(0.17)
+    p2.Draw()
+    p2.SetTopMargin(0)
+    p2.SetBottomMargin(0.4)
+    p2.SetLeftMargin(0.17)
+    p2.SetGridy()
+    totalObj.append(can)
+    totalObj.append(p1)
+    totalObj.append(p2)
+    can.cd()
+    p1.Draw()
+    p2.Draw()
+    return [can,p1,p2]
 
-    pad2.cd()
-    hist_list_cp = [x.Clone(x.GetName()+"_clone") for x in hist_list]
-    h_refer = hist_list_cp[0]
-    for i, hist in enumerate(hist_list_cp):
-        if i==0:
-            hist.Sumw2()
-            hist.Divide(h_refer)
 
-            hist.GetYaxis().SetTitle(y_title)
-            hist.GetYaxis().SetRangeUser(y_min, y_max)
-
-            hist.Draw("E3")
-        else:
-            # start to calculate the ratio
-            if reverse: # MC/Data
-                this_hist = hist.Clone(hist.GetName()+"_cp")
-                this_hist.Divide(h_refer)
-            else: # Data/MC
-                this_hist = h_refer.Clone(h_refer.GetName()+"_cp")
-                this_hist.Divide(hist)
-
-            this_hist.Draw("HIST SAME")
-
-    pad1.cd()
-    return pad1
 
 
 def compare_hists(
@@ -87,7 +72,11 @@ def compare_hists(
     hist_list_clone = [x.Clone(x.GetName()+"_clone") for x in hist_list]
 
     hist_id = 0
-    canvas = ROOT.TCanvas("canvas", "canvas", 600, 600)
+    if add_ratio:
+        canvas, pad1, pad2 = prepare_2pad_canvas("canvas", 600, 600)
+    else:
+        canvas = ROOT.TCanvas("canvas", "canvas", 600, 600)
+
     legend = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
     legend.SetFillColor(0)
     legend.SetBorderSize(0)
@@ -118,30 +107,39 @@ def compare_hists(
 
 def stack_hists(
     hist_list, tag_list, out_name,
-    x_title, y_title, is_log=False, has_data=True, debug=False
+    x_title, y_title,
+    is_log=False, has_data=True,
+    add_ratio=False
 ):
-    # put data to be the first one, plz.
+    # In hist_list, the data should be first element, if has_data
     colors = [1, 206, 64, 95, 28, 29, 209, 5]
     if len(hist_list) > len(colors):
         print "I don't have enough colors", len(hist_list), len(colors)
         return
 
     # clone current histograms, so that inputs are untouched.
-    hist_list_all = []
-    hist_list_cp = []
+    hist_list_cp = [] # a list of non-data histograms
     h_data = None  # the first element is assumed to be data
+
+    hist_sum = None
     for i, hist in enumerate(hist_list):
         new_hist = hist.Clone(hist.GetName()+"_clone")
         color = colors[i]
         new_hist.SetLineColor(color)
-        new_hist.SetFillColor(color)
+
         if i==0 and has_data:
             # decorate data points
             new_hist.SetMarkerStyle(20)
             new_hist.SetMarkerSize(1.2)
             h_data = new_hist
+            continue
+        elif i==0 or hist_sum is None:
+            hist_sum = hist
         else:
-            hist_list_cp.append(new_hist)
+            hist_sum.Add(hist)
+
+        new_hist.SetFillColor(color)
+        hist_list_cp.append(new_hist)
 
     # always plot the smallest component in the bottom
     hist_sorted_list = sorted(hist_list_cp, key=lambda k:k.Integral())
@@ -150,7 +148,16 @@ def stack_hists(
         hs.Add(hist)
 
     # start to plot them
-    canvas = ROOT.TCanvas("canvas", "canvas", 600, 600)
+    if add_ratio:
+        canvas, pad1, pad2 = prepare_2pad_canvas("canvas", 600, 600)
+    else:
+        canvas = ROOT.TCanvas("canvas", "canvas", 600, 600)
+
+    if add_ratio and has_data:
+        #hist_list_all = [x for x in hist_list] # clone of hist_list
+        hist_sum.SetLineColor(4)
+        new_data_copy = h_data.Clone("data_copy")
+        add_ratio_pad([new_data_copy, hist_sum], y_title, 0.5, 1.5)
 
     y_max = hs.GetMaximum()
     y_min = hs.GetMinimum()
@@ -166,7 +173,10 @@ def stack_hists(
         this_hist = hs
 
     if is_log:
-        canvas.SetLogy()
+        if add_ratio:
+            pad1.SetLogy()
+        else:
+            canvas.SetLogy()
         this_hist.GetYaxis().SetRangeUser(4E-3, y_max*1e3)
     else:
         this_hist.GetYaxis().SetRangeUser(1E-3, y_max*1.1)
