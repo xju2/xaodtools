@@ -137,6 +137,6 @@ if __name__ == "__main__":
         ds_name,info_ = ds_mgr.get_info(dsid)
         event_type = ds_name.split('.')[2].replace('_', '\_')
         if info_ is not None:
-            out_text += str(dsid) + " & "+ event_type +" & "\
+            out_text += str(dsid) + " & "+ event_type +" & " +\
                     " & ".join([str(x) for x in info_])+" \\\\ \n"
     print out_text
