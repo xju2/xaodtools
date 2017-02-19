@@ -123,6 +123,7 @@ int main( int argc, char* argv[] ) {
 
     unique_ptr<HZZ4lHelper> h4l_helper(new HZZ4lHelper());
     h4l_helper->MakeOutputTree(MyTree);
+    h4l_helper->MakeTruthTree(MyTree);
 
     int type;
     MyTree.Branch("type", &type, "type/I");
@@ -156,10 +157,25 @@ int main( int argc, char* argv[] ) {
         for(int i = 0; i < (int)weights.size(); i ++){
             mc_weights->push_back(weights.at(i));
         }
+        
+        // get truth info
+       const xAOD::TruthParticleContainer* particles(0);
+       if( event.retrieve(particles, "TruthParticles").isSuccess() )
+       {
+           h4l_helper->GetTruthInfo( *particles );
+       } else {
+           cout << "No truth particles" << endl;
+       }
 
         ////get electrons
         const xAOD::TruthParticleContainer* electrons(0);
-        CHECK( event.retrieve(electrons,"TruthElectrons") );
+        const xAOD::TruthParticleContainer* muons(0);
+        CHECK( event.retrieve(muons, "TruthMuons") );
+        if( ! event.retrieve(electrons,"TruthElectrons").isSuccess() ||
+            ! event.retrieve(muons, "TruthMuons").isSuccess() )
+        {
+            continue;
+        }
         xAOD::TruthParticleContainer::const_iterator ele_itr = electrons->begin();
         xAOD::TruthParticleContainer::const_iterator ele_end = electrons->end();
 
@@ -183,8 +199,6 @@ int main( int argc, char* argv[] ) {
         }
         // Info(APP_NAME, "Number of electrons: %d", (int)ele_4vec->size());
 
-        const xAOD::TruthParticleContainer* muons(0);
-        CHECK( event.retrieve(muons, "TruthMuons") );
         xAOD::TruthParticleContainer::const_iterator muon_itr = muons->begin();
         xAOD::TruthParticleContainer::const_iterator muon_end = muons->end();
         // cout << "total muons: " << muons->size() << endl;
