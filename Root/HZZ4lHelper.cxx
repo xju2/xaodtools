@@ -177,6 +177,7 @@ bool HZZ4lHelper::MakeTruthTree(TTree& MyTree)
 
 bool HZZ4lHelper::GetTruthInfo(const xAOD::TruthParticleContainer& particles)
 {
+    // Get truth info from the Truth container.
     truth_z1_mass = -1;
     truth_z2_mass = -1;
     truth_z1_pt = -1;
