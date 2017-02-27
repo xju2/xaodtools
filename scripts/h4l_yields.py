@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 """
 get the yields for H4l analysis,
-inputs are minitress
+The samples, input minitress are encoded!
+Change the function if it does fit you.
 """
 
 import ROOT
@@ -59,10 +60,21 @@ class MinitreeReader():
         mc_dir = self.options.mcDir
         sample_list = OrderedDict()
         if analysis == "HighMass":
-            # qqZZ
-            sample_list['qqZZ']  = mc_dir + 'mc15_13TeV.361603.PowhegPy8EG_CT10nloME_AZNLOCTEQ6L1_ZZllll_mll4.root,'
-            sample_list['qqZZ'] += mc_dir + 'mc15_13TeV.342556.PowhegPy8EG_CT10nloME_AZNLOCTEQ6L1_ZZllll_mll4_m4l_100_150.root,'
-            sample_list['qqZZ'] += mc_dir + 'mc15_13TeV.343232.PowhegPy8EG_CT10nloME_AZNLOCTEQ6L1_ZZllll_mll4_m4l_500_13000.root,'
+            # qqZZ, Powheg
+            #sample_list['qqZZ']  = mc_dir + 'mc15_13TeV.361603.PowhegPy8EG_CT10nloME_AZNLOCTEQ6L1_ZZllll_mll4.root,'
+            #sample_list['qqZZ'] += mc_dir + 'mc15_13TeV.342556.PowhegPy8EG_CT10nloME_AZNLOCTEQ6L1_ZZllll_mll4_m4l_100_150.root,'
+            #sample_list['qqZZ'] += mc_dir + 'mc15_13TeV.343232.PowhegPy8EG_CT10nloME_AZNLOCTEQ6L1_ZZllll_mll4_m4l_500_13000.root,'
+
+            # qqZZ, Sherpa, 2.1
+            #sample_list['qqZZ'] = mc_dir + 'mc15_13TeV.361090.Sherpa_CT10_llll_M4l100.root,'
+
+            # qqZZ, Sherpa, 2.2.1,
+            # It's likely the overlap is not removed...
+            # don't use 345107, 345108
+            #sample_list['qqZZ'] = mc_dir + 'mc15_13TeV.363490.Sherpa_221_NNPDF30NNLO_llll.root,' # full mass range,
+            sample_list['qqZZ'] = mc_dir + 'mc15_13TeV.345107.Sherpa_221_NNPDF30NNLO_llll_m4l100_300_filt100_150.root,' # 100, 130GeV
+            sample_list['qqZZ'] += mc_dir + 'mc15_13TeV.345108.Sherpa_221_NNPDF30NNLO_llll_m4l300.root,' # >= 300 GeV
+
 
             # ggZZ
             sample_list['ggZZ'] = mc_dir + 'mc15_13TeV.361073.Sherpa_CT10_ggllll.root,'
@@ -151,8 +163,12 @@ class MinitreeReader():
         return sysMap
 
     def get_yield(self, sample, cut):
-        #print sample, cut
+
         tree = ROOT.TChain(self.TREE_NAME, self.TREE_NAME)
+        w_name = self.weight_name
+        if "NNPDF30NNLO_llll" in sample:
+            #print sample
+            w_name += '*w_sherpaLep'
 
         ## use , to separate the samples.
         n_files = 0
@@ -175,7 +191,7 @@ class MinitreeReader():
                 tree.GetEntry(0)
                 lumi = tree.w_lumi
 
-            cut_t = ROOT.TCut(self.weight_name+"/w_lumi*"+str(lumi)+"*("+cut+")")
+            cut_t = ROOT.TCut(w_name+"/w_lumi*"+str(lumi)+"*("+cut+")")
             #print "Luminosity:", round(lumi, 2),"fb-1"
 
         tree.Draw(self.options.poi+">>h1", cut_t)
@@ -238,7 +254,7 @@ class MinitreeReader():
 
                     ic += 1
                     if 'data' in sample_name:
-                        out_text += ' & '+str(round(exp_,0))+' $\pm$ '+str(round(stat_,0))
+                        out_text += ' & {:.0f} $\pm$ {:.0f}'.format(exp_,stat_)
                     else:
                         if split_sys:
                             out_text += ' & '+str(round(exp_,dd))+' $\pm$ '+str(round(stat_,dd))+" $\pm$ "+str(round(sys_))

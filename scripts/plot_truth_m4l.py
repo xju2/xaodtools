@@ -6,8 +6,9 @@ make some validation plots
 
 import ROOT
 ROOT.gROOT.SetBatch()
+from optparse import OptionParser
 
-def make_plots(file_name):
+def make_plots(file_name, post_fix):
     import AtlasStyle
     f1 = ROOT.TFile.Open(file_name)
     tree = f1.Get("physics")
@@ -32,7 +33,16 @@ def make_plots(file_name):
     hists = [h_m4l, h_mZ1, h_mZ2, h_Z1_lepplus_pt, h_Z2_lepplus_pt, h_Z1_lepminus_pt, h_Z2_lepminus_pt] 
     for hist in hists:
         hist.Draw()
-        canvas.SaveAs(hist.GetName()+".pdf")
+        canvas.SaveAs(post_fix+"_"+hist.GetName()+".pdf")
 
 if __name__ == "__main__":
-    make_plots("reduced_ntuple.root")
+    usage = "%prog file_name out_tag"
+    parser = OptionParser(usage=usage, description="read truth file, plot basic variables")
+    (options, args) = parser.parse_args()
+    if len(args) < 2:
+        print parser.print_help()
+        exit(1)
+
+    file_ = args[0]
+    out_ = args[1]
+    make_plots(file_, out_)
