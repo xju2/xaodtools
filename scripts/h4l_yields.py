@@ -23,10 +23,16 @@ class MinitreeReader():
         current_ana = self.options.analysis
         dic = OrderedDict()
         if current_ana == "HighMass":
-            dic["2mu2e"] = "pass_vtx4lCut==1 && 140<m4l_constrained_HM&&m4l_constrained_HM<1500&&(event_type==3||event_type==2) && prod_type_HM==0"
-            dic["4e"] = "pass_vtx4lCut==1 && 140<m4l_constrained_HM&&m4l_constrained_HM<1500&&(event_type==1) && prod_type_HM==0"
-            dic["4mu"] = "pass_vtx4lCut==1 && 140<m4l_constrained_HM&&m4l_constrained_HM<1500&&(event_type==0) && prod_type_HM==0"
-            dic["VBF"] = "pass_vtx4lCut==1 && 140<m4l_constrained_HM&&m4l_constrained_HM<1500&&prod_type_HM==1"
+
+            if self.options.test:
+                dic["2mu2e"] = "pass_vtx4lCut==1 && 140<m4l_constrained_HM&&m4l_constrained_HM<1500&&(event_type==3||event_type==2)"
+                dic["4e"] = "pass_vtx4lCut==1 && 140<m4l_constrained_HM&&m4l_constrained_HM<1500&&(event_type==1)"
+                dic["4mu"] = "pass_vtx4lCut==1 && 140<m4l_constrained_HM&&m4l_constrained_HM<1500&&(event_type==0)"
+            else:
+                dic["2mu2e"] = "pass_vtx4lCut==1 && 140<m4l_constrained_HM&&m4l_constrained_HM<1500&&(event_type==3||event_type==2) && prod_type_HM==0"
+                dic["4e"] = "pass_vtx4lCut==1 && 140<m4l_constrained_HM&&m4l_constrained_HM<1500&&(event_type==1) && prod_type_HM==0"
+                dic["4mu"] = "pass_vtx4lCut==1 && 140<m4l_constrained_HM&&m4l_constrained_HM<1500&&(event_type==0) && prod_type_HM==0"
+                dic["VBF"] = "pass_vtx4lCut==1 && 140<m4l_constrained_HM&&m4l_constrained_HM<1500&&prod_type_HM==1"
 
         elif current_ana == "LowMass":
             dic = {
@@ -60,20 +66,26 @@ class MinitreeReader():
         mc_dir = self.options.mcDir
         sample_list = OrderedDict()
         if analysis == "HighMass":
-            # qqZZ, Powheg
-            #sample_list['qqZZ']  = mc_dir + 'mc15_13TeV.361603.PowhegPy8EG_CT10nloME_AZNLOCTEQ6L1_ZZllll_mll4.root,'
-            #sample_list['qqZZ'] += mc_dir + 'mc15_13TeV.342556.PowhegPy8EG_CT10nloME_AZNLOCTEQ6L1_ZZllll_mll4_m4l_100_150.root,'
-            #sample_list['qqZZ'] += mc_dir + 'mc15_13TeV.343232.PowhegPy8EG_CT10nloME_AZNLOCTEQ6L1_ZZllll_mll4_m4l_500_13000.root,'
 
-            # qqZZ, Sherpa, 2.1
-            #sample_list['qqZZ'] = mc_dir + 'mc15_13TeV.361090.Sherpa_CT10_llll_M4l100.root,'
-
-            # qqZZ, Sherpa, 2.2.1,
-            # It's likely the overlap is not removed...
-            # don't use 345107, 345108
-            #sample_list['qqZZ'] = mc_dir + 'mc15_13TeV.363490.Sherpa_221_NNPDF30NNLO_llll.root,' # full mass range,
-            sample_list['qqZZ'] = mc_dir + 'mc15_13TeV.345107.Sherpa_221_NNPDF30NNLO_llll_m4l100_300_filt100_150.root,' # 100, 130GeV
-            sample_list['qqZZ'] += mc_dir + 'mc15_13TeV.345108.Sherpa_221_NNPDF30NNLO_llll_m4l300.root,' # >= 300 GeV
+            # qqZZ
+            if self.options.powheg:
+                # Powheg
+                print "use PowHeg for qqZZ"
+                sample_list['qqZZ']  = mc_dir + 'mc15_13TeV.361603.PowhegPy8EG_CT10nloME_AZNLOCTEQ6L1_ZZllll_mll4.root,'
+                sample_list['qqZZ'] += mc_dir + 'mc15_13TeV.342556.PowhegPy8EG_CT10nloME_AZNLOCTEQ6L1_ZZllll_mll4_m4l_100_150.root,'
+                sample_list['qqZZ'] += mc_dir + 'mc15_13TeV.343232.PowhegPy8EG_CT10nloME_AZNLOCTEQ6L1_ZZllll_mll4_m4l_500_13000.root,'
+            elif self.options.sherpa == 2.1:
+                print "use Sherpa 2.1 for qqZZ"
+                # qqZZ, Sherpa, 2.1
+                sample_list['qqZZ'] = mc_dir + 'mc15_13TeV.361090.Sherpa_CT10_llll_M4l100.root,'
+            elif self.options.sherpa == 2.2:
+                print "use Sherpa 2.2 for qqZZ"
+                # qqZZ, Sherpa, 2.2.1,
+                # It's likely the overlap is not removed...
+                # don't use 345107, 345108, for now. 2017-03-01
+                sample_list['qqZZ'] = mc_dir + 'mc15_13TeV.363490.Sherpa_221_NNPDF30NNLO_llll.root,' # full mass range,
+                #sample_list['qqZZ'] = mc_dir + 'mc15_13TeV.345107.Sherpa_221_NNPDF30NNLO_llll_m4l100_300_filt100_150.root,' # 100, 130GeV
+                #sample_list['qqZZ'] += mc_dir + 'mc15_13TeV.345108.Sherpa_221_NNPDF30NNLO_llll_m4l300.root,' # >= 300 GeV
 
 
             # ggZZ
@@ -304,6 +316,12 @@ if __name__ == "__main__":
     parser.add_option("--lumi", dest='lumi', default=-1, type='float', help='final luminosity')
     parser.add_option("--digits", dest='digits', default=2, type='float', help="digits in final numbers")
     parser.add_option("--split", dest='split', default=False, action='store_true', help="split stats and sys")
+
+    parser.add_option("--test", dest='test', default=False, action='store_true', help="no VBF in highmass")
+    ## change qqZZ samples
+    parser.add_option("--powHeg", dest='powheg', default=False, action='store_true', help="use PowHeg for qqZZ")
+    parser.add_option("--sherpa", dest='sherpa', default=2.2, type='float', help="Sherpa version")
+
 
     (options,args) = parser.parse_args()
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import ROOT
+import math
 
 def loader(infile, tree_name):
     chain = ROOT.TChain(tree_name)
@@ -19,3 +20,8 @@ def loader(infile, tree_name):
 
     print "total events:",chain.GetEntries(),"in",ncounter,"files"
     return chain
+
+def get_eff(a, b):
+    eff = a*1.0/b
+    error = eff * math.sqrt(1./a + 1./b)
+    print "{:.4f} {:.4f}".format(eff,error)
