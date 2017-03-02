@@ -92,7 +92,8 @@ class MinitreeReader():
             sample_list['ggZZ'] = mc_dir + 'mc15_13TeV.361073.Sherpa_CT10_ggllll.root,'
 
             # qqZZjj
-            sample_list['qqZZjj'] = mc_dir + 'mc15_13TeV.361072.Sherpa_CT10_lllljj_EW6.root,'
+            #sample_list['qqZZjj'] = mc_dir + 'mc15_13TeV.361072.Sherpa_CT10_lllljj_EW6.root,'
+            sample_list['qqZZ'] += mc_dir + 'mc15_13TeV.361072.Sherpa_CT10_lllljj_EW6.root,'
 
             # reducible
             sample_list['reducible'] = self.get_reducible()
@@ -214,12 +215,24 @@ class MinitreeReader():
 
         return yields,stats_error
 
+    def get_str(self, nominal, stats, sys):
+        """
+        return a str: "10 $\pm$ 10 $\pm$ 10"
+        """
+        split_sys = self.options.split
+        dd = self.options.digits
+        if split_sys:
+            res = str(round(nominal, dd))+' $\pm$ '+str(round(stats, dd))+' $\pm$ '+str(round(sys,dd))
+        else:
+            total_ = math.sqrt(stats**2 + sys**2)
+            res = str(round(nominal, dd))+' $\pm$ '+str(round(total_, dd))
+
+        return res
+
     def process(self):
         samples = self.get_samples()
         cuts = self.get_cuts()
         sys = self.get_sys_list()
-        dd = self.options.digits
-        split_sys = self.options.split
 
         out_text = ""
         ic = 0
@@ -235,10 +248,14 @@ class MinitreeReader():
         combined = [0.]*len(samples)
         comb_stats = [0.]*len(samples)
         comb_sys = [0.]*len(samples)
-        ggf_combined = [0.]*len(samples)
-        ggf_combined_stat = [0.]*len(samples)
-        ggf_combined_sys = [0.]*len(samples)
+
+        # summation of non-data for each category
+        comb_chs = [0.]*len(cuts)
+        comb_chs_stats = [0.]*len(cuts)
+        comb_chs_sys = [0.]*len(cuts)
+
         if cuts is not None and len(samples) > 0:
+            ichan = 0
             for ch_name,cut in cuts.iteritems():
                 out_text += ch_name
                 ic = 0
@@ -259,48 +276,42 @@ class MinitreeReader():
                     comb_stats[ic] += stat_**2
                     comb_sys[ic] += sys_**2
 
-                    if "VBF" not in ch_name:
-                        ggf_combined[ic]  += exp_
-                        ggf_combined_stat[ic]  += stat_**2
-                        ggf_combined_sys[ic] += sys_**2
-
                     ic += 1
                     if 'data' in sample_name:
-                        out_text += ' & {:.0f} $\pm$ {:.0f}'.format(exp_,stat_)
+                        stats_ = math.sqrt(comb_chs_stats[ichan])
+                        sys_ = math.sqrt(comb_chs_sys[ichan])
+                        sum_bkg = self.get_str(comb_chs[ichan], stats_, sys_)
+                        out_text += ' & ' + sum_bkg + ' & {:.0f}'.format(exp_)
                     else:
-                        if split_sys:
-                            out_text += ' & '+str(round(exp_,dd))+' $\pm$ '+str(round(stat_,dd))+" $\pm$ "+str(round(sys_))
-                        else:
-                            total_ = round(math.sqrt(stat_**2 + sys_**2), dd)
-                            out_text += ' & '+str(round(exp_,dd))+' $\pm$ '+str(total_)
+                        # sum of the samples, except data.
+                        comb_chs[ichan] += exp_
+                        comb_chs_stats[ichan] += stat_**2
+                        comb_chs_sys[ichan] += sys_**2
+
+                        # print out info
+                        out_text += ' & ' + self.get_str(exp_, stat_, sys_)
 
                 out_text += " \\\\ \n"
+                ichan += 1
         else:
             print "I don't know"
 
         comb_tex = "Total"
-        ggf_tex = "ggF comb"
         for icat, sample_name in enumerate(samples.keys()):
 
             if "data" in sample_name:
-                dd = 0
+                # add total of non-data samples.
+                sum_ = sum(comb_chs)
+                stats_ = math.sqrt(sum([x**2 for x in comb_chs_stats]))
+                sys_ = math.sqrt(sum([x**2 for x in comb_chs_sys]))
+                sum_bkg = self.get_str(sum_, stats_, sys_)
+                comb_tex += ' & '+sum_bkg+' & {:.0f}'.format(combined[icat])
             else:
-                dd = self.options.digits
+                comb_tex += ' & '+self.get_str(combined[icat], math.sqrt(comb_stats[icat]), math.sqrt(comb_sys[icat]))
 
-            if split_sys:
-                ggf_tex += " & "+str(round(ggf_combined[icat], dd))+' $\pm$ '+str(round(math.sqrt(ggf_combined_stat[icat]), dd))+' $\pm$ '+str(round(math.sqrt(ggf_combined_sys[icat]),dd))
-                comb_tex += " & "+str(round(combined[icat], dd))+' $\pm$ '+str(round(math.sqrt(comb_stats[icat]),dd))+' $\pm$ '+str(round(math.sqrt(comb_sys[icat]),dd))
-            else:
-                comb_tot_ = math.sqrt( comb_stats[icat] + comb_sys[icat] )
-                ggf_tot_  = math.sqrt( ggf_combined_stat[icat] + ggf_combined_sys[icat] )
-                comb_tex += " & "+str(round(combined[icat], dd))+' $\pm$ '+ str(round(comb_tot_, dd))
-                ggf_tex += " & "+str(round(ggf_combined[icat], dd))+' $\pm$ '+ str(round(ggf_tot_, dd))
-
-
-        ggf_tex += "\\\\ \\hline \n"
         comb_tex += "\\\\ \\hline \n"
 
-        out_text += ggf_tex + comb_tex
+        out_text += comb_tex
         print out_text
 
 if __name__ == "__main__":
