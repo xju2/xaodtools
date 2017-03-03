@@ -27,19 +27,19 @@ bool readConfig(const char* filename, char delim, map<string, map<string, string
 void tokenizeString(const string& str, char delim, vector<string>& tokens);
 
 
-void checkNP(){
+void checkNP(const string& configPath, TString& pathToFiles, int n_NPs){
 
  // # of NP
- int n = 27; 
- string NPlabes[27];
+ // int n = 27; 
+ int n = n_NPs; 
+ string* NPlabes = new string[n];
 
- // TString pathToFiles = "/afs/cern.ch/user/j/jzalieck/public/Systematics/production/Prod_v05/sys_inputs230716/HighMass/bkg/";
- TString pathToFiles = "/afs/cern.ch/user/x/xju/work/h4l/highmass/systematics/syst_inputs20170303/HighMass_VBF/bkg/";
+// TString pathToFiles = "/afs/cern.ch/user/x/xju/work/h4l/highmass/systematics/syst_inputs20170303/HighMass_VBF/bkg/";
+// string configPath = "../config_qqZZ.ini";
 
  // read config file
  map<string, map<string, string> > p_dic;
  // string configPath = "../config.ini";
- string configPath = "../config_qqZZ.ini";
  readConfig(configPath.c_str(),'=', p_dic);
 
  // get norm files list
