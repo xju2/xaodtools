@@ -302,8 +302,8 @@ class MinitreeReader():
             if "data" in sample_name:
                 # add total of non-data samples.
                 sum_ = sum(comb_chs)
-                stats_ = math.sqrt(sum([x**2 for x in comb_chs_stats]))
-                sys_ = math.sqrt(sum([x**2 for x in comb_chs_sys]))
+                stats_ = math.sqrt(sum(comb_chs_stats))
+                sys_ = math.sqrt(sum(comb_chs_sys))
                 sum_bkg = self.get_str(sum_, stats_, sys_)
                 comb_tex += ' & '+sum_bkg+' & {:.0f}'.format(combined[icat])
             else:
@@ -325,7 +325,7 @@ if __name__ == "__main__":
     parser.add_option("--sysDir", dest='sysDir', help="directory for data", default="/Users/xju/Documents/Higgs/H4l/highmass/yields/")
 
     parser.add_option("--lumi", dest='lumi', default=-1, type='float', help='final luminosity')
-    parser.add_option("--digits", dest='digits', default=2, type='float', help="digits in final numbers")
+    parser.add_option("--digits", dest='digits', default=2, type='int', help="digits in final numbers")
     parser.add_option("--split", dest='split', default=False, action='store_true', help="split stats and sys")
 
     parser.add_option("--test", dest='test', default=False, action='store_true', help="no VBF in highmass")

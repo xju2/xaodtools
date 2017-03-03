@@ -52,15 +52,20 @@ class DataSetManager:
         else:
             if len(dic_datasets) > 2:
                 print pattern," more than 3 found"
-            for dataset in dic_datasets:
-                ds_name = dataset['ldn']
-                #print re.match(DataSetManager.atlfast_pat, ds_name)
-                if re.match(DataSetManager.atlfast_pat, ds_name) and self.only_fs:
-                    print "Skip fast simulation"
-                    continue
-                else:
-                    out = ds_name
-                    break
+
+            if len(dic_datasets) == 1:
+                dataset = dic_datasets[0]
+                out = dataset['ldn']
+            else:
+                for dataset in dic_datasets:
+                    ds_name = dataset['ldn']
+                    #print re.match(DataSetManager.atlfast_pat, ds_name)
+                    if re.match(DataSetManager.atlfast_pat, ds_name) and self.only_fs:
+                        print "Skip fast simulation"
+                        continue
+                    else:
+                        out = ds_name
+                        break
         return out
 
     def create_container(self, ctn_name, input_ds_list):
