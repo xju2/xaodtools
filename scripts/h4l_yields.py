@@ -24,15 +24,15 @@ class MinitreeReader():
         dic = OrderedDict()
         if current_ana == "HighMass":
 
-            if self.options.test:
-                dic["2mu2e"] = "pass_vtx4lCut==1 && 140<m4l_constrained_HM&&m4l_constrained_HM<1500&&(event_type==3||event_type==2)"
-                dic["4e"] = "pass_vtx4lCut==1 && 140<m4l_constrained_HM&&m4l_constrained_HM<1500&&(event_type==1)"
-                dic["4mu"] = "pass_vtx4lCut==1 && 140<m4l_constrained_HM&&m4l_constrained_HM<1500&&(event_type==0)"
+            if self.options.no_VBF:
+                dic["2mu2e"] = "pass_vtx4lCut==1 && 130<m4l_constrained_HM&&m4l_constrained_HM<1500&&(event_type==3||event_type==2)"
+                dic["4e"] = "pass_vtx4lCut==1 && 130<m4l_constrained_HM&&m4l_constrained_HM<1500&&(event_type==1)"
+                dic["4mu"] = "pass_vtx4lCut==1 && 130<m4l_constrained_HM&&m4l_constrained_HM<1500&&(event_type==0)"
             else:
-                dic["2mu2e"] = "pass_vtx4lCut==1 && 140<m4l_constrained_HM&&m4l_constrained_HM<1500&&(event_type==3||event_type==2) && prod_type_HM==0"
-                dic["4e"] = "pass_vtx4lCut==1 && 140<m4l_constrained_HM&&m4l_constrained_HM<1500&&(event_type==1) && prod_type_HM==0"
-                dic["4mu"] = "pass_vtx4lCut==1 && 140<m4l_constrained_HM&&m4l_constrained_HM<1500&&(event_type==0) && prod_type_HM==0"
-                dic["VBF"] = "pass_vtx4lCut==1 && 140<m4l_constrained_HM&&m4l_constrained_HM<1500&&prod_type_HM==1"
+                dic["2mu2e"] = "pass_vtx4lCut==1 && 130<m4l_constrained_HM&&m4l_constrained_HM<1500&&(event_type==3||event_type==2) && prod_type_HM==0"
+                dic["4e"] = "pass_vtx4lCut==1 && 130<m4l_constrained_HM&&m4l_constrained_HM<1500&&(event_type==1) && prod_type_HM==0"
+                dic["4mu"] = "pass_vtx4lCut==1 && 130<m4l_constrained_HM&&m4l_constrained_HM<1500&&(event_type==0) && prod_type_HM==0"
+                dic["VBF"] = "pass_vtx4lCut==1 && 130<m4l_constrained_HM&&m4l_constrained_HM<1500&&prod_type_HM==1"
 
         elif current_ana == "LowMass":
             dic = {
@@ -51,10 +51,15 @@ class MinitreeReader():
         dic = OrderedDict()
         norm = stats = sys = 1
         if current_ana == "HighMass":
-            dic["2mu2e"] = (norm, stats, sys)
-            dic["4e"] = (norm, stats, sys)
-            dic["4mu"] = (norm, stats, sys)
-            dic["VBF"] = (norm, stats, sys)
+            if self.options.no_VBF:
+                dic["2mu2e"] = (7.95706, 0.2926057, 1.1205216)
+                dic["4e"] = (4.48462, 0.241686, 0.789469)
+                dic["4mu"] = (3.78732, 0.159662, 0.884825)
+            else:
+                dic["2mu2e"] = (7.77571, 0, 1.05572)
+                dic["4e"] = (4.37282, 0, 0.759606)
+                dic["4mu"] = (3.71372, 0, 0.808304)
+                dic["VBF"] = (0.3724366, 0, 0.049943)
         else:
             print "I don't know"
 
@@ -332,6 +337,8 @@ if __name__ == "__main__":
     ## change qqZZ samples
     parser.add_option("--powHeg", dest='powheg', default=False, action='store_true', help="use PowHeg for qqZZ")
     parser.add_option("--sherpa", dest='sherpa', default=2.2, type='float', help="Sherpa version")
+    ## no VBF-like category in HighMass
+    parser.add_option("--noVBF", dest='no_VBF', default=False, action='store_true', help="no VBF-like category")
 
 
     (options,args) = parser.parse_args()

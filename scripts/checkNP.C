@@ -47,7 +47,7 @@ void checkNP(const string& configPath, TString& pathToFiles, int n_NPs){
  tokenizeString(p_dic["main"]["samples"].c_str(), ',', normFilesList);
  for(int i=0; i<(int)normFilesList.size(); ++i) {  
     sampleList.push_back(normFilesList[i]);
-    normFilesList[i] = pathToFiles + "norm_" + normFilesList[i] + ".txt"; 
+    normFilesList[i] = pathToFiles + "/norm_" + normFilesList[i] + ".txt"; 
  }
 
 // loop over samples
