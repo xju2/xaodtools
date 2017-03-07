@@ -325,8 +325,8 @@ if __name__ == "__main__":
     parser = OptionParser(usage=usage, description="get yields for WS", version=version)
     parser.add_option("--analysis", dest='analysis', default='HighMass', help='which analysis, affecting the built-in cuts')
     parser.add_option("--poi", dest='poi', default='m4l_constrained_HM', help='which variable used for counting')
-    parser.add_option("--mcDir", dest='mcDir', default='/afs/cern.ch/atlas/groups/HSG2/H4l/run2/2016/MiniTrees/Prod_v10/mc/Nominal/', help="directory for MC")
-    parser.add_option("--dataDir", dest='dataDir', default='/afs/cern.ch/atlas/groups/HSG2/H4l/run2/2016/MiniTrees/Prod_v10/data/Nominal/', help="directory for data")
+    parser.add_option("--mcDir", dest='mcDir', default='/afs/cern.ch/atlas/groups/HSG2/H4l/run2/2016/MiniTrees/Prod_v11/mc/Nominal/', help="directory for MC")
+    parser.add_option("--dataDir", dest='dataDir', default='/afs/cern.ch/atlas/groups/HSG2/H4l/run2/2016/MiniTrees/Prod_v11/data/Nominal/', help="directory for data")
     parser.add_option("--sysDir", dest='sysDir', help="directory for data", default="/Users/xju/Documents/Higgs/H4l/highmass/yields/")
 
     parser.add_option("--lumi", dest='lumi', default=-1, type='float', help='final luminosity')

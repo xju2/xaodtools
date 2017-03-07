@@ -2,9 +2,11 @@
 import ROOT
 import helper
 from optparse import OptionParser
+from ploter import Ploter
 
 class FileCompare:
-    def __init__(self, f1_name, t1_name, f2_name, t2_name):
+    def __init__(self, f1_name, t1_name, f2_name, t2_name, options):
+        import AtlasStyle
         self.f1_name = f1_name
         self.t1_name = t1_name
         self.f2_name = f2_name
@@ -31,6 +33,10 @@ class FileCompare:
         for ch_name in self.ch_names:
             self.h2d_list.append( h2d_temp.Clone("h2d_"+ch_name) )
 
+        self.lumi = 36.1
+        self.ps = Ploter("Internal", self.lumi)
+
+        self.options = options
 
     def get_bin_index(self, event_type, m4l):
         mass_id = -1
@@ -47,7 +53,7 @@ class FileCompare:
         #print event_type,m4l,mass_id,final_id
         return final_id
 
-    def compare(self):
+    def compare_ebye(self):
         ch1 = helper.loader(self.f1_name, self.t1_name)
         ch2 = helper.loader(self.f2_name, self.t2_name)
         ch2.BuildIndex("run", "event")
@@ -109,15 +115,71 @@ class FileCompare:
         fout.Close()
         print self.out_text
 
+    def compare_spectrum(self, add_cuts, out_name):
+        ch1 = helper.loader(self.f1_name, self.t1_name)
+        ch2 = helper.loader(self.f2_name, self.t2_name)
+
+        h4l_temp = ROOT.TH1F("h4l_temp", "temp", 107, 130, 1200)
+        h4l_ch1 = h4l_temp.Clone("h4l_ch1")
+        h4l_ch2 = h4l_temp.Clone("h4l_ch2")
+
+    
+        cut = ROOT.TCut("weight*(pass_vtx4lCut==1 && m4l_constrained_HM > 130 && m4l_constrained_HM < 1500 && "+add_cuts+")")
+        ch1.Draw("m4l_constrained_HM>>h4l_ch1", cut)
+        ch2.Draw("m4l_constrained_HM>>h4l_ch2", cut)
+
+        h4l_ch1.SetXTitle("m_{4l} [GeV]")
+        h4l_ch1.SetYTitle("Events/10 GeV")
+
+        h4l_ch1.Sumw2()
+        h4l_ch2.Sumw2()
+        h4l_ch1.SetMarkerSize(0.5)
+        h4l_ch1.SetMarkerStyle(4)
+        h4l_ch2.SetMarkerSize(0.5)
+
+        hist_list = [h4l_ch1, h4l_ch2]
+        self.ps.color(hist_list)
+
+        self.ps.prepare_2pad_canvas('canvas', 600, 600)
+        self.ps.pad2.cd()
+        self.ps.add_ratio_panel(hist_list, "v10/v09", 0.55, 1.42, True)
+        self.ps.pad1.cd()
+        self.ps.get_offset(h4l_ch1)
+        is_logy = self.options.logy
+
+        legend = self.ps.get_legend(len(hist_list) + 2)
+
+        this_hist = self.ps.set_y_range(h4l_ch1, h4l_ch2, is_logy)
+        h4l_ch2.Draw("EP")
+        h4l_ch1.Draw("EP SAME")
+
+        legend.AddEntry(h4l_ch1, "v09: {:.0f}".format(h4l_ch1.Integral()), "EP")
+        legend.AddEntry(h4l_ch2, "v10: {:.0f}".format(h4l_ch2.Integral()), "EP")
+
+        legend.Draw("same")
+        self.ps.add_atlas()
+        self.ps.add_lumi()
+
+        if is_logy:
+            self.ps.can.SaveAs(out_name+"_Log.eps")
+        else:
+            self.ps.can.SaveAs(out_name+".eps")
+
 
 if __name__ == "__main__":
-    usage = "%prog [option] f1 t1 f2 t2"
+    usage = "%prog [option] f1 t1 f2 t2 out_name"
     parser = OptionParser(description="compare two TTree", usage=usage)
+    parser.add_option('--logY', dest="logy", help="Log-Y", default=False, action='store_true')
 
     options,args = parser.parse_args()
     if len(args) < 4:
         print parser.print_help()
         exit(1)
 
-    fc = FileCompare(args[0], args[1], args[2], args[3])
-    fc.compare()
+    fc = FileCompare(args[0], args[1], args[2], args[3], options)
+    out_name = args[4]
+    #fc.compare_ebye()
+    fc.compare_spectrum("1", out_name+"_v09_v10_4l")
+    fc.compare_spectrum("event_type==0", out_name+"_v09_v10_4mu")
+    fc.compare_spectrum("event_type==1", out_name+"_v09_v10_4e")
+    fc.compare_spectrum("(event_type==2||event_type==3)", out_name+"_v09_v10_2e2mu")

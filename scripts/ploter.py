@@ -1,23 +1,24 @@
 #!/usr/bin/env python
 __author__ = "Xiangyang Ju"
 __version__ = "0.1"
-__doc__ = """
-to make comparison plots
-"""
 import ROOT
 
 class Ploter:
     def __init__(self, status="Internal", lumi=36.47):
         self.status = status
         self.lumi = lumi
-        self.totalObj = []
+
+        # few options
+        self.add_ratio = True
+
+        self.has_data = False
 
         # predefined colors
-        self.COLORS = [1, 206, 64, 95, 28, 29, 209, 5]
+        self.COLORS = [64, 95, 28, 29, 209, 5, 432, 433, 434, 435, 436, 8, 6]
         self.VerticalCanvasSplit = 0.4
 
         # parameters for label/title size
-        self.t_size = 0.04
+        self.t_size = 0.05
         self.x_title_size = 0.05
         self.text_size = 0.05
 
@@ -25,6 +26,18 @@ class Ploter:
         self.can = None
         self.pad1 = None
         self.pad2 = None
+
+        # legend
+        self.legend = None
+
+        # atlas and legend offset
+        self.x_offset = 0.17
+
+        # show sum of background for x-check
+        self.show_sum_bkg = True
+
+        self.totalObj = []
+
 
     def prepare_2pad_canvas(self, cname, width=600, height=600):
 
@@ -43,18 +56,25 @@ class Ploter:
         self.pad1.Draw()
         self.pad2.Draw()
 
-    def add_ratio_panel(self, hist_list_cp, y_title,
+    def add_ratio_panel(self, hist_list, y_title,
                         y_min, y_max, reverse=False):
         """
         hist_list = [Data, MC1, MC2]
         plot Data/MC1, Data/MC2
         @para=reverse, plot MC1/Data
         """
-        if len(hist_list_cp) < 2:
+        self.add_ratio = True
+        #y_title = "Data/MC"
+        #if reverse:
+        #    y_title = "MC/Data"
+
+        if len(hist_list) < 2:
             print "less than 2 histograms, kidding?"
             return None
 
-        #hist_list_cp = [x.Clone(x.GetName()+"_clone") for x in hist_list]
+        hist_list_cp = [x.Clone(x.GetName()+"_cloneRatio") for x in hist_list]
+        self.totalObj.append(hist_list_cp)
+
         h_refer = hist_list_cp[0].Clone("Histreference")
         self.totalObj.append(h_refer)
         print "REFER:", h_refer.Integral()
@@ -68,14 +88,15 @@ class Ploter:
                 hist.SetMarkerSize(0.001)
 
                 labelscalefact = 1. / (1. - self.VerticalCanvasSplit)
+                hist.GetYaxis().SetTitle(y_title)
                 hist.GetYaxis().SetTitleSize(self.t_size*labelscalefact)
                 hist.GetYaxis().SetLabelSize(self.t_size*labelscalefact)
-                hist.GetXaxis().SetLabelSize(self.t_size*labelscalefact)
-
-                hist.GetXaxis().SetTitleSize(self.x_title_size*labelscalefact)
-
-                hist.GetYaxis().SetTitle(y_title)
                 hist.GetYaxis().SetRangeUser(y_min, y_max)
+                hist.GetYaxis().SetTitleOffset(0.8)
+
+                hist.GetXaxis().SetLabelSize(self.t_size*labelscalefact)
+                hist.GetXaxis().SetTitleSize(self.x_title_size*labelscalefact)
+                hist.GetXaxis().SetTitleOffset(1.4)
 
                 hist.Draw("E2")
             else:
@@ -90,14 +111,13 @@ class Ploter:
                     print "Yields:",hist.Integral(), h_refer.Integral()
 
                 self.totalObj.append(this_hist)
-                this_hist.Draw("HIST SAME")
+                this_hist.Draw("EP SAME")
 
 
     def stack_hists(self,
         hist_list, tag_list, out_name,
         x_title, y_title,
         is_log=False, has_data=True,
-        add_ratio=False
     ):
         # In hist_list, the data should be first element, if has_data
         if len(hist_list) > len(self.COLORS):
@@ -119,6 +139,7 @@ class Ploter:
                 new_hist.SetMarkerStyle(20)
                 new_hist.SetMarkerSize(1.2)
                 h_data = new_hist
+                self.get_offset(h_data)
                 continue
             elif i==0 or hist_sum is None:
                 hist_sum = hist
@@ -135,16 +156,16 @@ class Ploter:
             hs.Add(hist)
 
         # start to plot them
-        if add_ratio and has_data:
+        if self.add_ratio and has_data:
             self.prepare_2pad_canvas("canvas", 600, 600)
-            canvas = self.can
             self.pad2.cd()
-            hist_sum.SetLineColor(4)
+            hist_sum.SetLineColor(8)
             new_data_copy = h_data.Clone("data_copy")
-            self.add_ratio_panel([new_data_copy, hist_sum], y_title, 0.5, 1.52)
+            #self.add_ratio_panel([new_data_copy, hist_sum], y_title, 0.5, 1.52)
+            self.add_ratio_panel([new_data_copy, hist_sum], "Data/MC", 0.55, 1.42)
             self.pad1.cd()
         else:
-            canvas = ROOT.TCanvas("canvas", "canvas", 600, 600)
+            self.can = ROOT.TCanvas("canvas", "canvas", 600, 600)
 
         y_max = hs.GetMaximum()
         y_min = hs.GetMinimum()
@@ -160,10 +181,10 @@ class Ploter:
             this_hist = hs
 
         if is_log:
-            if add_ratio:
+            if self.add_ratio:
                 self.pad1.SetLogy()
             else:
-                canvas.SetLogy()
+                self.can.SetLogy()
             this_hist.GetYaxis().SetRangeUser(4E-3, y_max*1e3)
         else:
             this_hist.GetYaxis().SetRangeUser(1E-3, y_max*1.1)
@@ -191,16 +212,21 @@ class Ploter:
         for hist, tag in zip(hist_all, tag_list):
             if has_data and hist_id == 0:
                 legend.AddEntry(hist, tag+" {:.0f}".format(hist.Integral()), "LP")
+                # add sum of background...
+                if self.show_sum_bkg:
+                    hist_sum.SetFillColor(0)
+                    hist_sum.SetLineColor(0)
+                    legend.AddEntry(hist_sum, "Total Bkg {:.0f}".format(hist_sum.Integral()), "F")
             else:
                 legend.AddEntry(hist, tag+" {:.1f}".format(hist.Integral()), "F")
             hist_id += 1
 
         legend.Draw("same")
-        x_offset = 0.17
-        self.add_atlas(x_offset, 0.80)
-        self.add_lumi(x_offset, 0.80 - self.text_size - 0.007)
+        self.add_atlas()
+        self.add_lumi()
 
-        canvas.SaveAs(out_name)
+        #canvas.SaveAs(out_name)
+        #return canvas
 
 
 
@@ -208,10 +234,12 @@ class Ploter:
         # corner = LT, RT, LB, RB
         # LT = left-hand top
         # LB = left-hand bottom
-        x_min = 0.6
-        x_max = 0.9
-        y_min = 0.55
-        y_max = y_min + self.t_size*nentries
+        x_min = self.x_offset
+        x_max = x_min + 0.3
+        y_max = 0.70
+        if self.show_sum_bkg:
+            nentries += 1
+        y_min = y_max - self.t_size*nentries
 
         legend = ROOT.TLegend(x_min, y_min, x_max, y_max)
         legend.SetFillColor(0)
@@ -229,8 +257,68 @@ class Ploter:
         l.SetTextFont(font)
         l.DrawLatex(x, y, text)
 
-    def add_atlas(self, x, y):
-        self.add_text(x, y, 1, "#bf{#it{ATLAS}} "+self.status)
+    def add_atlas(self):
+        self.add_text(self.x_offset, 0.80, 1, "#bf{#it{ATLAS}} "+self.status)
 
-    def add_lumi(self, x, y):
-        self.add_text(x, y, 1, "13 TeV, "+str(self.lumi)+" fb^{-1}")
+    def add_lumi(self):
+        self.add_text(self.x_offset, 0.80 - self.text_size - 0.007, 1, "13 TeV, "+str(self.lumi)+" fb^{-1}")
+
+    def get_offset(self, hist):
+        max_bin = hist.GetMaximumBin()
+        nbins = hist.GetXaxis().GetNbins()
+        if max_bin < nbins/2.:
+            self.x_offset = 0.60
+
+    def stack(self, hist_list):
+        hist_list_cp = [] # a list of non-data histograms
+        for hist in hist_list:
+            hist_list_cp.append( hist.Clone(hist.GetName()+"stackClone"))
+
+        self.totalObj.append(hist_list_cp)
+
+        hist_sorted_list = sorted(hist_list_cp, key=lambda k:k.Integral())
+        hs = ROOT.THStack("hs", "")
+        hist_sum = None
+        for hist in hist_sorted_list:
+            hs.Add(hist)
+            if hist_sum is None:
+                hist_sum = hist.Clone(hist.GetName()+"sumClone")
+            else:
+                hist_sum.Add(hist)
+
+        self.totalObj.append(hist_sum)
+        return hist_sum, hs
+
+    def color(self, hist_list):
+        for i, hist in enumerate(hist_list):
+            color = self.COLORS[i]
+            hist.SetLineColor(color)
+            hist.SetFillColor(color)
+            hist.SetMarkerColor(color)
+
+    def set_y_range(self, hist_data, hist_splusb, is_logY):
+        y_max = hist_splusb.GetMaximum()
+        y_min = hist_splusb.GetMinimum()
+        if hist_data:
+            this_hist = hist_data
+            if y_max < hist_data.GetMaximum():
+                y_max = hist_data.GetMaximum()
+
+            if y_min > hist_data.GetMinimum():
+                y_min = hist_data.GetMinimum()
+
+        else:
+            this_hist = hist_splusb
+
+
+        if is_logY:
+            if self.add_ratio:
+                self.pad1.SetLogy()
+            else:
+                self.can.SetLogy()
+
+            this_hist.GetYaxis().SetRangeUser(4E-3, y_max*1e2)
+        else:
+            this_hist.GetYaxis().SetRangeUser(1E-3, y_max*1.1)
+
+        return this_hist
