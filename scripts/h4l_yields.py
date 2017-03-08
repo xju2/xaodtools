@@ -16,23 +16,24 @@ ROOT.gROOT.SetBatch()
 class MinitreeReader():
     def __init__(self, options):
         self.TREE_NAME = "tree_incl_all"
-        self.weight_name = "weight_jet"
+        self.weight_name = "weight"
         self.options = options
 
     def get_cuts(self):
         current_ana = self.options.analysis
+        m4l_ = self.options.poi
         dic = OrderedDict()
         if current_ana == "HighMass":
 
             if self.options.no_VBF:
-                dic["2mu2e"] = "pass_vtx4lCut==1 && 130<m4l_constrained_HM&&m4l_constrained_HM<1500&&(event_type==3||event_type==2)"
-                dic["4e"] = "pass_vtx4lCut==1 && 130<m4l_constrained_HM&&m4l_constrained_HM<1500&&(event_type==1)"
-                dic["4mu"] = "pass_vtx4lCut==1 && 130<m4l_constrained_HM&&m4l_constrained_HM<1500&&(event_type==0)"
+                dic["2mu2e"] = "pass_vtx4lCut==1 && 130<"+m4l_+"&&"+m4l_+"<1500&&(event_type==3||event_type==2)"
+                dic["4e"] = "pass_vtx4lCut==1 && 130<"+m4l_+"&&"+m4l_+"<1500&&(event_type==1)"
+                dic["4mu"] = "pass_vtx4lCut==1 && 130<"+m4l_+"&&"+m4l_+"<1500&&(event_type==0)"
             else:
-                dic["2mu2e"] = "pass_vtx4lCut==1 && 130<m4l_constrained_HM&&m4l_constrained_HM<1500&&(event_type==3||event_type==2) && prod_type_HM==0"
-                dic["4e"] = "pass_vtx4lCut==1 && 130<m4l_constrained_HM&&m4l_constrained_HM<1500&&(event_type==1) && prod_type_HM==0"
-                dic["4mu"] = "pass_vtx4lCut==1 && 130<m4l_constrained_HM&&m4l_constrained_HM<1500&&(event_type==0) && prod_type_HM==0"
-                dic["VBF"] = "pass_vtx4lCut==1 && 130<m4l_constrained_HM&&m4l_constrained_HM<1500&&prod_type_HM==1"
+                dic["2mu2e"] = "pass_vtx4lCut==1 && 130<"+m4l_+"&&"+m4l_+"<1500&&(event_type==3||event_type==2) && prod_type_HM==0"
+                dic["4e"] = "pass_vtx4lCut==1 && 130<"+m4l_+"&&"+m4l_+"<1500&&(event_type==1) && prod_type_HM==0"
+                dic["4mu"] = "pass_vtx4lCut==1 && 130<"+m4l_+"&&"+m4l_+"<1500&&(event_type==0) && prod_type_HM==0"
+                dic["VBF"] = "pass_vtx4lCut==1 && 130<"+m4l_+"&&"+m4l_+"<1500&&prod_type_HM==1"
 
         elif current_ana == "LowMass":
             dic = {
@@ -326,7 +327,7 @@ if __name__ == "__main__":
     parser.add_option("--analysis", dest='analysis', default='HighMass', help='which analysis, affecting the built-in cuts')
     parser.add_option("--poi", dest='poi', default='m4l_constrained_HM', help='which variable used for counting')
     parser.add_option("--mcDir", dest='mcDir', default='/afs/cern.ch/atlas/groups/HSG2/H4l/run2/2016/MiniTrees/Prod_v11/mc/Nominal/', help="directory for MC")
-    parser.add_option("--dataDir", dest='dataDir', default='/afs/cern.ch/atlas/groups/HSG2/H4l/run2/2016/MiniTrees/Prod_v11/data/Nominal/', help="directory for data")
+    parser.add_option("--dataDir", dest='dataDir', default='/afs/cern.ch/atlas/groups/HSG2/H4l/run2/2016/MiniTrees/Prod_v10/data/Nominal/', help="directory for data")
     parser.add_option("--sysDir", dest='sysDir', help="directory for data", default="/Users/xju/Documents/Higgs/H4l/highmass/yields/")
 
     parser.add_option("--lumi", dest='lumi', default=-1, type='float', help='final luminosity')
