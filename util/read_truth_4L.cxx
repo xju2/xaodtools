@@ -126,16 +126,35 @@ int main( int argc, char* argv[] ) {
     h4l_helper->MakeTruthTree(MyTree);
 
     int type;
-    MyTree.Branch("type", &type, "type/I");
+    MyTree.Branch("truth_event_type", &type, "truth_event_type/I");
+    int truth_type;
+    MyTree.Branch("type_truth", &truth_type, "type_truth/I");
 
 	MyTree.Branch("MCWeight", &MCWeight, "MCWeight/D");
 	MyTree.Branch("MCWeightUp", &mc_weight_up, "MCWeightUp/D");
 	MyTree.Branch("MCWeightDown", &mc_weight_down, "MCWeightDown/D");
 	MyTree.Branch("MCWeights", &mc_weights);
 
+    // add jet information
+    double dijet_invmass = -999;
+    double dijet_deltaeta = -999;
+	MyTree.Branch("dijet_deltaeta_fid", &dijet_deltaeta, "dijet_deltaeta_fid/D");
+	MyTree.Branch("dijet_invmass_fid", &dijet_invmass, "dijet_invmass_fid/D");
+
+    int pass_fid = -1;
+    MyTree.Branch("pass_fid_cut", &pass_fid, "pass_fid_cut/I");
+    int pass_fid_truth = -1;
+    MyTree.Branch("pass_fid_cut_truth", &pass_fid_truth, "pass_fid_cut_truth/I");
+
 	for( Long64_t entry = 0; entry < entries; ++entry ) {
 
         mc_weights->clear();
+        h4l_helper->Clear();
+        dijet_invmass = -999;
+        dijet_deltaeta = -999;
+        pass_fid = -1;
+        type = -1;
+        truth_type = -1;
 
 		// Tell the object which entry to look at:
 		event.getEntry( entry );
@@ -157,13 +176,27 @@ int main( int argc, char* argv[] ) {
         for(int i = 0; i < (int)weights.size(); i ++){
             mc_weights->push_back(weights.at(i));
         }
+
+		// Get the Jets from the event:
+		const xAOD::JetContainer* jets_origin = 0;
+        CHECK( event.retrieve( jets_origin, "AntiKt4TruthJets" ) );
+        std::pair<xAOD::JetContainer*, xAOD::ShallowAuxContainer*> jet_shallowcopy = xAOD::shallowCopyContainer(*jets_origin);
+        xAOD::JetContainer* jets = jet_shallowcopy.first;
         
+        // calculate dijet invariant mass and delta-eta
+        if (jets->size() >= 2){
+            sort(jets->begin(), jets->end(), descend_on_pt);
+            dijet_invmass = (jets->at(0)->p4() + jets->at(1)->p4()).M();
+            dijet_deltaeta = fabs(jets->at(0)->eta() - jets->at(1)->eta());
+        }
+
         // get truth info
        const xAOD::TruthParticleContainer* particles(0);
        if( event.retrieve(particles, "TruthParticles").isSuccess() )
        {
            // get truth information
            h4l_helper->GetTruthInfo( *particles );
+           truth_type = h4l_helper->getTruthType();
        } else {
            cout << "No truth particles" << endl;
        }
@@ -227,12 +260,16 @@ int main( int argc, char* argv[] ) {
         if(ele_4vec->size() >= 4 && h4l_helper->Is_4mu4e(ele_4vec)){
             type = 1; //4electrons
         }else if(muon_4vec->size() >= 4 && h4l_helper->Is_4mu4e(muon_4vec)){
-            type = 2; //4muons
+            type = 0; //4muons
         }else if (ele_4vec->size() >=2 && muon_4vec->size() >= 2){ 
             h4l_helper->Is_2e2mu(ele_4vec, muon_4vec, type);
         }else{
             type = -1;
         }
+        h4l_helper->setType(type);
+
+        pass_fid = h4l_helper->passFiducial();
+        pass_fid_truth = h4l_helper->passFiducialTruth();
 
         MyTree.Fill();
         for(int i =0; i < (int)ele_4vec->size(); i++){
