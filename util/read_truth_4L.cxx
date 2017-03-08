@@ -186,8 +186,13 @@ int main( int argc, char* argv[] ) {
         // calculate dijet invariant mass and delta-eta
         if (jets->size() >= 2){
             sort(jets->begin(), jets->end(), descend_on_pt);
-            dijet_invmass = (jets->at(0)->p4() + jets->at(1)->p4()).M();
-            dijet_deltaeta = fabs(jets->at(0)->eta() - jets->at(1)->eta());
+            if(jets->at(1)->p4().Pt()/1E3 > 30
+               && fabs(jets->at(0)->p4().Eta()) < 4.5
+               && fabs(jets->at(1)->p4().Eta()) < 4.5
+               ){
+                dijet_invmass = (jets->at(0)->p4() + jets->at(1)->p4()).M();
+                dijet_deltaeta = fabs(jets->at(0)->eta() - jets->at(1)->eta());
+            }
         }
 
         // get truth info
