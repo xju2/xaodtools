@@ -16,8 +16,8 @@ ROOT.gROOT.SetBatch()
 class MinitreeReader():
     def __init__(self, options):
         self.TREE_NAME = "tree_incl_all"
-        self.weight_name = "weight"
         self.options = options
+        self.weight_name = options.wName
 
     def get_cuts(self):
         current_ana = self.options.analysis
@@ -67,9 +67,24 @@ class MinitreeReader():
         return dic
 
 
+    def get_mc_dir(self):
+        if self.options.prod is None:
+            mc_dir = self.options.mcDir
+        else:
+            mc_dir = "/afs/cern.ch/atlas/groups/HSG2/H4l/run2/2016/MiniTrees/"+self.options.prod+"/mc/Nominal/"
+        return mc_dir
+
+    def get_data_dir(self):
+        if self.options.prod is None:
+            data_dir = self.options.dataDir
+        else:
+            data_dir = "/afs/cern.ch/atlas/groups/HSG2/H4l/run2/2016/MiniTrees/"+self.options.prod+"/data/Nominal/"
+        return data_dir 
+
     def get_samples(self):
         analysis = self.options.analysis
-        mc_dir = self.options.mcDir
+        mc_dir = self.get_mc_dir()
+        print "MC dir",mc_dir
         sample_list = OrderedDict()
         if analysis == "HighMass":
 
@@ -98,8 +113,8 @@ class MinitreeReader():
             sample_list['ggZZ'] = mc_dir + 'mc15_13TeV.361073.Sherpa_CT10_ggllll.root,'
 
             # qqZZjj
-            #sample_list['qqZZjj'] = mc_dir + 'mc15_13TeV.361072.Sherpa_CT10_lllljj_EW6.root,'
-            sample_list['qqZZ'] += mc_dir + 'mc15_13TeV.361072.Sherpa_CT10_lllljj_EW6.root,'
+            sample_list['qqZZjj'] = mc_dir + 'mc15_13TeV.361072.Sherpa_CT10_lllljj_EW6.root,'
+            #sample_list['qqZZ'] += mc_dir + 'mc15_13TeV.361072.Sherpa_CT10_lllljj_EW6.root,'
 
             # reducible
             sample_list['reducible'] = self.get_reducible()
@@ -115,7 +130,7 @@ class MinitreeReader():
             sample_list['ttV']    += mc_dir  + 'mc15_13TeV.410142.Sherpa_NNPDF30NNLO_ttll_mll5.root,'
 
             # data
-            sample_list['data']   = self.options.dataDir + 'data_13TeV.root,'
+            sample_list['data']   = self.get_data_dir()+ 'data_13TeV.root,'
         else:
             print "I don't know"
 
@@ -326,7 +341,7 @@ if __name__ == "__main__":
     parser = OptionParser(usage=usage, description="get yields for WS", version=version)
     parser.add_option("--analysis", dest='analysis', default='HighMass', help='which analysis, affecting the built-in cuts')
     parser.add_option("--poi", dest='poi', default='m4l_constrained_HM', help='which variable used for counting')
-    parser.add_option("--mcDir", dest='mcDir', default='/afs/cern.ch/atlas/groups/HSG2/H4l/run2/2016/MiniTrees/Prod_v11/mc/Nominal/', help="directory for MC")
+    parser.add_option("--mcDir", dest='mcDir', default='/afs/cern.ch/atlas/groups/HSG2/H4l/run2/2016/MiniTrees/Prod_v10/mc/Nominal/', help="directory for MC")
     parser.add_option("--dataDir", dest='dataDir', default='/afs/cern.ch/atlas/groups/HSG2/H4l/run2/2016/MiniTrees/Prod_v10/data/Nominal/', help="directory for data")
     parser.add_option("--sysDir", dest='sysDir', help="directory for data", default="/Users/xju/Documents/Higgs/H4l/highmass/yields/")
 
@@ -336,10 +351,12 @@ if __name__ == "__main__":
 
     parser.add_option("--test", dest='test', default=False, action='store_true', help="no VBF in highmass")
     ## change qqZZ samples
-    parser.add_option("--powHeg", dest='powheg', default=False, action='store_true', help="use PowHeg for qqZZ")
+    parser.add_option("--powheg", dest='powheg', default=False, action='store_true', help="use PowHeg for qqZZ")
     parser.add_option("--sherpa", dest='sherpa', default=2.2, type='float', help="Sherpa version")
     ## no VBF-like category in HighMass
     parser.add_option("--noVBF", dest='no_VBF', default=False, action='store_true', help="no VBF-like category")
+    parser.add_option("--prod", dest='prod', default=None, help="Use production")
+    parser.add_option("-w", '--weightName', dest='wName', default='weight_jet', help="Name of weights")
 
 
     (options,args) = parser.parse_args()

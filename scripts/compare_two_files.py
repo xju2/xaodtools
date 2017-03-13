@@ -70,6 +70,7 @@ class FileCompare:
         for iEvt in range(n_f1): # loop file1
             #ch1.LoadTree(iEvt)
             ch1.GetEntry(iEvt)
+
             #found = ch2.GetEntryWithIndex(ch1.run, ch1.event)
             run = ch1.run
             event = ch1.event
@@ -100,9 +101,9 @@ class FileCompare:
                 h2d = self.h2d_list[ch1.event_type]
                 h2d.Fill(ch1.m4l_unconstrained, m4l_diff)
 
-        self.out_text += str(n_matched)+" "+str(n_matched/n_f1)+\
+        self.out_text += str(n_matched)+" "+str(round(n_matched*1./n_f1,3))+\
                 " matches found in "+self.f2_name+"\n"
-        self.out_text += str(n_missed)+" "+str(n_missed/n_f1)+\
+        self.out_text += str(n_missed)+" "+str(round(n_missed*1./n_f1,3))+\
                 " no matches found in "+self.f2_name+"\n"
 
         fout = ROOT.TFile.Open("diff_mass.root", "recreate")
@@ -119,7 +120,7 @@ class FileCompare:
         ch1 = helper.loader(self.f1_name, self.t1_name)
         ch2 = helper.loader(self.f2_name, self.t2_name)
 
-        h4l_temp = ROOT.TH1F("h4l_temp", "temp", 107, 130, 1200)
+        h4l_temp = ROOT.TH1F("h4l_temp", "temp", 113, 70, 1200)
         h4l_ch1 = h4l_temp.Clone("h4l_ch1")
         h4l_ch2 = h4l_temp.Clone("h4l_ch2")
 
@@ -170,6 +171,7 @@ if __name__ == "__main__":
     usage = "%prog [option] f1 t1 f2 t2 out_name"
     parser = OptionParser(description="compare two TTree", usage=usage)
     parser.add_option('--logY', dest="logy", help="Log-Y", default=False, action='store_true')
+    parser.add_option('--cmp', dest="cmp", help="compare the shapes", default=False, action='store_true')
 
     options,args = parser.parse_args()
     if len(args) < 4:
@@ -178,8 +180,10 @@ if __name__ == "__main__":
 
     fc = FileCompare(args[0], args[1], args[2], args[3], options)
     out_name = args[4]
-    #fc.compare_ebye()
-    fc.compare_spectrum("1", out_name+"_v09_v10_4l")
-    fc.compare_spectrum("event_type==0", out_name+"_v09_v10_4mu")
-    fc.compare_spectrum("event_type==1", out_name+"_v09_v10_4e")
-    fc.compare_spectrum("(event_type==2||event_type==3)", out_name+"_v09_v10_2e2mu")
+    if options.cmp:
+        fc.compare_spectrum("1", out_name+"_v09_v10_4l")
+        fc.compare_spectrum("event_type==0", out_name+"_v09_v10_4mu")
+        fc.compare_spectrum("event_type==1", out_name+"_v09_v10_4e")
+        fc.compare_spectrum("(event_type==2||event_type==3)", out_name+"_v09_v10_2e2mu")
+    else:
+        fc.compare_ebye()

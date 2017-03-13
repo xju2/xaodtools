@@ -136,8 +136,10 @@ int main( int argc, char* argv[] ) {
 	MyTree.Branch("MCWeights", &mc_weights);
 
     // add jet information
+    int n_jets_30 = 0;
     double dijet_invmass = -999;
     double dijet_deltaeta = -999;
+	MyTree.Branch("n_jets", &n_jets_30, "n_jets/I");
 	MyTree.Branch("dijet_deltaeta_fid", &dijet_deltaeta, "dijet_deltaeta_fid/D");
 	MyTree.Branch("dijet_invmass_fid", &dijet_invmass, "dijet_invmass_fid/D");
 
@@ -182,7 +184,15 @@ int main( int argc, char* argv[] ) {
         CHECK( event.retrieve( jets_origin, "AntiKt4TruthJets" ) );
         std::pair<xAOD::JetContainer*, xAOD::ShallowAuxContainer*> jet_shallowcopy = xAOD::shallowCopyContainer(*jets_origin);
         xAOD::JetContainer* jets = jet_shallowcopy.first;
-        
+       
+        // count number of jets with pt > 30 GeV and |eta| < 4.5
+        n_jets_30 = 0;
+        for(auto& jet : *jets){
+            if( jet->p4.Pt() > 30E3 && fabs(jet->p4.Eta()) < 4.5 ) {
+                n_jets_30 ++;
+            }
+        }
+
         // calculate dijet invariant mass and delta-eta
         if (jets->size() >= 2){
             sort(jets->begin(), jets->end(), descend_on_pt);
