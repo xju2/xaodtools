@@ -187,8 +187,8 @@ int main( int argc, char* argv[] ) {
        
         // count number of jets with pt > 30 GeV and |eta| < 4.5
         n_jets_30 = 0;
-        for(auto& jet : *jets){
-            if( jet->p4.Pt() > 30E3 && fabs(jet->p4.Eta()) < 4.5 ) {
+        for(const auto& jet : *jets){
+            if( jet->p4().Pt() > 30E3 && fabs(jet->p4().Eta()) < 4.5 ) {
                 n_jets_30 ++;
             }
         }
