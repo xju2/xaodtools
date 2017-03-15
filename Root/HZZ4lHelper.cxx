@@ -258,7 +258,7 @@ bool HZZ4lHelper::GetTruthInfo(const xAOD::TruthParticleContainer& particles)
                     const xAOD::TruthVertex* zqq_vtx = z->decayVtx();
                     int z_daughters = zqq_vtx->nOutgoingParticles();
                     if(z_daughters != 2) {
-                        cerr << "Z decays to " << z_daughters << " daughters!" << endl;
+                        // cerr << "Z decays to " << z_daughters << " daughters!" << endl;
                         continue;
                     }
                     for(int i_z_daughter = 0; i_z_daughter < z_daughters; i_z_daughter++){

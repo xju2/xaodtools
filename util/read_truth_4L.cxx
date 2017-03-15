@@ -32,6 +32,7 @@
 #include "xAODEgamma/PhotonContainer.h"
 #include "xAODTau/TauJetContainer.h"
 #include "xAODJet/JetContainer.h"
+#include "xAODJet/Jet.h"
 #include "xAODJet/JetAuxContainer.h"
 #include "xAODCaloEvent/CaloCluster.h"
 #include "xAODTruth/TruthParticleContainer.h"
@@ -65,6 +66,24 @@ using namespace std;
 
 bool descend_on_pt(xAOD::IParticle* p1, xAOD::IParticle* p2){
     return p1->pt() > p2->pt();
+}
+bool isHard(const xAOD::Jet& jet){
+    /***
+    bool isHS = false;
+    if(//jet.isAvailable<ElementLink<xAOD::JetContainer> >("GhostTruthAssociationLink") &&
+       jet.auxdata< int >("GhostPartonsCount"))
+    {
+        //const xAOD::Jet* tjet = * jet.auxdata< ElementLink<xAOD::JetContainer> >("GhostTruthAssociationLink");
+        // isHS = tjet->pt() > 10E3; 
+        int parton_count = jet.auxdata< int >("GhostPartonsCount");
+        isHS = parton_count > 0;
+    } else {
+        cout <<"NOTHING IS HERE" << endl;
+    }
+    ***/
+    //int parton_count = jet.auxdata< int >("GhostPartonsCount");
+    int parton_count = jet.auxdata< int >("PartonTruthLabelID");
+    return parton_count > 0;
 }
 
 int main( int argc, char* argv[] ) {
@@ -139,9 +158,27 @@ int main( int argc, char* argv[] ) {
     int n_jets_30 = 0;
     double dijet_invmass = -999;
     double dijet_deltaeta = -999;
+    double dijet_deltaR = -999;
 	MyTree.Branch("n_jets", &n_jets_30, "n_jets/I");
 	MyTree.Branch("dijet_deltaeta_fid", &dijet_deltaeta, "dijet_deltaeta_fid/D");
 	MyTree.Branch("dijet_invmass_fid", &dijet_invmass, "dijet_invmass_fid/D");
+	MyTree.Branch("dijet_deltaR_fid", &dijet_deltaR, "dijet_deltaR_fid/D");
+
+    double ljet_pt = -999;
+    double sljet_pt = -999;
+	MyTree.Branch("ljet_pt", &ljet_pt, "ljet_pt/D");
+	MyTree.Branch("sljet_pt", &sljet_pt, "sljet_pt/D");
+    double ljet_eta = -999;
+    double sljet_eta = -999;
+	MyTree.Branch("ljet_eta", &ljet_eta, "ljet_eta/D");
+	MyTree.Branch("sljet_eta", &sljet_eta, "sljet_eta/D");
+
+    int n_jets_30_noCorr = 0;
+    double dijet_invmass_noCorr = -999;
+    double dijet_deltaeta_noCorr = -999;
+	MyTree.Branch("n_jets_noCorr", &n_jets_30_noCorr, "n_jets_noCorr/I");
+	MyTree.Branch("dijet_deltaeta_fid_noCorr", &dijet_deltaeta_noCorr, "dijet_deltaeta_fid_noCorr/D");
+	MyTree.Branch("dijet_invmass_fid_noCorr", &dijet_invmass_noCorr, "dijet_invmass_fid_noCorr/D");
 
     int pass_fid = -1;
     MyTree.Branch("pass_fid_cut", &pass_fid, "pass_fid_cut/I");
@@ -154,9 +191,18 @@ int main( int argc, char* argv[] ) {
         h4l_helper->Clear();
         dijet_invmass = -999;
         dijet_deltaeta = -999;
+        dijet_deltaR = -999;
         pass_fid = -1;
         type = -1;
         truth_type = -1;
+        ljet_pt = -999;
+        sljet_pt = -999;
+        ljet_eta = -999;
+        sljet_eta = -999;
+
+        dijet_invmass_noCorr = -999;
+        dijet_deltaeta_noCorr = -999;
+
 
 		// Tell the object which entry to look at:
 		event.getEntry( entry );
@@ -184,24 +230,25 @@ int main( int argc, char* argv[] ) {
         CHECK( event.retrieve( jets_origin, "AntiKt4TruthJets" ) );
         std::pair<xAOD::JetContainer*, xAOD::ShallowAuxContainer*> jet_shallowcopy = xAOD::shallowCopyContainer(*jets_origin);
         xAOD::JetContainer* jets = jet_shallowcopy.first;
+
+        sort(jets->begin(), jets->end(), descend_on_pt);
        
         // count number of jets with pt > 30 GeV and |eta| < 4.5
-        n_jets_30 = 0;
+        n_jets_30_noCorr = 0;
         for(const auto& jet : *jets){
             if( jet->p4().Pt() > 30E3 && fabs(jet->p4().Eta()) < 4.5 ) {
-                n_jets_30 ++;
+                n_jets_30_noCorr ++;
             }
         }
 
         // calculate dijet invariant mass and delta-eta
         if (jets->size() >= 2){
-            sort(jets->begin(), jets->end(), descend_on_pt);
             if(jets->at(1)->p4().Pt()/1E3 > 30
                && fabs(jets->at(0)->p4().Eta()) < 4.5
                && fabs(jets->at(1)->p4().Eta()) < 4.5
                ){
-                dijet_invmass = (jets->at(0)->p4() + jets->at(1)->p4()).M();
-                dijet_deltaeta = fabs(jets->at(0)->eta() - jets->at(1)->eta());
+                dijet_invmass_noCorr = (jets->at(0)->p4() + jets->at(1)->p4()).M();
+                dijet_deltaeta_noCorr = fabs(jets->at(0)->eta() - jets->at(1)->eta());
             }
         }
 
@@ -219,7 +266,7 @@ int main( int argc, char* argv[] ) {
         ////get electrons and muons, then to mimic our fiducial selection
         const xAOD::TruthParticleContainer* electrons(0);
         const xAOD::TruthParticleContainer* muons(0);
-        CHECK( event.retrieve(muons, "TruthMuons") );
+        // CHECK( event.retrieve(muons, "TruthMuons") );
         if( ! event.retrieve(electrons,"TruthElectrons").isSuccess() ||
             ! event.retrieve(muons, "TruthMuons").isSuccess() )
         {
@@ -228,6 +275,55 @@ int main( int argc, char* argv[] ) {
             }
             continue;
         }
+
+        // find the leading two jets that do not overlap with any lepton candidates.
+        const xAOD::Jet* leading_jet = 0;
+        const xAOD::Jet* subleading_jet = 0;
+        n_jets_30 = 0;
+        for(const auto& jet : *jets){
+            if (!isHard(*jet)) continue;
+            bool is_OL_ele = false;
+            for(const auto& ele : *electrons){
+                if (ele->p4().Pt() < 7E3 || fabs(ele->p4().Eta()) > 2.47)
+                    continue;
+                if( ele->p4().DeltaR(jet->p4()) < 0.2) {
+                    is_OL_ele = true;
+                    break;
+                }
+            }
+            bool is_OL_muon = false;
+            for(const auto& muon : *muons) {
+                if (muon->p4().Pt() < 5E3 || fabs(muon->p4().Eta()) > 2.7)
+                    continue;
+                if(muon->p4().DeltaR(jet->p4()) < 0.2) {
+                    is_OL_muon = true;
+                    break;
+                }
+            }
+            if(is_OL_ele || is_OL_muon) continue;
+            // count number of jets with pT > 30 GeV and |eta| < 4.5
+            if( jet->p4().Pt() > 30E3 && fabs(jet->p4().Eta()) < 4.5 ) {
+                n_jets_30 ++;
+                if(leading_jet == 0){
+                    leading_jet = jet;
+                }else if(subleading_jet == 0){
+                    subleading_jet = jet;
+                }else{
+                    continue;
+                }
+            }
+        }
+        if(leading_jet && subleading_jet){
+            dijet_invmass = (leading_jet->p4() + subleading_jet->p4()).M();
+            dijet_deltaeta = fabs(leading_jet->eta() - subleading_jet->eta());
+            dijet_deltaR = leading_jet->p4().DeltaR(subleading_jet->p4());
+            ljet_pt = leading_jet->pt();
+            sljet_pt = subleading_jet->pt();
+            ljet_eta = leading_jet->eta();
+            sljet_eta = subleading_jet->eta();
+        }
+
+
         xAOD::TruthParticleContainer::const_iterator ele_itr = electrons->begin();
         xAOD::TruthParticleContainer::const_iterator ele_end = electrons->end();
 
@@ -239,7 +335,7 @@ int main( int argc, char* argv[] ) {
                 TLorentzVector ele;
                 ele.SetPxPyPzE((*ele_itr)->px(),(*ele_itr)->py(),
                         (*ele_itr)->pz(), (*ele_itr)->e());
-                if(ele.Pt() > 7e3 && ele.Eta() < 2.47){
+                if(ele.Pt() > 7e3 && fabs(ele.Eta()) < 2.47){
                     float charge = (*ele_itr)->pdgId()/11.;
                     Candidate* can = new Candidate(ele_index, ele);
                     can->setCharge(charge);
@@ -261,7 +357,7 @@ int main( int argc, char* argv[] ) {
                 TLorentzVector mu ;
                 mu.SetPxPyPzE((*muon_itr)->px(), (*muon_itr)->py(),
                         (*muon_itr)->pz(), (*muon_itr)->e());
-                if(mu.Pt() > 5e3 && mu.Eta() < 2.7){
+                if(mu.Pt() > 5e3 && fabs(mu.Eta()) < 2.7){
                     float charge = (*muon_itr)->pdgId()/13.;
                     Candidate* can = new Candidate(index, mu);
                     can->setCharge(charge);

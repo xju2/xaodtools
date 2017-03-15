@@ -105,16 +105,21 @@ class MinitreeReader():
                 # It's likely the overlap is not removed...
                 # don't use 345107, 345108, for now. 2017-03-01
                 sample_list['qqZZ'] = mc_dir + 'mc15_13TeV.363490.Sherpa_221_NNPDF30NNLO_llll.root,' # full mass range,
-                #sample_list['qqZZ'] = mc_dir + 'mc15_13TeV.345107.Sherpa_221_NNPDF30NNLO_llll_m4l100_300_filt100_150.root,' # 100, 130GeV
-                #sample_list['qqZZ'] += mc_dir + 'mc15_13TeV.345108.Sherpa_221_NNPDF30NNLO_llll_m4l300.root,' # >= 300 GeV
+                sample_list['qqZZ'] += mc_dir + 'mc15_13TeV.345107.Sherpa_221_NNPDF30NNLO_llll_m4l100_300_filt100_150.root,' # 100, 130GeV
+                sample_list['qqZZ'] += mc_dir + 'mc15_13TeV.345108.Sherpa_221_NNPDF30NNLO_llll_m4l300.root,' # >= 300 GeV
 
 
             # ggZZ
             sample_list['ggZZ'] = mc_dir + 'mc15_13TeV.361073.Sherpa_CT10_ggllll.root,'
 
             # qqZZjj
-            sample_list['qqZZjj'] = mc_dir + 'mc15_13TeV.361072.Sherpa_CT10_lllljj_EW6.root,'
-            #sample_list['qqZZ'] += mc_dir + 'mc15_13TeV.361072.Sherpa_CT10_lllljj_EW6.root,'
+            if not self.options.noVBS:
+                if self.options.no_VBF:
+                    sample_list['qqZZ'] += mc_dir + 'mc15_13TeV.361072.Sherpa_CT10_lllljj_EW6.root,'
+                else:
+                    sample_list['qqZZjj'] = mc_dir + 'mc15_13TeV.361072.Sherpa_CT10_lllljj_EW6.root,'
+            else:
+                print "VBS samples ignored"
 
             # reducible
             sample_list['reducible'] = self.get_reducible()
@@ -138,22 +143,29 @@ class MinitreeReader():
 
     def get_sys_list(self):
         analysis = self.options.analysis
-        sys_dir = self.options.sysDir
         sys_list = OrderedDict()
         if analysis == "HighMass":
             # these text files follows the structure of the inputs for workspace
-            sys_list['qqZZ'] = self.get_sys( sys_dir + 'norm_qqZZ.txt' )
-            sys_list['ggZZ'] = self.get_sys( sys_dir + 'norm_ggllll.txt' )
-            sys_list['qqZZjj'] = self.get_sys( sys_dir + 'norm_qqZZ.txt' )
-            sys_list['ttV'] = self.get_sys( sys_dir + 'norm_qqZZ.txt' )
+            sys_list['qqZZ'] = self.get_sys( ['norm_qqZZ.txt','theory_qqZZ.txt'] )
+            sys_list['ggZZ'] = self.get_sys( ['norm_ggllll.txt','theory_ggZZ.txt'] )
+            sys_list['qqZZjj'] = self.get_sys( ['norm_qqZZ.txt','theory_qqZZ.txt'] )
+            sys_list['ttV'] = self.get_sys( ['norm_qqZZ.txt','theory_qqZZ.txt'] )
         else:
             pass
 
         return sys_list
 
-    def get_sys(self, file_name):
-        """This will read one of the workspace file"""
+    def get_sys(self, file_list):
         sysMap = {}
+        for file_name in file_list:
+            full_path = self.options.sysDir+"/"+file_name
+            self.add_sys(sysMap, full_path)
+
+        return sysMap
+
+    def add_sys(self, sysMap, file_name):
+        """This will read one of the workspace file"""
+        #sysMap = {}
         total_sys = 0.
         currSection = ''
         prev_section = None
@@ -174,7 +186,11 @@ class MinitreeReader():
             if '[' in line:
                 currSection = line[1:-1].strip()
                 if prev_section is not None:
-                    sysMap[prev_section] = math.sqrt(total_sys)
+                    try:
+                        exiting_val = sysMap[prev_section]
+                        sysMap[prev_section] = math.sqrt(exiting_val**2 + total_sys)
+                    except:
+                        sysMap[prev_section] = math.sqrt(total_sys)
 
                 prev_section = currSection
                 total_sys = 0
@@ -192,17 +208,23 @@ class MinitreeReader():
                 pass
                 #print line,"cannot be recognised"
 
+        try:
+            exiting_val = sysMap[prev_section]
+            sysMap[prev_section] = math.sqrt(exiting_val**2 + total_sys)
+        except:
+            sysMap[prev_section] = math.sqrt(total_sys)
 
-        sysMap[prev_section] = math.sqrt(total_sys)
-        return sysMap
+        #return sysMap
 
     def get_yield(self, sample, cut):
+        if "NNPDF30NNLO_llll" in sample:
+            #print sample
+            #w_name += '*w_sherpaLep'
+            return self.get_yield_corrected(sample, cut)
+            pass
 
         tree = ROOT.TChain(self.TREE_NAME, self.TREE_NAME)
         w_name = self.weight_name
-        if "NNPDF30NNLO_llll" in sample:
-            #print sample
-            w_name += '*w_sherpaLep'
 
         ## use , to separate the samples.
         n_files = 0
@@ -234,6 +256,84 @@ class MinitreeReader():
         stats_error = yields/math.sqrt(hist.GetEntries())
         del hist
 
+        return yields,stats_error
+
+    def get_yield_corrected(self, sample, cut):
+
+        tree = ROOT.TChain(self.TREE_NAME, self.TREE_NAME)
+        w_name = self.weight_name
+
+        ## use , to separate the samples.
+        n_files = 0
+        if ',' in sample:
+            for s in sample.split(','):
+                if s != "":
+                    n_files += 1
+                    tree.Add(s)
+        else:
+            tree.Add(sample)
+            n_files += 1
+
+        if self.options.lumi > 0:
+            lumi = self.options.lumi
+        else:
+            tree.GetEntry(0)
+            lumi = tree.w_lumi
+        
+        #print n_files," files with entries:", tree.GetEntries()
+        m4l_ = self.options.poi
+        cat_id = None
+        try:
+            match_item = re.match(r'.*(event_type==[0-9]).*', cut)
+            cat_id = match_item.group(1)
+        except:
+            print "cannot find category ID"
+            return (0,0)
+        
+        #print cat_id
+        n_entries = tree.GetEntries()
+        #print "total entries", n_entries
+
+        mass_cuts = [100, 200, 300, 400, 500, 3000]
+        correct_4e = [0.9579, 0.9580,  0.9638,  0.9651,  0.9699]
+        correct_4mu = [1.0461,  1.0459,  1.0392,  1.0373,  1.0313]
+        correct = [1.]*5
+        if "0" in cat_id:
+            correct = correct_4mu
+        elif "1" in cat_id:
+            correct = correct_4e
+        else:
+            pass
+
+        yields = 0;
+        for ientry in xrange(n_entries):
+            tree.GetEntry(ientry)
+            m4l_val = getattr(tree, m4l_)
+            if m4l_val <= 130. or tree.pass_vtx4lCut != 1:
+                continue
+
+            if "1" in cat_id and tree.event_type != 1:
+                continue
+            
+            if "0" in cat_id and tree.event_type != 0:
+                continue
+            
+            if "2" in cat_id and not (tree.event_type == 2 or tree.event_type == 3):
+                continue
+
+            w_ = getattr(tree, w_name)*lumi/tree.w_lumi
+            m4l_truth = tree.m4l_truth_born
+            for idx in range(len(correct)):
+                c_factor = correct[idx]
+                low_m = mass_cuts[idx]
+                high_m = mass_cuts[idx+1]
+                if m4l_truth > low_m and m4l_truth < high_m:
+                    w_ *= c_factor
+                    break
+
+            yields += w_
+            
+        stats_error = yields/math.sqrt(n_entries)
         return yields,stats_error
 
     def get_str(self, nominal, stats, sys):
@@ -355,6 +455,7 @@ if __name__ == "__main__":
     parser.add_option("--sherpa", dest='sherpa', default=2.2, type='float', help="Sherpa version")
     ## no VBF-like category in HighMass
     parser.add_option("--noVBF", dest='no_VBF', default=False, action='store_true', help="no VBF-like category")
+    parser.add_option("--noVBS", dest='noVBS', default=False, action='store_true', help="no VBS events")
     parser.add_option("--prod", dest='prod', default=None, help="Use production")
     parser.add_option("-w", '--weightName', dest='wName', default='weight_jet', help="Name of weights")
 
