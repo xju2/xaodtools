@@ -297,28 +297,32 @@ class MinitreeReader():
         mass_cuts = [100, 200, 300, 400, 500, 3000]
         correct_4e = [0.9579, 0.9580,  0.9638,  0.9651,  0.9699]
         correct_4mu = [1.0461,  1.0459,  1.0392,  1.0373,  1.0313]
-        correct = [1.]*5
-        if "0" in cat_id:
-            correct = correct_4mu
-        elif "1" in cat_id:
-            correct = correct_4e
-        else:
-            pass
+        correct_no = [1.]*5
 
         yields = 0;
+
         for ientry in xrange(n_entries):
             tree.GetEntry(ientry)
             m4l_val = getattr(tree, m4l_)
             if m4l_val <= 130. or tree.pass_vtx4lCut != 1:
                 continue
+            
+            truth_type = tree.truth_event_type
+            if truth_type == 0:
+                correct = correct_4mu
+            elif truth_type == 1:
+                correct = correct_4e
+            else:
+                correct = correct_no
 
-            if "1" in cat_id and tree.event_type != 1:
+            event_type = tree.event_type
+            if "1" in cat_id and event_type != 1:
                 continue
             
-            if "0" in cat_id and tree.event_type != 0:
+            if "0" in cat_id and event_type != 0:
                 continue
             
-            if "2" in cat_id and not (tree.event_type == 2 or tree.event_type == 3):
+            if "2" in cat_id and not (event_type == 2 or event_type == 3):
                 continue
 
             w_ = getattr(tree, w_name)*lumi/tree.w_lumi
