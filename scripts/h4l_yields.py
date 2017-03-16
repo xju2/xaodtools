@@ -19,6 +19,11 @@ class MinitreeReader():
         self.options = options
         self.weight_name = options.wName
 
+        self.mass_cuts = [100, 200, 300, 400, 500, 3000]
+        self.correct_4e = [0.9579, 0.9580,  0.9638,  0.9651,  0.9699]
+        self.correct_4mu = [1.0461,  1.0459,  1.0392,  1.0373,  1.0313]
+        self.correct_no = [1.]*5
+
     def get_cuts(self):
         current_ana = self.options.analysis
         m4l_ = self.options.poi
@@ -294,10 +299,6 @@ class MinitreeReader():
         n_entries = tree.GetEntries()
         #print "total entries", n_entries
 
-        mass_cuts = [100, 200, 300, 400, 500, 3000]
-        correct_4e = [0.9579, 0.9580,  0.9638,  0.9651,  0.9699]
-        correct_4mu = [1.0461,  1.0459,  1.0392,  1.0373,  1.0313]
-        correct_no = [1.]*5
 
         yields = 0;
 
@@ -307,14 +308,6 @@ class MinitreeReader():
             if m4l_val <= 130. or tree.pass_vtx4lCut != 1:
                 continue
             
-            truth_type = tree.truth_event_type
-            if truth_type == 0:
-                correct = correct_4mu
-            elif truth_type == 1:
-                correct = correct_4e
-            else:
-                correct = correct_no
-
             event_type = tree.event_type
             if "1" in cat_id and event_type != 1:
                 continue
@@ -325,20 +318,32 @@ class MinitreeReader():
             if "2" in cat_id and not (event_type == 2 or event_type == 3):
                 continue
 
-            w_ = getattr(tree, w_name)*lumi/tree.w_lumi
-            m4l_truth = tree.m4l_truth_born
-            for idx in range(len(correct)):
-                c_factor = correct[idx]
-                low_m = mass_cuts[idx]
-                high_m = mass_cuts[idx+1]
-                if m4l_truth > low_m and m4l_truth < high_m:
-                    w_ *= c_factor
-                    break
+            w_ = getattr(tree, w_name)*lumi/tree.w_lumi * self.get_correct_factor(tree.truth_event_type, tree.m4l_truth_born)
 
             yields += w_
             
         stats_error = yields/math.sqrt(n_entries)
         return yields,stats_error
+
+    def get_correct_factor(self, truth_event_type, m4l_truth):
+        truth_type = tree.truth_event_type
+        if truth_type == 0:
+            correct = self.correct_4mu
+        elif truth_type == 1:
+            correct = self.correct_4e
+        else:
+            correct = self.correct_no
+
+        factor = 1
+        for idx in range(len(correct)):
+            c_factor = correct[idx]
+            low_m = self.mass_cuts[idx]
+            high_m = self.mass_cuts[idx+1]
+            if m4l_truth > low_m and m4l_truth < high_m:
+                factor = c_factor
+                break
+        return factor
+
 
     def get_str(self, nominal, stats, sys):
         """
