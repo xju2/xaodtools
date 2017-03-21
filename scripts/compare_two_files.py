@@ -84,7 +84,7 @@ class FileCompare:
                 ch2.GetEntry(found_entry)
 
             if ch2.run != run or ch2.event != event:
-                print "NO!--",run,event,ch1.m4l_unconstrained
+                print "NO!--",run,event,ch1.event_type,ch1.m4l_unconstrained,ch1.m4l_constrained_HM
                 n_missed += 1
                 continue
             else:
@@ -120,17 +120,17 @@ class FileCompare:
         ch1 = helper.loader(self.f1_name, self.t1_name)
         ch2 = helper.loader(self.f2_name, self.t2_name)
 
-        h4l_temp = ROOT.TH1F("h4l_temp", "temp", 113, 70, 1200)
+        h4l_temp = ROOT.TH1F("h4l_temp", "temp", 20, 200, 300)
         h4l_ch1 = h4l_temp.Clone("h4l_ch1")
         h4l_ch2 = h4l_temp.Clone("h4l_ch2")
 
     
-        cut = ROOT.TCut("weight*(pass_vtx4lCut==1 && m4l_constrained_HM > 130 && m4l_constrained_HM < 1500 && "+add_cuts+")")
+        cut = ROOT.TCut("(pass_vtx4lCut==1 && m4l_constrained_HM > 130 && m4l_constrained_HM < 1500 && "+add_cuts+")")
         ch1.Draw("m4l_constrained_HM>>h4l_ch1", cut)
         ch2.Draw("m4l_constrained_HM>>h4l_ch2", cut)
 
-        h4l_ch1.SetXTitle("m_{4l} [GeV]")
-        h4l_ch1.SetYTitle("Events/10 GeV")
+        h4l_ch2.SetXTitle("m_{4l} [GeV]")
+        h4l_ch2.SetYTitle("Events/5 GeV")
 
         h4l_ch1.Sumw2()
         h4l_ch2.Sumw2()
@@ -151,6 +151,8 @@ class FileCompare:
         legend = self.ps.get_legend(len(hist_list) + 2)
 
         this_hist = self.ps.set_y_range(h4l_ch1, h4l_ch2, is_logy)
+        y_axis = h4l_ch2.GetMaximum()
+        h4l_ch2.GetYaxis().SetRangeUser(0, y_axis*1.5)
         h4l_ch2.Draw("EP")
         h4l_ch1.Draw("EP SAME")
 

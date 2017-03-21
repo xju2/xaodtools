@@ -10,6 +10,8 @@ from optparse import OptionParser
 from collections import OrderedDict
 import math
 import re
+from functools import reduce
+import helper as Helper
 
 ROOT.gROOT.SetBatch()
 
@@ -24,6 +26,11 @@ class MinitreeReader():
         self.correct_4mu = [1.0461,  1.0459,  1.0392,  1.0373,  1.0313]
         self.correct_no = [1.]*5
 
+        self.mass_low = "130"
+        self.mass_hi = "1500"
+        self.split_2mu2e = False
+        print "Mass window", self.mass_low, self.mass_hi
+
     def get_cuts(self):
         current_ana = self.options.analysis
         m4l_ = self.options.poi
@@ -31,14 +38,18 @@ class MinitreeReader():
         if current_ana == "HighMass":
 
             if self.options.no_VBF:
-                dic["2mu2e"] = "pass_vtx4lCut==1 && 130<"+m4l_+"&&"+m4l_+"<1500&&(event_type==3||event_type==2)"
-                dic["4e"] = "pass_vtx4lCut==1 && 130<"+m4l_+"&&"+m4l_+"<1500&&(event_type==1)"
-                dic["4mu"] = "pass_vtx4lCut==1 && 130<"+m4l_+"&&"+m4l_+"<1500&&(event_type==0)"
+                if self.options.noComb:
+                    dic["2mu2e"] = "pass_vtx4lCut==1 && "+self.mass_low+"<"+m4l_+"&&"+m4l_+"<"+self.mass_hi+"&&(event_type==2)"
+                    dic["2e2mu"] = "pass_vtx4lCut==1 && "+self.mass_low+"<"+m4l_+"&&"+m4l_+"<"+self.mass_hi+"&&(event_type==3)"
+                else:
+                    dic["2mu2e"] = "pass_vtx4lCut==1 && "+self.mass_low+"<"+m4l_+"&&"+m4l_+"<"+self.mass_hi+"&&(event_type==3||event_type==2)"
+                dic["4e"] = "pass_vtx4lCut==1 && "+self.mass_low+"<"+m4l_+"&&"+m4l_+"<"+self.mass_hi+"&&(event_type==1)"
+                dic["4mu"] = "pass_vtx4lCut==1 && "+self.mass_low+"<"+m4l_+"&&"+m4l_+"<"+self.mass_hi+"&&(event_type==0)"
             else:
-                dic["2mu2e"] = "pass_vtx4lCut==1 && 130<"+m4l_+"&&"+m4l_+"<1500&&(event_type==3||event_type==2) && prod_type_HM==0"
-                dic["4e"] = "pass_vtx4lCut==1 && 130<"+m4l_+"&&"+m4l_+"<1500&&(event_type==1) && prod_type_HM==0"
-                dic["4mu"] = "pass_vtx4lCut==1 && 130<"+m4l_+"&&"+m4l_+"<1500&&(event_type==0) && prod_type_HM==0"
-                dic["VBF"] = "pass_vtx4lCut==1 && 130<"+m4l_+"&&"+m4l_+"<1500&&prod_type_HM==1"
+                dic["2mu2e"] = "pass_vtx4lCut==1 && "+self.mass_low+"<"+m4l_+"&&"+m4l_+"<"+self.mass_hi+"&&(event_type==3||event_type==2) && prod_type_HM==0"
+                dic["4e"] = "pass_vtx4lCut==1 && "+self.mass_low+"<"+m4l_+"&&"+m4l_+"<"+self.mass_hi+"&&(event_type==1) && prod_type_HM==0"
+                dic["4mu"] = "pass_vtx4lCut==1 && "+self.mass_low+"<"+m4l_+"&&"+m4l_+"<"+self.mass_hi+"&&(event_type==0) && prod_type_HM==0"
+                dic["VBF"] = "pass_vtx4lCut==1 && "+self.mass_low+"<"+m4l_+"&&"+m4l_+"<"+self.mass_hi+"&&prod_type_HM==1"
 
         elif current_ana == "LowMass":
             dic = {
@@ -153,7 +164,7 @@ class MinitreeReader():
             # these text files follows the structure of the inputs for workspace
             sys_list['qqZZ'] = self.get_sys( ['norm_qqZZ.txt','theory_qqZZ.txt'] )
             sys_list['ggZZ'] = self.get_sys( ['norm_ggllll.txt','theory_ggZZ.txt'] )
-            sys_list['qqZZjj'] = self.get_sys( ['norm_qqZZ.txt','theory_qqZZ.txt'] )
+            sys_list['qqZZjj'] = self.get_sys( ['norm_qqZZEW.txt'] )
             sys_list['ttV'] = self.get_sys( ['norm_qqZZ.txt','theory_qqZZ.txt'] )
         else:
             pass
@@ -161,19 +172,18 @@ class MinitreeReader():
         return sys_list
 
     def get_sys(self, file_list):
+        """
+        Get dictionary for the systematics in each category for each NP
+        """
         sysMap = {}
         for file_name in file_list:
             full_path = self.options.sysDir+"/"+file_name
             self.add_sys(sysMap, full_path)
-
         return sysMap
 
     def add_sys(self, sysMap, file_name):
         """This will read one of the workspace file"""
-        #sysMap = {}
-        total_sys = 0.
         currSection = ''
-        prev_section = None
         fileObj = open(file_name)
         for line in fileObj:
             line = line.strip()
@@ -183,44 +193,57 @@ class MinitreeReader():
             if(line.startswith('#')):
                 continue
 
-            #print line, len(line)
-            # check if the current line is a heading
-            #isSection = re.match('^\[.*\]$', line)
-
             # update the current section and add a section to the map
             if '[' in line:
                 currSection = line[1:-1].strip()
-                if prev_section is not None:
-                    try:
-                        exiting_val = sysMap[prev_section]
-                        sysMap[prev_section] = math.sqrt(exiting_val**2 + total_sys)
-                    except:
-                        sysMap[prev_section] = math.sqrt(total_sys)
+                if not currSection in sysMap:
+                    sysMap[currSection] = {}
 
-                prev_section = currSection
-                total_sys = 0
                 continue
 
-
-            # now these are options for section
-            # split on '=' but not on '=='.. this uses lookForward and lookBehind regex search
-            #print line[:-1].split('=')[1].split()
             try:
+                sys_name = line[:-1].split('=')[0].strip()
                 low, high = line[:-1].split('=')[1].split()
                 mean = (abs(float(low)-1) + abs(float(high)-1))/2.
-                total_sys += mean**2
             except :
                 pass
                 #print line,"cannot be recognised"
+            sysMap[currSection][sys_name] = mean
+            if self.options.debug:
+                print currSection,sys_name,mean
 
-        try:
-            exiting_val = sysMap[prev_section]
-            sysMap[prev_section] = math.sqrt(exiting_val**2 + total_sys)
-        except:
-            sysMap[prev_section] = math.sqrt(total_sys)
 
-        #return sysMap
+    def sum_sys(self, sys_dir):
+        """
+        sys_dir[ATLAS_Lumi] = 0.032
+        sys_dir[XX] = 0.05
+        """
+        return math.sqrt(sum([y**2 for x,y in sys_dir.iteritems()]))
 
+
+    def combined_sys(self, list_sys): 
+        ## construct a new dictionary
+        new_dic = {}
+        all_sys_names = [y.keys() for x,y in list_sys if type(y) is dict]
+
+        # common systematics are correlated, add them linearly
+        if len(all_sys_names) > 0:
+            all_sys_name = reduce((lambda x, y:set(x).union(set(y))), all_sys_names)
+            for sys_name in all_sys_name:
+                sys_val = sum([x*y[sys_name] for x,y in list_sys if type(y) is dict and sys_name in y])
+                new_dic[sys_name] = sys_val 
+            new_dic["ADDSYS"] = math.sqrt(sum([y**2 for x,y in list_sys if type(y) is not dict]))
+        else:
+            new_dic["ADDSYS"] = sum([y for x,y in list_sys if type(y) is not dict])
+
+
+        return self.sum_sys(new_dic)
+
+    def all_sys(self, comb_sample_channel):
+        ## flatten the list...
+        flat_ = [x for z in comb_sample_channel for x in z]
+        return self.combined_sys(flat_)
+            
     def get_yield(self, sample, cut):
         if "NNPDF30NNLO_llll" in sample:
             #print sample
@@ -325,14 +348,13 @@ class MinitreeReader():
         stats_error = yields/math.sqrt(n_entries)
         return yields,stats_error
 
-    def get_correct_factor(self, truth_event_type, m4l_truth):
-        truth_type = tree.truth_event_type
+    def get_correct_factor(self, truth_type, m4l_truth):
         if truth_type == 0:
             correct = self.correct_4mu
         elif truth_type == 1:
             correct = self.correct_4e
         else:
-            correct = self.correct_no
+            return 1.0
 
         factor = 1
         for idx in range(len(correct)):
@@ -359,6 +381,7 @@ class MinitreeReader():
 
         return res
 
+
     def process(self):
         samples = self.get_samples()
         cuts = self.get_cuts()
@@ -375,6 +398,7 @@ class MinitreeReader():
 
         out_text += " \\\\ \\hline \n"
 
+        # summation of events for each sample
         combined = [0.]*len(samples)
         comb_stats = [0.]*len(samples)
         comb_sys = [0.]*len(samples)
@@ -382,14 +406,18 @@ class MinitreeReader():
         # summation of non-data for each category
         comb_chs = [0.]*len(cuts)
         comb_chs_stats = [0.]*len(cuts)
-        comb_chs_sys = [0.]*len(cuts)
+
+        comb_chs_sys_input = [0.]*len(cuts)
 
         if cuts is not None and len(samples) > 0:
             ichan = 0
             for ch_name,cut in cuts.iteritems():
                 out_text += ch_name
                 ic = 0
+                comb_chs_sys_input[ichan] = [0]*(len(samples)-1)
                 for sample_name, sample_dir in samples.iteritems():
+                    if self.options.debug:
+                        print "IN sample: ", sample_name
 
                     exp_ = stat_ = sys_ = 0
                     if type(sample_dir) is str:
@@ -397,27 +425,35 @@ class MinitreeReader():
                         if 'data' in sample_name:
                             sys_ = 0
                         else:
-                            sys_ = sys[sample_name][ch_name]*exp_
+                            ch_sys_input = sys[sample_name][ch_name]
+                            comb_chs_sys_input[ichan][ic] = (exp_, ch_sys_input)
+                            try:
+                                sys_ = self.combined_sys([(exp_, ch_sys_input)])
+                                #print "SYS:", sample_name, ch_name, exp_, sys_
+                            except:
+                                sys_ = 0
+                                #print "no sys for", sample_name, ch_name
                     else:
                         # for the pre-defined backgrounds, such as reducible-bkg
                         exp_, stat_, sys_ = sample_dir[ch_name]
+                        comb_chs_sys_input[ichan][ic] = (exp_, sys_)
 
                     combined[ic] += exp_
                     comb_stats[ic] += stat_**2
-                    comb_sys[ic] += sys_**2
 
                     ic += 1
                     if 'data' in sample_name:
                         stats_ = math.sqrt(comb_chs_stats[ichan])
-                        sys_ = math.sqrt(comb_chs_sys[ichan])
+                        #sys_ = math.sqrt(comb_chs_sys[ichan])
+                        if self.options.debug:
+                            print comb_chs_sys_input[ichan]
+                        sys_ = self.combined_sys(comb_chs_sys_input[ichan])
                         sum_bkg = self.get_str(comb_chs[ichan], stats_, sys_)
                         out_text += ' & ' + sum_bkg + ' & {:.0f}'.format(exp_)
                     else:
                         # sum of the samples, except data.
                         comb_chs[ichan] += exp_
                         comb_chs_stats[ichan] += stat_**2
-                        comb_chs_sys[ichan] += sys_**2
-
                         # print out info
                         out_text += ' & ' + self.get_str(exp_, stat_, sys_)
 
@@ -433,11 +469,15 @@ class MinitreeReader():
                 # add total of non-data samples.
                 sum_ = sum(comb_chs)
                 stats_ = math.sqrt(sum(comb_chs_stats))
-                sys_ = math.sqrt(sum(comb_chs_sys))
+                #sys_ = math.sqrt(sum(comb_chs_sys))
+                sys_ = self.all_sys(comb_chs_sys_input)
                 sum_bkg = self.get_str(sum_, stats_, sys_)
                 comb_tex += ' & '+sum_bkg+' & {:.0f}'.format(combined[icat])
             else:
-                comb_tex += ' & '+self.get_str(combined[icat], math.sqrt(comb_stats[icat]), math.sqrt(comb_sys[icat]))
+                sys_comb_sample = Helper.column(comb_chs_sys_input, icat)
+                #print sys_comb_sample
+                sys_comb = self.combined_sys( sys_comb_sample )
+                comb_tex += ' & '+self.get_str(combined[icat], math.sqrt(comb_stats[icat]), sys_comb)
 
         comb_tex += "\\\\ \\hline \n"
 
@@ -467,6 +507,9 @@ if __name__ == "__main__":
     parser.add_option("--noVBS", dest='noVBS', default=False, action='store_true', help="no VBS events")
     parser.add_option("--prod", dest='prod', default=None, help="Use production")
     parser.add_option("-w", '--weightName', dest='wName', default='weight_jet', help="Name of weights")
+    parser.add_option("--noComb", dest='noComb', default=False, help="not combine 2mu2e with 2e2mu", action='store_true')
+
+    parser.add_option("-v","--verbose", dest='debug', default=False, help="in a debug mode", action='store_true')
 
 
     (options,args) = parser.parse_args()

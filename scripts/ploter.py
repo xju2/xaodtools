@@ -98,7 +98,7 @@ class Ploter:
                 hist.GetXaxis().SetTitleSize(self.x_title_size*labelscalefact)
                 hist.GetXaxis().SetTitleOffset(1.4)
 
-                hist.Draw("E2")
+                hist.Draw("AXIS")
             else:
                 # start to calculate the ratio
                 if reverse: # MC/Data
@@ -159,6 +159,7 @@ class Ploter:
         if self.add_ratio and has_data:
             self.prepare_2pad_canvas("canvas", 600, 600)
             self.pad2.cd()
+            self.pad2.SetGridy()
             hist_sum.SetLineColor(8)
             new_data_copy = h_data.Clone("data_copy")
             #self.add_ratio_panel([new_data_copy, hist_sum], y_title, 0.5, 1.52)
