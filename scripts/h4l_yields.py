@@ -29,6 +29,7 @@ class MinitreeReader():
         self.mass_low = "130"
         self.mass_hi = "1500"
         self.split_2mu2e = False
+        self.MINIDIR = "/afs/cern.ch/atlas/groups/HSG2/H4l/run2/2016/MiniTrees/"
         print "Mass window", self.mass_low, self.mass_hi
 
     def get_cuts(self):
@@ -84,18 +85,10 @@ class MinitreeReader():
 
 
     def get_mc_dir(self):
-        if self.options.prod is None:
-            mc_dir = self.options.mcDir
-        else:
-            mc_dir = "/afs/cern.ch/atlas/groups/HSG2/H4l/run2/2016/MiniTrees/"+self.options.prod+"/mc/Nominal/"
-        return mc_dir
+        return self.options.mcDir if self.options.prod is None else self.MINIDIR+self.options.prod+"/mc/Nominal/"
 
     def get_data_dir(self):
-        if self.options.prod is None:
-            data_dir = self.options.dataDir
-        else:
-            data_dir = "/afs/cern.ch/atlas/groups/HSG2/H4l/run2/2016/MiniTrees/"+self.options.prod+"/data/Nominal/"
-        return data_dir 
+        return self.options.dataDir if self.options.prod is None else self.MINIDIR+self.options.prod+"/data/Nominal/"
 
     def get_samples(self):
         analysis = self.options.analysis
@@ -213,14 +206,6 @@ class MinitreeReader():
                 print currSection,sys_name,mean
 
 
-    def sum_sys(self, sys_dir):
-        """
-        sys_dir[ATLAS_Lumi] = 0.032
-        sys_dir[XX] = 0.05
-        """
-        return math.sqrt(sum([y**2 for x,y in sys_dir.iteritems()]))
-
-
     def combined_sys(self, list_sys): 
         ## construct a new dictionary
         new_dic = {}
@@ -237,12 +222,8 @@ class MinitreeReader():
             new_dic["ADDSYS"] = sum([y for x,y in list_sys if type(y) is not dict])
 
 
-        return self.sum_sys(new_dic)
+        return math.sqrt(sum([y**2 for x,y in new_dic.iteritems()]))
 
-    def all_sys(self, comb_sample_channel):
-        ## flatten the list...
-        flat_ = [x for z in comb_sample_channel for x in z]
-        return self.combined_sys(flat_)
             
     def get_yield(self, sample, cut):
         if "NNPDF30NNLO_llll" in sample:
@@ -469,8 +450,8 @@ class MinitreeReader():
                 # add total of non-data samples.
                 sum_ = sum(comb_chs)
                 stats_ = math.sqrt(sum(comb_chs_stats))
-                #sys_ = math.sqrt(sum(comb_chs_sys))
-                sys_ = self.all_sys(comb_chs_sys_input)
+                flat_input = Helper.flatten(comb_chs_sys_input)
+                sys_ = self.combined_sys(flat_input)
                 sum_bkg = self.get_str(sum_, stats_, sys_)
                 comb_tex += ' & '+sum_bkg+' & {:.0f}'.format(combined[icat])
             else:

@@ -62,3 +62,6 @@ def make_graphError(name_, x_, xe_, y_, ye_):
 
 def column(matrix, i):
     return [row[i] for row in matrix]
+
+def flatten(matrix):
+    return [x for y in matrix for x in y]
