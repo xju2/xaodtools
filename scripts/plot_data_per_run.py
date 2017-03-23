@@ -27,7 +27,8 @@ class EventPerRun:
 
         # setup the luminosity calculator
         lumi_table_2015 = "/afs/cern.ch/user/x/xju/work/myRooCoreTools/MyXAODTools/scripts/lumitable_data15_all.csv"
-        lumi_table_2016 = "/afs/cern.ch/user/x/xju/work/myRooCoreTools/MyXAODTools/scripts/lumitable_data16_297730_311481_v88_pro20-21.csv"
+        lumi_table_2016 = "/afs/cern.ch/user/x/xju/work/myRooCoreTools/MyXAODTools/" \
+                          "scripts/lumitable_data16_297730_311481_v88_pro20-21.csv"
         self.cal = LumiCal()
         self.cal.load_lumi(lumi_table_2015)
         self.cal.load_lumi(lumi_table_2016)
@@ -36,6 +37,7 @@ class EventPerRun:
         self.num_events_dic = {}
         for key in self.cal.lumi_dic.keys():
             self.num_events_dic[key] = 0
+
 
     def loop_events(self):
         runs_not_in_GRL = []
@@ -53,10 +55,10 @@ class EventPerRun:
             if not tree.pass_vtx4lCut: 
                 print run_,event_,m4l,event_type,"not pass vertex"
                 continue
-            ## only look at 4e candidates in [230, 250] GeV
-            if not event_type == 1:
+            # only look at 4e candidates in [230, 250] GeV
+            if not event_type == 1 or not tree.weight:
                 continue
-            if not (m4l > 240 and m4l < 245):
+            if not (230 < m4l < 250):
                 continue
         
             ntotal += 1
@@ -65,8 +67,7 @@ class EventPerRun:
             else:
                 runs_not_in_GRL.append(run_)
 
-        print "Total number of events in 4e",ntotal
-
+        print "Total number of events in 4e", ntotal
 
     def events(self, start, end):
         """
@@ -74,26 +75,42 @@ class EventPerRun:
         """
         total = 0
         for key, value in self.num_events_dic.iteritems():
-            if key >= start and key <= end:
+            if start <= key <= end:
                 total += value
         return total
 
     def per_period(self):
-        period_ = [x+1 for x in range(len(PERIOD2016))]
+        period_ = [x+1 for x in range(len(PERIOD2016)-1)]
         xs_ = []
         xs_E_ = []
-        for start,end in PERIOD2016:
-            #print start,end
-            lumi,total_runs = self.cal.get_lumi_for_range(start, end)
+
+        lumi_list = []
+        n_event_list = []
+        curr_lumi = 0
+        curr_nEvt = 0
+        for start, end in PERIOD2016:
+            # print start,end
+            lumi, total_runs = self.cal.get_lumi_for_range(start, end)
+            lumi /= 1E3
+            n_event = self.events(start, end)
+
+            # count accumulated number of events and luminosity
+            curr_lumi += lumi
+            curr_nEvt += n_event
+
             if lumi == 0:
                 continue
-            #print lumi,total_runs
-            n_event = self.events(start, end)
+
             xs, xs_E = Helper.get_eff_error(
                 n_event, math.sqrt(n_event),
                 lumi, 0.032*lumi)
             xs_.append(xs)
             xs_E_.append(xs_E)
+
+            lumi_list.append(curr_lumi)
+            n_event_list.append(curr_nEvt)
+            # print lumi, n_event,
+            # print curr_lumi, curr_nEvt
 
         gr = Helper.make_graphError(
             "XS", period_, [0.]*len(period_),
@@ -102,63 +119,37 @@ class EventPerRun:
         canvas = ROOT.TCanvas("canvas", "canvas", 600, 600)
         gr.SetMarkerStyle(20)
         gr.Draw('A*')
-        canvas.SaveAs("TEST_XS.pdf")
+        gr.GetXaxis().SetTitle("Data Period")
+        gr.GetYaxis().SetTitle("# of observed / Int #it{L} [fb]")
+        # add expected XS
+        exp_xs = 0.675
+        line = ROOT.TLine(0, exp_xs, 12, exp_xs)
+        line.SetLineWidth(2)
+        line.SetLineColor(4)
+        line.Draw("same")
+        canvas.SaveAs(out_name+"_XS.pdf")
 
+        gr_total = Helper.make_graphError(
+            "Total", lumi_list, [0.]*len(lumi_list),
+            n_event_list, [math.sqrt(x) for x in n_event_list]
+        )
+        gr_total.SetMarkerStyle(20)
+        gr_total.Draw('A*')
+        gr_total.GetXaxis().SetTitle("Integrated luminosity [fb^{-1}]")
+        gr_total.GetYaxis().SetTitle("# of observed in [230, 250] GeV")
+        # add expected and Fit
+        #fun_p1 = ROOT.TF1("fun_p1", "{:.3f}*x".format(exp_xs), 0, 36.5)
+        #fun_p1.Draw("same")
+        fun_p2 = ROOT.TF1("fun_p2", "[0]+[1]*x+[2]*x*x", 0, 36.5)
+        gr_total.Fit("fun_p2")
+        fun_p2.Draw("same")
+        fun_p2.SetLineColor(4)
+        canvas.SaveAs(out_name+"_nEvt.pdf")
 
-def junk():
-    #save visible cross to histogram
-    run_list = []
-    xs_list = []
-    evt_list = []
-
-    # number of events as funcition of integrated luminosity
-    lumi_list = []
-    n_event_list = []
-    curr_lumi = 0
-    curr_nEvt = 0
-    print "Total runs",len(num_events_dic.keys())
-    for key in sorted(num_events_dic.keys()):
-        lumi = lumi_dic[key]
-        nEvt = num_events_dic[key]
-        xs = nEvt/lumi
-        if xs > 0.02:
-            print key,round(xs,3),round(lumi,2),nEvt
-
-        curr_lumi += lumi/1E3
-        curr_nEvt += nEvt
-        if nEvt < 1:
-            continue
-
-        run_list.append(key)
-        xs_list.append(xs)
-        evt_list.append(nEvt)
-        lumi_list.append(curr_lumi)
-        n_event_list.append(curr_nEvt)
-
-    gr = ROOT.TGraph(len(run_list), array('f', run_list), array('f', xs_list))
-    fout = ROOT.TFile.Open(out_name+".root", "recreate")
-    gr.SetName("visualXS")
-    gr.Write()
-
-    #gr.SetMarkerStyle(21)
-    gr.Draw("A*")
-    canvas.SaveAs(out_name+".pdf")
-
-    gr_lumi = ROOT.TGraph(len(lumi_list), array('f', lumi_list), array('f', n_event_list))
-    gr_lumi.SetName("totalEvts")
-    gr_lumi.Write()
-    #gr_lumi.SetMarkerStyle(21)
-    gr_lumi.Draw("A*")
-    canvas.SaveAs(out_name+"_lumi.pdf")
-    ##
-
-    gr_evt = ROOT.TGraph(len(run_list), array('f', run_list), array('f', evt_list))
-    gr_evt.SetName("nEvts")
-    gr_evt.Write()
-    #gr_evt.SetMarkerStyle(21)
-    gr_evt.Draw("A*")
-    canvas.SaveAs(out_name+"_nEvt.pdf")
-    fout.Close()
+        fout = ROOT.TFile.Open(out_name+".root", "recreate")
+        gr.Write()
+        gr_total.Write()
+        fout.Close()
 
 
 if __name__ == "__main__":

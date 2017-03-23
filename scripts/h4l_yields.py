@@ -27,8 +27,8 @@ class MinitreeReader(object):
         self.correct_4mu = [1.0461,  1.0459,  1.0392,  1.0373,  1.0313]
         self.correct_no = [1.]*5
 
-        self.mass_low = "130"
-        self.mass_hi = "1500"
+        self.mass_low = "230"
+        self.mass_hi = "250"
         self.split_2mu2e = False
         self.DIR_BASE = "/afs/cern.ch/atlas/groups/HSG2/H4l/run2/2016/MiniTrees/"
         print "Mass window", self.mass_low, self.mass_hi
@@ -40,7 +40,7 @@ class MinitreeReader(object):
         if current_ana == "HighMass":
 
             if self.options.no_VBF:
-                if self.options.noComb:
+                if self.options.noCombLep:
                     dic["2mu2e"] = "pass_vtx4lCut==1 && "+self.mass_low+"<"+m4l_+"&&"+m4l_+"<"+self.mass_hi + \
                                    "&&(event_type==2)"
                     dic["2e2mu"] = "pass_vtx4lCut==1 && "+self.mass_low+"<"+m4l_+"&&"+m4l_+"<"+self.mass_hi + \
@@ -132,16 +132,21 @@ class MinitreeReader(object):
                     mc_dir + 'mc15_13TeV.345108.Sherpa_221_NNPDF30NNLO_llll_m4l300.root,'  # >= 300 GeV
 
             # ggZZ
-            sample_list['ggZZ'] = mc_dir + 'mc15_13TeV.361073.Sherpa_CT10_ggllll.root,'
+            gg_zz_input = mc_dir + 'mc15_13TeV.361073.Sherpa_CT10_ggllll.root,'
+            if self.options.comb_zz:
+                sample_list['qqZZ'] += gg_zz_input
+            else:
+                sample_list['ggZZ'] = gg_zz_input
 
             # qqZZjj
-            if not self.options.noVBS:
-                if self.options.no_VBF:
-                    sample_list['qqZZ'] += mc_dir + 'mc15_13TeV.361072.Sherpa_CT10_lllljj_EW6.root,'
-                else:
-                    sample_list['qqZZjj'] = mc_dir + 'mc15_13TeV.361072.Sherpa_CT10_lllljj_EW6.root,'
-            else:
+            qq_zz_input = mc_dir + 'mc15_13TeV.361072.Sherpa_CT10_lllljj_EW6.root,'
+            if self.options.noVBS:
                 print "VBS samples ignored"
+            elif self.options.comb_zz or self.options.no_VBF:
+                sample_list['qqZZ'] += qq_zz_input
+            else:
+                sample_list['qqZZjj'] = qq_zz_input
+
 
             # reducible
             sample_list['reducible'] = self.get_reducible()
@@ -216,7 +221,7 @@ class MinitreeReader(object):
                 print curr_section,sys_name,mean
 
     @staticmethod
-    def combined_sys(self, list_sys): 
+    def combined_sys(list_sys): 
         # construct a new dictionary to save sys info
         new_dic = {}
         all_sys_names = [y.keys() for x, y in list_sys if type(y) is dict]
@@ -237,7 +242,8 @@ class MinitreeReader(object):
         if "NNPDF30NNLO_llll" in sample:
             # print sample
             # w_name += '*w_sherpaLep'
-            return self.get_yield_corrected(sample, cut)
+            # Correction has been applied, in Prod_v11, March 22, 2017
+            # return self.get_yield_corrected(sample, cut)
             pass
 
         tree = ROOT.TChain(self.TREE_NAME, self.TREE_NAME)
@@ -256,7 +262,9 @@ class MinitreeReader(object):
 
         # print n_files,"Files with entries:", tree.GetEntries()
         if 'data' in sample:
-            cut_t = ROOT.TCut(cut)
+            # add weight in data,
+            # because sometimes event can pass selections via new pairing, which only used in coupling
+            cut_t = ROOT.TCut(w_name+"*("+cut+")")
         else:
             if self.options.lumi > 0:
                 lumi = self.options.lumi
@@ -305,7 +313,7 @@ class MinitreeReader(object):
             cat_id = match_item.group(1)
         except:
             print "cannot find category ID"
-            return (0, 0)
+            return 0, 0
         
         # print cat_id
         n_entries = tree.GetEntries()
@@ -474,8 +482,11 @@ if __name__ == "__main__":
     parser = OptionParser(usage=usage, description="get yields for WS", version=version)
     parser.add_option("--analysis", dest='analysis', default='HighMass',
                       help='which analysis, affecting the built-in cuts')
+
     parser.add_option("--poi", dest='poi', default='m4l_constrained_HM',
                       help='which variable used for counting')
+    parser.add_option("-w", '--weightName', dest='wName', default='weight_jet', help="Name of weights")
+
     parser.add_option("--mcDir", dest='mcDir',
                       default='/afs/cern.ch/atlas/groups/HSG2/H4l/run2/2016/MiniTrees/Prod_v10/mc/Nominal/',
                       help="directory for MC")
@@ -484,21 +495,23 @@ if __name__ == "__main__":
                       help="directory for data")
     parser.add_option("--sysDir", dest='sysDir', help="directory for data",
                       default="/Users/xju/Documents/Higgs/H4l/highmass/yields/")
+    parser.add_option("--prod", dest='prod', default=None, help="Use production")
 
     parser.add_option("--lumi", dest='lumi', default=-1, type='float', help='final luminosity')
     parser.add_option("--digits", dest='digits', default=2, type='int', help="digits in final numbers")
     parser.add_option("--split", dest='split', default=False, action='store_true', help="split stats and sys")
+    parser.add_option("--noCombLep", dest='noCombLep', default=False, help="not combine 2mu2e with 2e2mu", action='store_true')
+    parser.add_option("--combZZ", dest='comb_zz', default=False, help="combine qq/gg/qqjj", action='store_true')
 
     parser.add_option("--test", dest='test', default=False, action='store_true', help="no VBF in highmass")
+
     # change qqZZ samples
     parser.add_option("--powheg", dest='powheg', default=False, action='store_true', help="use PowHeg for qqZZ")
     parser.add_option("--sherpa", dest='sherpa', default=2.2, type='float', help="Sherpa version")
+
     # no VBF-like category in HighMass
     parser.add_option("--noVBF", dest='no_VBF', default=False, action='store_true', help="no VBF-like category")
     parser.add_option("--noVBS", dest='noVBS', default=False, action='store_true', help="no VBS events")
-    parser.add_option("--prod", dest='prod', default=None, help="Use production")
-    parser.add_option("-w", '--weightName', dest='wName', default='weight_jet', help="Name of weights")
-    parser.add_option("--noComb", dest='noComb', default=False, help="not combine 2mu2e with 2e2mu", action='store_true')
 
     parser.add_option("-v","--verbose", dest='debug', default=False, help="in a debug mode", action='store_true')
 

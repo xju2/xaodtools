@@ -120,7 +120,7 @@ class FileCompare:
         ch1 = helper.loader(self.f1_name, self.t1_name)
         ch2 = helper.loader(self.f2_name, self.t2_name)
 
-        h4l_temp = ROOT.TH1F("h4l_temp", "temp", 20, 200, 300)
+        h4l_temp = ROOT.TH1F("h4l_temp", "temp", 70, 130, 1530)
         h4l_ch1 = h4l_temp.Clone("h4l_ch1")
         h4l_ch2 = h4l_temp.Clone("h4l_ch2")
 
