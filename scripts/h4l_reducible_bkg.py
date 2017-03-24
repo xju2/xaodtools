@@ -12,9 +12,25 @@ def run(options):
     from ROOT import H4lBackgroundReader
 
     b = H4lBackgroundReader()
-    b.loadShapes("$ROOTCOREBIN/../H4lBackgroundReader/data/shapes_SignalRegion.root");
-    b.loadNorms("$ROOTCOREBIN/../H4lBackgroundReader/data/normalizations_m4lFullRange_1ifb.root");
+    b.loadShapes("$ROOTCOREBIN/data/H4lBackgroundReader/shapes_SignalRegion.root");
+
+    input_norm = '$ROOTCOREBIN/data/H4lBackgroundReader/normalizations_m4lFullRange_CategoriesHM_1ifb.root'
+    if options.incl:
+        input_norm = '$ROOTCOREBIN/data/H4lBackgroundReader/normalizations_m4lFullRange_1ifb.root'
+    b.loadNorms(input_norm)
+    
     b.setLumiInvFb(36.1);
+
+    if options.incl:
+        # get inclusive yields for each lepton-final state
+        channels = [ROOT.H4lBkg.Channel._4l, ROOT.H4lBkg.Channel._4e, ROOT.H4lBkg.Channel._2mu2e,
+                    ROOT.H4lBkg.Channel._4mu, ROOT.H4lBkg.Channel._2e2mu]
+        for channel in channels:
+            bgm = b.getBkgMeasurement(ROOT.H4lBkg.Observable.dummy, ROOT.H4lBkg.Category.prodInclusive, channel);
+            m = bgm.getNorm()
+            print ROOT.H4lBkg.Channel.toString( channel ), '\t', m.getString()
+
+        return
 
     if options.no_VBF:
         channels = [ROOT.H4lBkg.Channel._4l, ROOT.H4lBkg.Channel._4e, ROOT.H4lBkg.Channel._2mu2e, ROOT.H4lBkg.Channel._4mu, ROOT.H4lBkg.Channel._2e2mu]
@@ -31,13 +47,13 @@ def run(options):
             bgm_4e = b.getBkgMeasurement( ROOT.H4lBkg.Observable.m4lHM, category,  ROOT.H4lBkg.Channel._4e , 130, 1500);
             bgm_2e2mu = b.getBkgMeasurement( ROOT.H4lBkg.Observable.m4lHM, category,  ROOT.H4lBkg.Channel._2e2mu , 130, 1500);
             bgm_2mu2e = b.getBkgMeasurement( ROOT.H4lBkg.Observable.m4lHM, category,  ROOT.H4lBkg.Channel._2mu2e , 130, 1500);
-            bgm_4l = b.getBkgMeasurement( ROOT.H4lBkg.Observable.m4lHM, category,  ROOT.H4lBkg.Channel._4l, 130, 1500);
             bgm_mixed = ROOT.Add(bgm_2mu2e,bgm_2e2mu, category, ROOT.H4lBkg.Channel._4l);
+            bgm_4l = b.getBkgMeasurement( ROOT.H4lBkg.Observable.m4lHM, category,  ROOT.H4lBkg.Channel._4l, 130, 1500);
 
+            print ROOT.H4lBkg.Channel.toString( ROOT.H4lBkg.Channel._4l ), '\t', bgm_4l.getNorm().getString()
             print ROOT.H4lBkg.Channel.toString( ROOT.H4lBkg.Channel._4mu ), '\t', bgm_4mu.getNorm().getString()
             print ROOT.H4lBkg.Channel.toString( ROOT.H4lBkg.Channel._4e ), '\t', bgm_4e.getNorm().getString()
             print '2e2mu', '\t', bgm_mixed.getNorm().getString()
-            print ROOT.H4lBkg.Channel.toString( ROOT.H4lBkg.Channel._4l ), '\t', bgm_4l.getNorm().getString()
 
             ## example of getting shape
             ## h_m4mu_shape = bgm_4mu.getHistShape();
@@ -48,6 +64,7 @@ if __name__ == "__main__":
     version="%prog 1.1"
     parser = OptionParser(usage=usage, description="get yields for WS", version=version)
     parser.add_option("--noVBF", dest="no_VBF", default=False, action='store_true', help='For Highmass, no VBF-like category')
+    parser.add_option("--incl", dest="incl", default=False, action='store_true', help="inclusive yields")
     (options,args) = parser.parse_args()
 
     run(options)

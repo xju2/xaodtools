@@ -125,11 +125,12 @@ class FileCompare:
         h4l_ch2 = h4l_temp.Clone("h4l_ch2")
 
     
-        cut = ROOT.TCut("(pass_vtx4lCut==1 && m4l_constrained_HM > 130 && m4l_constrained_HM < 1500 && "+add_cuts+")")
+        cut = ROOT.TCut("weight*(pass_vtx4lCut==1 && m4l_constrained_HM > 130 && m4l_constrained_HM < 1500 && "+add_cuts+")")
         ch1.Draw("m4l_constrained_HM>>h4l_ch1", cut)
         ch2.Draw("m4l_constrained_HM>>h4l_ch2", cut)
 
         h4l_ch2.SetXTitle("m_{4l} [GeV]")
+        h4l_ch1.GetXaxis().SetTitle("m_{4l} [GeV]")
         h4l_ch2.SetYTitle("Events/5 GeV")
 
         h4l_ch1.Sumw2()

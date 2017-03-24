@@ -122,8 +122,8 @@ class EventPerRun:
         gr.GetXaxis().SetTitle("Data Period")
         gr.GetYaxis().SetTitle("# of observed / Int #it{L} [fb]")
         # add expected XS
-        exp_xs = 0.675
-        line = ROOT.TLine(0, exp_xs, 12, exp_xs)
+        exp_bkg_xs = 0.675
+        line = ROOT.TLine(0, exp_bkg_xs, 12, exp_bkg_xs)
         line.SetLineWidth(2)
         line.SetLineColor(4)
         line.Draw("same")
@@ -138,13 +138,26 @@ class EventPerRun:
         gr_total.GetXaxis().SetTitle("Integrated luminosity [fb^{-1}]")
         gr_total.GetYaxis().SetTitle("# of observed in [230, 250] GeV")
         # add expected and Fit
-        #fun_p1 = ROOT.TF1("fun_p1", "{:.3f}*x".format(exp_xs), 0, 36.5)
+        #fun_p1 = ROOT.TF1("fun_p1", "{:.3f}*x".format(exp_bkg_xs), 0, 36.5)
         #fun_p1.Draw("same")
         fun_p2 = ROOT.TF1("fun_p2", "[0]+[1]*x+[2]*x*x", 0, 36.5)
         gr_total.Fit("fun_p2")
         fun_p2.Draw("same")
         fun_p2.SetLineColor(4)
         canvas.SaveAs(out_name+"_nEvt.pdf")
+
+        ## get significance as function of luminosity
+        signal_list = [x-exp_bkg_xs*y for x,y in zip(n_event_list, lumi_list)]
+        sigma_list = [Helper.significance(x, exp_bkg_xs*y) for x,y in zip(signal_list, lumi_list)]
+        gr_sigma = Helper.make_graphError(
+            "Total", lumi_list, [0.]*len(lumi_list),
+            sigma_list, [0.]*len(sigma_list)
+        )
+        gr_sigma.SetMarkerStyle(20)
+        gr_sigma.Draw('A*')
+        gr_sigma.GetXaxis().SetTitle("Integrated luminosity [fb^{-1}]")
+        gr_sigma.GetYaxis().SetTitle("significance")
+        canvas.SaveAs(out_name+"_Sigma.pdf")
 
         fout = ROOT.TFile.Open(out_name+".root", "recreate")
         gr.Write()

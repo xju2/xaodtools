@@ -65,3 +65,10 @@ def column(matrix, i):
 
 def flatten(matrix):
     return [x for y in matrix for x in y]
+
+def significance(s, b):
+    if s < 0 or b < 0:
+        return 0
+    if abs(b) < 1E-6:
+        return 0
+    return math.sqrt(2*((s+b)*math.log(1+s/b) - s))

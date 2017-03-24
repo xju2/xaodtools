@@ -27,8 +27,8 @@ class MinitreeReader(object):
         self.correct_4mu = [1.0461,  1.0459,  1.0392,  1.0373,  1.0313]
         self.correct_no = [1.]*5
 
-        self.mass_low = "230"
-        self.mass_hi = "250"
+        # setup range of POI, usually it's the mass.
+        self.mass_low, self.mass_hi = options_.poi_range.split(':')
         self.split_2mu2e = False
         self.DIR_BASE = "/afs/cern.ch/atlas/groups/HSG2/H4l/run2/2016/MiniTrees/"
         print "Mass window", self.mass_low, self.mass_hi
@@ -485,6 +485,8 @@ if __name__ == "__main__":
 
     parser.add_option("--poi", dest='poi', default='m4l_constrained_HM',
                       help='which variable used for counting')
+    parser.add_option("--poiRange", dest='poi_range', default='130:1500',
+                      help='range of POI')
     parser.add_option("-w", '--weightName', dest='wName', default='weight_jet', help="Name of weights")
 
     parser.add_option("--mcDir", dest='mcDir',
