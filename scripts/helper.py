@@ -4,6 +4,9 @@ import ROOT
 import math
 from array import array
 
+import os
+import errno
+
 def loader(infile, tree_name):
     chain = ROOT.TChain(tree_name)
     if "root" in infile:
@@ -72,3 +75,34 @@ def significance(s, b):
     if abs(b) < 1E-6:
         return 0
     return math.sqrt(2*((s+b)*math.log(1+s/b) - s))
+
+def read_np_list(np_list_name):
+    np_list = []
+    with open(np_list_name) as handle:
+        for line in handle:
+            if line.strip()[0] == '#':
+                continue
+            np_list.append(line[:-1].strip())
+    
+    print "Total nuisance parameters:",len(np_list)
+    return np_list
+
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+        print path,"is created"
+    except OSError as exc:
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise
+
+def add_line(hist, y_val, color=1, style=2):
+    #x_low = hist.GetBinLowEdge(1)
+    x_low = hist.GetBinLowEdge(hist.GetXaxis().GetFirst())
+    x_hi = hist.GetBinLowEdge(hist.GetXaxis().GetLast()+1)
+    line = ROOT.TLine()
+    line.SetLineColor(color)
+    line.SetLineStyle(style)
+    line.SetLineWidth(2)
+    line.DrawLine(x_low, y_val, x_hi, y_val)

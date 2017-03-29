@@ -177,6 +177,7 @@ if __name__ == "__main__":
     parser.add_option('--cmp', dest="cmp", help="compare the shapes", default=False, action='store_true')
 
     options,args = parser.parse_args()
+
     if len(args) < 4:
         print parser.print_help()
         exit(1)

@@ -128,6 +128,7 @@ class EventPerRun:
         line.SetLineColor(4)
         line.Draw("same")
         canvas.SaveAs(out_name+"_XS.pdf")
+        canvas.SaveAs(out_name+"_XS.eps")
 
         gr_total = Helper.make_graphError(
             "Total", lumi_list, [0.]*len(lumi_list),
@@ -145,6 +146,7 @@ class EventPerRun:
         fun_p2.Draw("same")
         fun_p2.SetLineColor(4)
         canvas.SaveAs(out_name+"_nEvt.pdf")
+        canvas.SaveAs(out_name+"_nEvt.eps")
 
         ## get significance as function of luminosity
         signal_list = [x-exp_bkg_xs*y for x,y in zip(n_event_list, lumi_list)]
@@ -158,6 +160,7 @@ class EventPerRun:
         gr_sigma.GetXaxis().SetTitle("Integrated luminosity [fb^{-1}]")
         gr_sigma.GetYaxis().SetTitle("significance")
         canvas.SaveAs(out_name+"_Sigma.pdf")
+        canvas.SaveAs(out_name+"_Sigma.eps")
 
         fout = ROOT.TFile.Open(out_name+".root", "recreate")
         gr.Write()

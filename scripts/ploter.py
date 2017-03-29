@@ -1,7 +1,9 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 __author__ = "Xiangyang Ju"
 __version__ = "0.1"
 import ROOT
+import helper
 
 class Ploter:
     def __init__(self, status="Internal", lumi=36.47):
@@ -31,10 +33,10 @@ class Ploter:
         self.legend = None
 
         # atlas and legend offset
-        self.x_offset = 0.17
+        self.x_offset = 0.20
 
         # show sum of background for x-check
-        self.show_sum_bkg = True
+        self.show_sum_bkg = True 
 
         self.totalObj = []
 
@@ -47,11 +49,12 @@ class Ploter:
         self.pad1.SetBottomMargin(0)
         self.pad1.SetTopMargin(0.09)
         self.pad1.SetLeftMargin(0.17)
-        self.pad2.Draw()
+        #self.pad2.Draw()
         self.pad2.SetTopMargin(0)
         self.pad2.SetBottomMargin(0.4)
         self.pad2.SetLeftMargin(0.17)
         self.pad2.SetGridy()
+        self.pad2.SetGridx()
         self.can.cd()
         self.pad1.Draw()
         self.pad2.Draw()
@@ -77,7 +80,7 @@ class Ploter:
 
         h_refer = hist_list_cp[0].Clone("Histreference")
         self.totalObj.append(h_refer)
-        print "REFER:", h_refer.Integral()
+        # print "REFER:", h_refer.Integral()
         for i, hist in enumerate(hist_list_cp):
             if i==0:
 
@@ -112,6 +115,7 @@ class Ploter:
 
                 self.totalObj.append(this_hist)
                 this_hist.Draw("EP SAME")
+        helper.add_line(hist_list[0], 1.0)
 
 
     def stack_hists(self,
@@ -209,7 +213,11 @@ class Ploter:
         else:
             hist_all = hist_list_cp
 
-        legend = self.get_legend(len(hist_all))
+        if self.show_sum_bkg:
+            legend = self.get_legend(len(hist_all)+1)
+        else:
+            legend = self.get_legend(len(hist_all))
+
         for hist, tag in zip(hist_all, tag_list):
             if has_data and hist_id == 0:
                 legend.AddEntry(hist, tag+" {:.0f}".format(hist.Integral()), "LP")
@@ -238,8 +246,6 @@ class Ploter:
         x_min = self.x_offset
         x_max = x_min + 0.3
         y_max = 0.70
-        if self.show_sum_bkg:
-            nentries += 1
         y_min = y_max - self.t_size*nentries
 
         legend = ROOT.TLegend(x_min, y_min, x_max, y_max)
@@ -266,8 +272,10 @@ class Ploter:
 
     def get_offset(self, hist):
         max_bin = hist.GetMaximumBin()
-        nbins = hist.GetXaxis().GetNbins()
-        if max_bin < nbins/2.:
+        # nbins = hist.GetXaxis().GetNbins()
+        last_bin = hist.GetXaxis().GetLast()
+        first_bin = hist.GetXaxis().GetFirst()
+        if max_bin < first_bin + (last_bin - first_bin)/2.:
             self.x_offset = 0.60
 
     def stack(self, hist_list):
@@ -318,8 +326,80 @@ class Ploter:
             else:
                 self.can.SetLogy()
 
-            this_hist.GetYaxis().SetRangeUser(4E-3, y_max*1e2)
+            # this_hist.GetYaxis().SetRangeUser(4E-3, y_max*1e2)
         else:
-            this_hist.GetYaxis().SetRangeUser(1E-3, y_max*1.1)
+            # this_hist.GetYaxis().SetRangeUser(1E-3, y_max*1.1)
+            pass
 
         return this_hist
+
+    def compare_hists(self, hist_list, tag_list, **kwargs):
+        """
+        a list of histograms,
+        Key words include:  ratio_title, ratio_range, logY, out_name
+        """
+        if len(hist_list) < 2:
+            print "not enough hitograms for comparison"
+            return 
+        self.color(hist_list)
+
+        self.prepare_2pad_canvas('canvas', 600, 600)
+        self.pad2.cd()
+        try:
+            ratio_title = kwargs["ratio_title"]
+        except KeyError:
+            ratio_title = "MC/Data"
+
+        try:
+            ratio_x, ratio_y = kwargs["ratio_range"]
+        except KeyError:
+            ratio_x, ratio_y = 0.55, 1.42
+
+        self.add_ratio_panel(hist_list, ratio_title, 
+                                ratio_x, ratio_y, True)
+        self.pad1.cd()
+
+        try:
+            self.x_offset = kwargs["x_offset"]
+        except KeyError:
+            self.get_offset(hist_list[0])
+
+        try:
+            is_logy = kwargs["logY"]
+        except KeyError:
+            is_logy = False
+
+        legend = self.get_legend(len(hist_list) + 2)
+
+        this_hist = self.set_y_range(hist_list[0], hist_list[1], is_logy)
+        # y_axis = this_hist.GetMaximum()
+        # this_hist.GetYaxis().SetRangeUser(0, y_axis*1.5)
+        for i, hist in enumerate(hist_list):
+            legend.AddEntry(hist, tag_list[i])
+            if i==0:
+                hist.Draw()
+            else:
+                hist.Draw("SAME")
+
+        legend.Draw("same")
+        self.add_atlas()
+        self.add_lumi()
+
+        try:
+            out_name = kwargs["out_name"]
+        except KeyError:
+            out_name = "TEST"
+
+        try:
+            out_folder = kwargs["out_folder"]
+        except KeyError:
+            out_folder = "./"
+
+        helper.mkdir_p(out_folder)
+
+
+        if is_logy:
+            self.can.SaveAs(out_folder+"/"+out_name+"_Log.eps")
+        else:
+            self.can.SaveAs(out_folder+"/"+out_name+".eps")
+

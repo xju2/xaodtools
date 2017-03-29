@@ -278,7 +278,10 @@ class MinitreeReader(object):
         tree.Draw(self.options.poi+">>h1", cut_t)
         hist = ROOT.gDirectory.Get("h1")
         yields = hist.Integral()
-        stats_error = yields/math.sqrt(hist.GetEntries())
+        try:
+            stats_error = yields/math.sqrt(hist.GetEntries())
+        except ZeroDivisionError:
+            stats_error = 0
         del hist
 
         return yields, stats_error
@@ -416,6 +419,9 @@ class MinitreeReader(object):
                     exp_ = stat_ = sys_ = 0
                     if type(sample_dir) is str:
                         exp_, stat_ = self.get_yield(sample_dir, cut)
+                        # add a correction of qqZZ sample
+                        if sample_name == "qqZZ":
+                            exp_ *= 1.0411
                         if 'data' in sample_name:
                             sys_ = 0
                         else:
