@@ -13,8 +13,77 @@ import re
 from functools import reduce
 import helper as helper
 
+from collections import namedtuple
+
 ROOT.gROOT.SetBatch()
 
+Category = namedtuple("Category", 'name cut')
+
+class Sample(object):
+    def __init__(self, name):
+        self.name = name
+        self.file_list = []
+        self.sys_dic = {}
+        self.scale = 1.0
+        self.yields = {}
+    
+    def get_yield(self, category, options):
+
+        if "data" not in self.name:
+            try:
+                sys_ = self.sys_dic[category.name]
+            except KeyError:
+                print self.name,"no systematics?"
+                sys_ = 0
+            except TypeError:
+                print self.name,"no systematic dictionary"
+                sys_ = 0
+        else:
+            sys_ = 0
+
+        if "NNPDF30NNLO_llll" in self.name:
+            # print sample
+            # w_name += '*w_sherpaLep'
+            # Correction has been applied, in Prod_v11, March 22, 2017
+            # return self.get_yield_corrected(sample, cut)
+            pass
+
+        TREE_NAME = "tree_incl_all"
+        tree = ROOT.TChain(TREE_NAME, TREE_NAME)
+        w_name = options.wName
+
+        # use ',' to separate the samples.
+        n_files = 0
+        for file_ in self.file_list:
+            tree.Add(file_)
+            n_files += 1
+
+        cut = category.cut
+        # print n_files,"Files with entries:", tree.GetEntries()
+        if 'data' in self.name:
+            # add weight in data,
+            # because sometimes event can pass selections via new pairing, which only used in coupling
+            cut_t = ROOT.TCut(w_name+"*("+cut+")")
+        else:
+            if options.lumi > 0:
+                lumi = options.lumi
+            else:
+                tree.GetEntry(0)
+                lumi = tree.w_lumi
+
+            cut_t = ROOT.TCut(w_name+"/w_lumi*"+str(lumi)+"*("+cut+")")
+            # print "Luminosity:", round(lumi, 2),"fb-1"
+
+        tree.Draw(options.poi+">>h1", cut_t)
+        hist = ROOT.gDirectory.Get("h1")
+        exp_ = hist.Integral() * self.scale
+        try:
+            stats_error = exp_/math.sqrt(hist.GetEntries())
+        except ZeroDivisionError:
+            stats_error = 0
+        del hist
+
+        self.yields[category.name] = (exp_, stats_error, sys_)
 
 class MinitreeReader(object):
     def __init__(self, options_):
@@ -33,45 +102,31 @@ class MinitreeReader(object):
         self.DIR_BASE = "/afs/cern.ch/atlas/groups/HSG2/H4l/run2/2016/MiniTrees/"
         print "Mass window", self.mass_low, self.mass_hi
 
+        self.category_list = []
+
     def get_cuts(self):
         current_ana = self.options.analysis
         m4l_ = self.options.poi
-        dic = OrderedDict()
+
+        mass_cut = "pass_vtx4lCut==1 &&"+self.mass_low+"<"+m4l_+"&&"+m4l_+"<"+self.mass_hi+"&&"
         if current_ana == "HighMass":
 
             if self.options.no_VBF:
                 if self.options.noCombLep:
-                    dic["2mu2e"] = "pass_vtx4lCut==1 && "+self.mass_low+"<"+m4l_+"&&"+m4l_+"<"+self.mass_hi + \
-                                   "&&(event_type==2)"
-                    dic["2e2mu"] = "pass_vtx4lCut==1 && "+self.mass_low+"<"+m4l_+"&&"+m4l_+"<"+self.mass_hi + \
-                                   "&&(event_type==3)"
+                    self.category_list.append(Category(name="2mu2e", cut=mass_cut+"event_type==2"))
+                    self.category_list.append(Category(name="2e2mu", cut=mass_cut+"event_type==3"))
                 else:
-                    dic["2mu2e"] = "pass_vtx4lCut==1 && "+self.mass_low+"<"+m4l_+"&&"+m4l_+"<"+self.mass_hi + \
-                                   "&&(event_type==3||event_type==2)"
-                dic["4e"] = "pass_vtx4lCut==1 && "+self.mass_low+"<"+m4l_+"&&"+m4l_+"<"+self.mass_hi + \
-                            "&&(event_type==1)"
-                dic["4mu"] = "pass_vtx4lCut==1 && "+self.mass_low+"<"+m4l_+"&&"+m4l_+"<"+self.mass_hi + \
-                             "&&(event_type==0)"
-            else:
-                dic["2mu2e"] = "pass_vtx4lCut==1 && "+self.mass_low+"<"+m4l_+"&&"+m4l_+"<"+self.mass_hi + \
-                               "&&(event_type==3||event_type==2) && prod_type_HM==0"
-                dic["4e"] = "pass_vtx4lCut==1 && "+self.mass_low+"<"+m4l_+"&&"+m4l_+"<"+self.mass_hi + \
-                            "&&(event_type==1) && prod_type_HM==0"
-                dic["4mu"] = "pass_vtx4lCut==1 && "+self.mass_low+"<"+m4l_+"&&"+m4l_+"<"+self.mass_hi + \
-                             "&&(event_type==0) && prod_type_HM==0"
-                dic["VBF"] = "pass_vtx4lCut==1 && "+self.mass_low+"<"+m4l_+"&&"+m4l_+"<"+self.mass_hi + \
-                             "&&prod_type_HM==1"
+                    self.category_list.append(Category(name="2mu2e", cut=mass_cut+"(event_type==3 || event_type==2)"))
 
-        elif current_ana == "LowMass":
-            dic = {
-                "ggF_2e2mu_13TeV": "pass_vtx4lCut==1 && 115<m4l_constrained && m4l_constrained<130 && event_type==3",
-                "ggF_2mu2e_13TeV": "pass_vtx4lCut==1 && 115<m4l_constrained && m4l_constrained<130 && event_type==2",
-                "ggF_4e_13TeV": "pass_vtx4lCut==1 && 115<m4l_constrained && m4l_constrained<130 && event_type==1",
-                "ggF_4mu_13TeV": "pass_vtx4lCut==1 && 115<m4l_constrained && m4l_constrained<130 && event_type==0",
-            }
+                self.category_list.append(Category(name="4e", cut=mass_cut+"event_type==1"))
+                self.category_list.append(Category(name="4mu", cut=mass_cut+"event_type==0"))
+            else:
+                self.category_list.append(Category(name="2mu2e", cut=mass_cut+"(event_type==3 || event_type==2) && prod_type_HM==0"))
+                self.category_list.append(Category(name="4e", cut=mass_cut+"event_type==1 && prod_type_HM==0"))
+                self.category_list.append(Category(name="4mu", cut=mass_cut+"event_type==0 && prod_type_HM==0"))
+                self.category_list.append(Category(name="VBF", cut=mass_cut+"prod_type_HM==1"))
         else:
             pass
-        return dic
 
     def get_reducible(self):
         """return a dictionary for pre-defined background, the keys should match ones in get_cuts"""
@@ -103,82 +158,77 @@ class MinitreeReader(object):
         analysis = self.options.analysis
         mc_dir = self.get_mc_dir()
         print "MC dir",mc_dir
-        sample_list = OrderedDict()
+        sample_list = []
         if analysis == "HighMass":
 
             # qqZZ
+            qq_zz = Sample("qqZZ")
             if self.options.powheg:
                 # Powheg
                 print "use PowHeg for qqZZ"
-                sample_list['qqZZ'] = \
-                    mc_dir + 'mc15_13TeV.361603.PowhegPy8EG_CT10nloME_AZNLOCTEQ6L1_ZZllll_mll4.root,'
-                sample_list['qqZZ'] += \
-                    mc_dir + 'mc15_13TeV.342556.PowhegPy8EG_CT10nloME_AZNLOCTEQ6L1_ZZllll_mll4_m4l_100_150.root,'
-                sample_list['qqZZ'] += \
-                    mc_dir + 'mc15_13TeV.343232.PowhegPy8EG_CT10nloME_AZNLOCTEQ6L1_ZZllll_mll4_m4l_500_13000.root,'
+                qq_zz.file_list.append(mc_dir+'mc15_13TeV.361603.PowhegPy8EG_CT10nloME_AZNLOCTEQ6L1_ZZllll_mll4.root')
+                qq_zz.file_list.append(mc_dir+'mc15_13TeV.342556.PowhegPy8EG_CT10nloME_AZNLOCTEQ6L1_ZZllll_mll4_m4l_100_150.root')
+                qq_zz.file_list.append(mc_dir+'mc15_13TeV.343232.PowhegPy8EG_CT10nloME_AZNLOCTEQ6L1_ZZllll_mll4_m4l_500_13000.root')
+
             elif self.options.sherpa == 2.1:
                 print "use Sherpa 2.1 for qqZZ"
                 # qqZZ, Sherpa, 2.1
-                sample_list['qqZZ'] = mc_dir + 'mc15_13TeV.361090.Sherpa_CT10_llll_M4l100.root,'
+                qq_zz.file_list.append(mc_dir + 'mc15_13TeV.361090.Sherpa_CT10_llll_M4l100.root')
             elif self.options.sherpa == 2.2:
                 print "use Sherpa 2.2 for qqZZ"
                 # qqZZ, Sherpa, 2.2.1,
                 # It's likely the overlap is not removed...
                 # don't use 345107, 345108, for now. 2017-03-01
-                sample_list['qqZZ'] = mc_dir + 'mc15_13TeV.363490.Sherpa_221_NNPDF30NNLO_llll.root,' # full mass range,
-                sample_list['qqZZ'] += \
-                    mc_dir + 'mc15_13TeV.345107.Sherpa_221_NNPDF30NNLO_llll_m4l100_300_filt100_150.root,'  # 100, 130GeV
-                sample_list['qqZZ'] += \
-                    mc_dir + 'mc15_13TeV.345108.Sherpa_221_NNPDF30NNLO_llll_m4l300.root,'  # >= 300 GeV
+                qq_zz.file_list.append(mc_dir+'mc15_13TeV.363490.Sherpa_221_NNPDF30NNLO_llll.root')
+                qq_zz.file_list.append(mc_dir+'mc15_13TeV.345107.Sherpa_221_NNPDF30NNLO_llll_m4l100_300_filt100_150.root')
+                qq_zz.file_list.append(mc_dir+'mc15_13TeV.345108.Sherpa_221_NNPDF30NNLO_llll_m4l300.root')
+                qq_zz.scale = 1.0411
+
+            qq_zz.sys_dic = self.get_sys(['norm_qqZZ.txt','theory_qqZZ.txt'])
+            sample_list.append(qq_zz)
+        
 
             # ggZZ
-            gg_zz_input = mc_dir + 'mc15_13TeV.361073.Sherpa_CT10_ggllll.root,'
-            if self.options.comb_zz:
-                sample_list['qqZZ'] += gg_zz_input
-            else:
-                sample_list['ggZZ'] = gg_zz_input
+            gg_zz = Sample('ggZZ')
+            gg_zz.file_list.append(mc_dir + 'mc15_13TeV.361073.Sherpa_CT10_ggllll.root')
+            gg_zz.sys_dic = self.get_sys(['norm_ggllll.txt','theory_ggZZ.txt'])
+            sample_list.append(gg_zz)
 
             # qqZZjj
-            qq_zz_input = mc_dir + 'mc15_13TeV.361072.Sherpa_CT10_lllljj_EW6.root,'
+            qq_zz_input = mc_dir + 'mc15_13TeV.361072.Sherpa_CT10_lllljj_EW6.root'
+            qqZZjj = Sample('qqZZjj')
+            qqZZjj.file_list.append(qq_zz_input)
+            qqZZjj.sys_dic = self.get_sys(['norm_qqZZEW.txt'])
             if self.options.noVBS:
                 print "VBS samples ignored"
-            elif self.options.comb_zz or self.options.no_VBF:
-                sample_list['qqZZ'] += qq_zz_input
             else:
-                sample_list['qqZZjj'] = qq_zz_input
+                sample_list.append(qqZZjj)
 
 
             # reducible
-            sample_list['reducible'] = self.get_reducible()
+            reducible = Sample('reducible')
+            sample_list.append(reducible)
 
             # ttV
-            sample_list['ttV'] = mc_dir + 'mc15_13TeV.361621.Sherpa_CT10_WWZ_4l2v.root,'
-            sample_list['ttV'] += mc_dir + 'mc15_13TeV.361623.Sherpa_CT10_WZZ_5l1v.root,'
-            sample_list['ttV'] += mc_dir + 'mc15_13TeV.361625.Sherpa_CT10_ZZZ_6l0v.root,'
-            sample_list['ttV'] += mc_dir + 'mc15_13TeV.361626.Sherpa_CT10_ZZZ_4l2v.root,'
-            sample_list['ttV'] += mc_dir + 'mc15_13TeV.410144.Sherpa_NNPDF30NNLO_ttW.root,'
-            sample_list['ttV'] += mc_dir + 'mc15_13TeV.410142.Sherpa_NNPDF30NNLO_ttll_mll5.root,'
+            ttv = Sample('ttV')
+            ttv.file_list.append(mc_dir + 'mc15_13TeV.361621.Sherpa_CT10_WWZ_4l2v.root')
+            ttv.file_list.append(mc_dir + 'mc15_13TeV.361623.Sherpa_CT10_WZZ_5l1v.root')
+            ttv.file_list.append(mc_dir + 'mc15_13TeV.361625.Sherpa_CT10_ZZZ_6l0v.root')
+            ttv.file_list.append(mc_dir + 'mc15_13TeV.361626.Sherpa_CT10_ZZZ_4l2v.root')
+            ttv.file_list.append(mc_dir + 'mc15_13TeV.410144.Sherpa_NNPDF30NNLO_ttW.root')
+            ttv.file_list.append(mc_dir + 'mc15_13TeV.410142.Sherpa_NNPDF30NNLO_ttll_mll5.root')
+            ttv.sys_dic = self.get_sys(['norm_qqZZ.txt','theory_qqZZ.txt'])
+            sample_list.append(ttv)
 
             # data
-            sample_list['data'] = self.get_data_dir()+ 'data_13TeV.root,'
+            data = Sample('data')
+            data.file_list.append(self.get_data_dir()+ 'data_13TeV.root')
+            sample_list.append(data)
         else:
             print "I don't know"
 
         return sample_list
 
-    def get_sys_list(self):
-        analysis = self.options.analysis
-        sys_list = OrderedDict()
-        if analysis == "HighMass":
-            # these text files follows the structure of the inputs for workspace
-            sys_list['qqZZ'] = self.get_sys(['norm_qqZZ.txt','theory_qqZZ.txt'])
-            sys_list['ggZZ'] = self.get_sys(['norm_ggllll.txt','theory_ggZZ.txt'])
-            sys_list['qqZZjj'] = self.get_sys( ['norm_qqZZEW.txt'] )
-            sys_list['ttV'] = self.get_sys(['norm_qqZZ.txt','theory_qqZZ.txt'])
-        else:
-            pass
-
-        return sys_list
 
     def get_sys(self, file_list):
         """
@@ -191,7 +241,10 @@ class MinitreeReader(object):
         return sys_map
 
     def add_sys(self, sys_map, file_name):
-        """This will read one of the workspace file"""
+        """
+        This will read text file for systematics
+        and returen a dictionary
+        """
         curr_section = ''
         file_obj = open(file_name)
         for line in file_obj:
@@ -223,147 +276,33 @@ class MinitreeReader(object):
     @staticmethod
     def combined_sys(list_sys): 
         # construct a new dictionary to save sys info
+        total_exp = sum([x for x,y,z in list_sys])
+
         new_dic = {}
-        all_sys_names = [y.keys() for x, y in list_sys if type(y) is dict]
+        all_sys_names = [z.keys() for x, y, z in list_sys if type(z) is dict]
 
         # common systematics are correlated, added linearly
         if len(all_sys_names) > 0:
-            all_sys_name = reduce((lambda x, y: set(x).union(set(y))), all_sys_names)
-            for sys_name in all_sys_name:
-                sys_val = sum([x*y[sys_name] for x, y in list_sys if type(y) is dict and sys_name in y])
-                new_dic[sys_name] = sys_val 
-            new_dic["ADDSYS"] = math.sqrt(sum([y**2 for x,y in list_sys if type(y) is not dict]))
+            union_sys_name = reduce((lambda x, y: set(x).union(set(y))), all_sys_names)
+            for sys_name in union_sys_name:
+                sys_val = sum([x*z[sys_name] for x, y, z in list_sys if type(z) is dict and sys_name in z])
+                new_dic[sys_name] = sys_val/total_exp
+
+            #new_dic["ADDSYS"] = math.sqrt(sum([(z/x)**2 for x,y,z in list_sys if type(z) is not dict]))
         else:
-            new_dic["ADDSYS"] = sum([y for x,y in list_sys if type(y) is not dict])
+            #new_dic["ADDSYS"] = math.sqrt(sum([(z/x)**2 for x,y,z in list_sys if type(z) is not dict]))
+            #new_dic["ADDSYS"] = sum([z/x for x,y,z in list_sys if type(z) is not dict])
+            new_dic =  sum([z*1.02 for x,y,z in list_sys if type(z) is not dict])
 
-        return math.sqrt(sum([y**2 for x, y in new_dic.iteritems()]))
+        total_stat = math.sqrt(sum([y**2 for x,y,z in list_sys]))
 
-    def get_yield(self, sample, cut):
-        if "NNPDF30NNLO_llll" in sample:
-            # print sample
-            # w_name += '*w_sherpaLep'
-            # Correction has been applied, in Prod_v11, March 22, 2017
-            # return self.get_yield_corrected(sample, cut)
-            pass
+        return (total_exp, total_stat, new_dic)
 
-        tree = ROOT.TChain(self.TREE_NAME, self.TREE_NAME)
-        w_name = self.weight_name
-
-        # use ',' to separate the samples.
-        n_files = 0
-        if ',' in sample:
-            for s in sample.split(','):
-                if s != "":
-                    n_files += 1
-                    tree.Add(s)
+    def get_sys_val(self, exp, sys_dic):
+        if type(sys_dic) is dict:
+            return math.sqrt(sum([(exp*y)**2 for y in sys_dic.values()]))
         else:
-            tree.Add(sample)
-            n_files += 1
-
-        # print n_files,"Files with entries:", tree.GetEntries()
-        if 'data' in sample:
-            # add weight in data,
-            # because sometimes event can pass selections via new pairing, which only used in coupling
-            cut_t = ROOT.TCut(w_name+"*("+cut+")")
-        else:
-            if self.options.lumi > 0:
-                lumi = self.options.lumi
-            else:
-                tree.GetEntry(0)
-                lumi = tree.w_lumi
-
-            cut_t = ROOT.TCut(w_name+"/w_lumi*"+str(lumi)+"*("+cut+")")
-            # print "Luminosity:", round(lumi, 2),"fb-1"
-
-        tree.Draw(self.options.poi+">>h1", cut_t)
-        hist = ROOT.gDirectory.Get("h1")
-        yields = hist.Integral()
-        try:
-            stats_error = yields/math.sqrt(hist.GetEntries())
-        except ZeroDivisionError:
-            stats_error = 0
-        del hist
-
-        return yields, stats_error
-
-    def get_yield_corrected(self, sample, cut):
-
-        tree = ROOT.TChain(self.TREE_NAME, self.TREE_NAME)
-        w_name = self.weight_name
-
-        # use , to separate the samples.
-        n_files = 0
-        if ',' in sample:
-            for s in sample.split(','):
-                if s != "":
-                    n_files += 1
-                    tree.Add(s)
-        else:
-            tree.Add(sample)
-            n_files += 1
-
-        if self.options.lumi > 0:
-            lumi = self.options.lumi
-        else:
-            tree.GetEntry(0)
-            lumi = tree.w_lumi
-        
-        # print n_files," files with entries:", tree.GetEntries()
-        m4l_ = self.options.poi
-        cat_id = None
-        try:
-            match_item = re.match(r'.*(event_type==[0-9]).*', cut)
-            cat_id = match_item.group(1)
-        except:
-            print "cannot find category ID"
-            return 0, 0
-        
-        # print cat_id
-        n_entries = tree.GetEntries()
-        # print "total entries", n_entries
-        yields = 0;
-
-        for ientry in xrange(n_entries):
-            tree.GetEntry(ientry)
-            m4l_val = getattr(tree, m4l_)
-            if m4l_val <= 130. or tree.pass_vtx4lCut != 1:
-                continue
-            
-            event_type = tree.event_type
-            if "1" in cat_id and event_type != 1:
-                continue
-            
-            if "0" in cat_id and event_type != 0:
-                continue
-            
-            if "2" in cat_id and not (event_type == 2 or event_type == 3):
-                continue
-
-            w_ = getattr(tree, w_name)*lumi/tree.w_lumi*self.get_correct_factor(
-                tree.truth_event_type, tree.m4l_truth_born)
-
-            yields += w_
-            
-        stats_error = yields/math.sqrt(n_entries)
-        return yields, stats_error
-
-    def get_correct_factor(self, truth_type, m4l_truth):
-        if truth_type == 0:
-            correct = self.correct_4mu
-        elif truth_type == 1:
-            correct = self.correct_4e
-        else:
-            return 1.0
-
-        factor = 1
-        for idx in range(len(correct)):
-            c_factor = correct[idx]
-            low_m = self.mass_cuts[idx]
-            high_m = self.mass_cuts[idx+1]
-            if low_m < m4l_truth < high_m:
-                factor = c_factor
-                break
-        return factor
+            return sys_dic
 
     def get_str(self, nominal, stats, sys):
         """
@@ -379,108 +318,91 @@ class MinitreeReader(object):
 
         return res
 
-    def process(self):
-        samples = self.get_samples()
-        cuts = self.get_cuts()
-        sys = self.get_sys_list()
+    def combine_samples(self, samples, name):
+        combined = Sample(name)
+        for category in self.category_list:
+            combined.yields[category.name] = self.combined_sys(map(lambda x: x.yields[category.name], samples))
 
+        return combined
+
+    def print_list(self, samples):
         out_text = ""
         ic = 0
-        for sample_name in samples.keys():
+        for sample in samples:
             if ic == 0:
-                out_text += sample_name
+                out_text += sample.name
             else:
-                out_text += " & " + sample_name
+                out_text += " & " + sample.name
             ic += 1
 
         out_text += " \\\\ \\hline \n"
 
-        # summation of events for each sample
-        combined = [0.]*len(samples)
-        comb_stats = [0.]*len(samples)
-        comb_sys = [0.]*len(samples)
+        for category in self.category_list:
+            ch_name = category.name
+            out_text += ch_name
 
-        # summation of non-data for each category
-        comb_chs = [0.]*len(cuts)
-        comb_chs_stats = [0.]*len(cuts)
+            for sample in samples:
+                if self.options.debug:
+                    print "IN sample: ", sample.name
 
-        comb_chs_sys_input = [0.]*len(cuts)
+                exp_, stat_, sys_dic_ = sample.yields[ch_name]
 
-        if cuts is not None and len(samples) > 0:
-            ichan = 0
-            for ch_name,cut in cuts.iteritems():
-                out_text += ch_name
-                ic = 0
-                comb_chs_sys_input[ichan] = [0]*(len(samples)-1)
-                for sample_name, sample_dir in samples.iteritems():
-                    if self.options.debug:
-                        print "IN sample: ", sample_name
+                if 'data' in sample.name:
+                    out_text += ' & ' + str(exp_)
+                else:
+                    sys_ = self.get_sys_val(exp_, sys_dic_)
+                    out_text += ' & ' + self.get_str(exp_, stat_, sys_)
+                
+            out_text += " \\\\ \n"
 
-                    exp_ = stat_ = sys_ = 0
-                    if type(sample_dir) is str:
-                        exp_, stat_ = self.get_yield(sample_dir, cut)
-                        # add a correction of qqZZ sample
-                        if sample_name == "qqZZ":
-                            exp_ *= 1.0411
-                        if 'data' in sample_name:
-                            sys_ = 0
-                        else:
-                            ch_sys_input = sys[sample_name][ch_name]
-                            comb_chs_sys_input[ichan][ic] = (exp_, ch_sys_input)
-                            try:
-                                sys_ = self.combined_sys([(exp_, ch_sys_input)])
-                                # print "SYS:", sample_name, ch_name, exp_, sys_
-                            except:
-                                sys_ = 0
-                                # print "no sys for", sample_name, ch_name
-                    else:
-                        # for the pre-defined backgrounds, such as reducible-bkg
-                        exp_, stat_, sys_ = sample_dir[ch_name]
-                        comb_chs_sys_input[ichan][ic] = (exp_, sys_)
 
-                    combined[ic] += exp_
-                    comb_stats[ic] += stat_**2
+        out_text += "Total"
+        for sample in samples:
+            list_sys = []
+            for category in self.category_list:
+                list_sys.append(sample.yields[category.name])
 
-                    ic += 1
-                    if 'data' in sample_name:
-                        stats_ = math.sqrt(comb_chs_stats[ichan])
-                        if self.options.debug:
-                            print comb_chs_sys_input[ichan]
-                        sys_ = self.combined_sys(comb_chs_sys_input[ichan])
-                        sum_bkg = self.get_str(comb_chs[ichan], stats_, sys_)
-                        out_text += ' & ' + sum_bkg + ' & {:.0f}'.format(exp_)
-                    else:
-                        # sum of the samples, except data.
-                        comb_chs[ichan] += exp_
-                        comb_chs_stats[ichan] += stat_**2
-                        # print out info
-                        out_text += ' & ' + self.get_str(exp_, stat_, sys_)
+            total_exp, total_stat, total_sys_dic = self.combined_sys(list_sys)
+            total_sys = self.get_sys_val(total_exp, total_sys_dic)
 
-                out_text += " \\\\ \n"
-                ichan += 1
-        else:
-            print "I don't know"
-
-        comb_tex = "Total"
-        for icat, sample_name in enumerate(samples.keys()):
-
-            if "data" in sample_name:
-                # add total of non-data samples.
-                sum_ = sum(comb_chs)
-                stats_ = math.sqrt(sum(comb_chs_stats))
-                flat_input = helper.flatten(comb_chs_sys_input)
-                sys_ = self.combined_sys(flat_input)
-                sum_bkg = self.get_str(sum_, stats_, sys_)
-                comb_tex += ' & '+sum_bkg+' & {:.0f}'.format(combined[icat])
+            if "data" in sample.name:
+                out_text += ' & '+ str(total_exp)
             else:
-                sys_comb_sample = helper.column(comb_chs_sys_input, icat)
-                sys_comb = self.combined_sys( sys_comb_sample )
-                comb_tex += ' & '+self.get_str(combined[icat], math.sqrt(comb_stats[icat]), sys_comb)
+                out_text += ' & '+self.get_str(total_exp, total_stat, total_sys)
 
-        comb_tex += "\\\\ \\hline \n"
-
-        out_text += comb_tex
+        out_text += "\\\\ \\hline \n"
         print out_text
+
+    def process(self):
+        self.get_cuts()
+        all_samples = self.get_samples()
+
+        # get yields for each sample for each category
+        # save the information in a 2-D list:
+        # all_res[channel][sample] = (exp, stats, sys_dic) 
+        if len(self.category_list) > 0 and len(all_samples) > 0:
+            for category in self.category_list:
+                for sample in all_samples:
+                    if "reducible" not in sample.name:
+                        sample.get_yield(category, options)
+                    else:
+                        sample.yields = self.get_reducible()
+
+        new_samples = []
+        if self.options.comb_zz:
+            index = 2 if self.options.noVBS else 3
+            combined = self.combine_samples(all_samples[0:index], "combinedZZ")
+            new_samples.append(combined)
+            new_samples += all_samples[index:-1]
+        else:
+            new_samples += all_samples[:-1]
+
+        new_samples.append(self.combine_samples(all_samples[0:-1], "expected"))
+        new_samples.append(all_samples[-1])
+            
+
+        self.print_list(new_samples)
+
 
 if __name__ == "__main__":
     usage = "%prog [options]"

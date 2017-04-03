@@ -17,6 +17,7 @@ class Ploter:
 
         # predefined colors
         self.COLORS = [64, 95, 28, 29, 209, 5, 432, 433, 434, 435, 436, 8, 6]
+        self.LINE_STYLE = [1]*10
         self.VerticalCanvasSplit = 0.4
 
         # parameters for label/title size
@@ -34,6 +35,7 @@ class Ploter:
 
         # atlas and legend offset
         self.x_offset = 0.20
+        self.y_offset = 0.80
 
         # show sum of background for x-check
         self.show_sum_bkg = True 
@@ -239,13 +241,10 @@ class Ploter:
 
 
 
-    def get_legend(self, nentries, corner="RT"):
-        # corner = LT, RT, LB, RB
-        # LT = left-hand top
-        # LB = left-hand bottom
+    def get_legend(self, nentries):
         x_min = self.x_offset
         x_max = x_min + 0.3
-        y_max = 0.70
+        y_max = self.y_offset-self.text_size*2-0.001
         y_min = y_max - self.t_size*nentries
 
         legend = ROOT.TLegend(x_min, y_min, x_max, y_max)
@@ -265,10 +264,13 @@ class Ploter:
         l.DrawLatex(x, y, text)
 
     def add_atlas(self):
-        self.add_text(self.x_offset, 0.80, 1, "#bf{#it{ATLAS}} "+self.status)
+        self.add_text(self.x_offset, self.y_offset,
+                      1, "#bf{#it{ATLAS}} "+self.status)
 
     def add_lumi(self):
-        self.add_text(self.x_offset, 0.80 - self.text_size - 0.007, 1, "13 TeV, "+str(self.lumi)+" fb^{-1}")
+        self.add_text(self.x_offset,
+                      self.y_offset - self.text_size - 0.007,
+                      1, "13 TeV, "+str(self.lumi)+" fb^{-1}")
 
     def get_offset(self, hist):
         max_bin = hist.GetMaximumBin()
@@ -277,6 +279,7 @@ class Ploter:
         first_bin = hist.GetXaxis().GetFirst()
         if max_bin < first_bin + (last_bin - first_bin)/2.:
             self.x_offset = 0.60
+
 
     def stack(self, hist_list):
         hist_list_cp = [] # a list of non-data histograms
@@ -298,12 +301,14 @@ class Ploter:
         self.totalObj.append(hist_sum)
         return hist_sum, hs
 
-    def color(self, hist_list):
+    def color(self, hist_list, no_fill=False):
         for i, hist in enumerate(hist_list):
-            color = self.COLORS[i]
-            hist.SetLineColor(color)
-            hist.SetFillColor(color)
-            hist.SetMarkerColor(color)
+            color_ = self.COLORS[i]
+            hist.SetLineColor(color_)
+            if not no_fill:
+                hist.SetFillColor(color_)
+            hist.SetMarkerColor(color_)
+            hist.SetLineStyle(self.LINE_STYLE[i])
 
     def set_y_range(self, hist_data, hist_splusb, is_logY):
         y_max = hist_splusb.GetMaximum()
@@ -328,7 +333,7 @@ class Ploter:
 
             # this_hist.GetYaxis().SetRangeUser(4E-3, y_max*1e2)
         else:
-            # this_hist.GetYaxis().SetRangeUser(1E-3, y_max*1.1)
+            this_hist.GetYaxis().SetRangeUser(1E-3, y_max*1.10)
             pass
 
         return this_hist
@@ -338,27 +343,38 @@ class Ploter:
         a list of histograms,
         Key words include:  ratio_title, ratio_range, logY, out_name
         """
+        self.del_obj()
+
         if len(hist_list) < 2:
             print "not enough hitograms for comparison"
             return 
-        self.color(hist_list)
-
-        self.prepare_2pad_canvas('canvas', 600, 600)
-        self.pad2.cd()
         try:
-            ratio_title = kwargs["ratio_title"]
+            no_fill = kwargs["no_fill"]
         except KeyError:
-            ratio_title = "MC/Data"
+            no_fill = False
 
-        try:
-            ratio_x, ratio_y = kwargs["ratio_range"]
-        except KeyError:
-            ratio_x, ratio_y = 0.55, 1.42
+        self.color(hist_list, no_fill)
+      
+        if self.add_ratio:
+            self.prepare_2pad_canvas('canvas', 600, 600)
+            self.pad2.cd()
+            try:
+                ratio_title = kwargs["ratio_title"]
+            except KeyError:
+                ratio_title = "MC/Data"
 
-        self.add_ratio_panel(hist_list, ratio_title, 
-                                ratio_x, ratio_y, True)
-        self.pad1.cd()
+            try:
+                ratio_x, ratio_y = kwargs["ratio_range"]
+            except KeyError:
+                ratio_x, ratio_y = 0.55, 1.42
+        
+            self.add_ratio_panel(hist_list, ratio_title, ratio_x, ratio_y, True)
+            self.pad1.cd()
+        else:
+            self.text_size = 0.04
+            self.can = ROOT.TCanvas("canvas", "canvas", 600, 600)
 
+        self.set_y_offset()
         try:
             self.x_offset = kwargs["x_offset"]
         except KeyError:
@@ -369,17 +385,31 @@ class Ploter:
         except KeyError:
             is_logy = False
 
-        legend = self.get_legend(len(hist_list) + 2)
+        legend = self.get_legend(len(hist_list))
 
         this_hist = self.set_y_range(hist_list[0], hist_list[1], is_logy)
         # y_axis = this_hist.GetMaximum()
         # this_hist.GetYaxis().SetRangeUser(0, y_axis*1.5)
+        try:
+            draw_option = kwargs["draw_option"]
+        except KeyError:
+            draw_option = "HIST"
+
+        try:
+            add_yield = kwargs['add_yields']
+        except KeyError:
+            add_yield = False
+
         for i, hist in enumerate(hist_list):
-            legend.AddEntry(hist, tag_list[i])
-            if i==0:
-                hist.Draw()
+            if add_yield:
+                legend.AddEntry(hist, "{}: {:.0f}".format(tag_list[i], hist.Integral()))
             else:
-                hist.Draw("SAME")
+                legend.AddEntry(hist, tag_list[i])
+
+            if i==0:
+                hist.Draw(draw_option)
+            else:
+                hist.Draw(draw_option+" SAME")
 
         legend.Draw("same")
         self.add_atlas()
@@ -403,3 +433,20 @@ class Ploter:
         else:
             self.can.SaveAs(out_folder+"/"+out_name+".eps")
 
+
+    def set_y_offset(self):
+        if not self.add_ratio:
+            self.y_offset = 0.88
+
+    def del_obj(self):
+        for obj in self.totalObj:
+            del obj
+
+        if self.can:
+            del self.can
+
+        if self.pad1:
+            del self.pad1
+
+        if self.pad2:
+            del self.pad2

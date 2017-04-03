@@ -3,8 +3,9 @@ import ROOT
 import helper
 from optparse import OptionParser
 from ploter import Ploter
+import sets
 
-class FileCompare:
+class FileCompare(object):
     def __init__(self, f1_name, t1_name, f2_name, t2_name, options):
         import AtlasStyle
         self.f1_name = f1_name
@@ -63,6 +64,7 @@ class FileCompare:
 
         self.out_text = self.f1_name+" contains "+str(n_f1)+" events\n"
         self.out_text += self.f2_name+" contains "+str(n_f2)+" events\n"
+
 
         n_matched = 0
         n_missed = 0
