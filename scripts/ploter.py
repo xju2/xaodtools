@@ -6,7 +6,7 @@ import ROOT
 import helper
 
 class Ploter:
-    def __init__(self, status="Internal", lumi=36.47):
+    def __init__(self, status="Internal", lumi=36.1):
         self.status = status
         self.lumi = lumi
 
@@ -38,7 +38,7 @@ class Ploter:
         self.y_offset = 0.80
 
         # show sum of background for x-check
-        self.show_sum_bkg = True 
+        self.show_sum_bkg = True
 
         self.totalObj = []
 
@@ -81,6 +81,7 @@ class Ploter:
         self.totalObj.append(hist_list_cp)
 
         h_refer = hist_list_cp[0].Clone("Histreference")
+        h_refer.Sumw2()
         self.totalObj.append(h_refer)
         # print "REFER:", h_refer.Integral()
         for i, hist in enumerate(hist_list_cp):
@@ -103,7 +104,8 @@ class Ploter:
                 hist.GetXaxis().SetTitleSize(self.x_title_size*labelscalefact)
                 hist.GetXaxis().SetTitleOffset(1.4)
 
-                hist.Draw("AXIS")
+                #hist.Draw("AXIS")
+                hist.Draw("E2")
             else:
                 # start to calculate the ratio
                 if reverse: # MC/Data
@@ -125,6 +127,8 @@ class Ploter:
         x_title, y_title,
         is_log=False, has_data=True,
     ):
+        ## not saving the plots..
+
         # In hist_list, the data should be first element, if has_data
         if len(hist_list) > len(self.COLORS):
             print "I don't have enough colors", len(hist_list), len(self.COLORS)
@@ -236,9 +240,8 @@ class Ploter:
         self.add_atlas()
         self.add_lumi()
 
-        #canvas.SaveAs(out_name)
-        #return canvas
-
+        if out_name is not None:
+            self.can.SaveAs(out_name)
 
 
     def get_legend(self, nentries):
@@ -341,7 +344,10 @@ class Ploter:
     def compare_hists(self, hist_list, tag_list, **kwargs):
         """
         a list of histograms,
-        Key words include:  ratio_title, ratio_range, logY, out_name
+        Key words include:  
+            ratio_title, ratio_range, logY, out_name
+            no_fill, x_offset, draw_option, add_yields, 
+            out_folder
         """
         self.del_obj()
 

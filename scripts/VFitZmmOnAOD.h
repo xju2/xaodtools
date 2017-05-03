@@ -5,9 +5,10 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // Name    : VFitZmmOnAOD.h
 // Package : offline/PhysicsAnalysis/AnalysisCommon/AnalysisExamples
-// Author  : Shuwei YE
-// Created : September 2009
+// Author  : Xiangyang
+// Created : Dec. 2016
 // Modifed from ZeeZmmOnAOD in AnalysisExamples
+// Used for the four-muon searches in 8 TeV!
 //
 // DESCRIPTION:
 //

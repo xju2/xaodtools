@@ -121,9 +121,9 @@ class MinitreeReader(object):
                 self.category_list.append(Category(name="4e", cut=mass_cut+"event_type==1"))
                 self.category_list.append(Category(name="4mu", cut=mass_cut+"event_type==0"))
             else:
+                self.category_list.append(Category(name="4mu", cut=mass_cut+"event_type==0 && prod_type_HM==0"))
                 self.category_list.append(Category(name="2mu2e", cut=mass_cut+"(event_type==3 || event_type==2) && prod_type_HM==0"))
                 self.category_list.append(Category(name="4e", cut=mass_cut+"event_type==1 && prod_type_HM==0"))
-                self.category_list.append(Category(name="4mu", cut=mass_cut+"event_type==0 && prod_type_HM==0"))
                 self.category_list.append(Category(name="VBF", cut=mass_cut+"prod_type_HM==1"))
         else:
             pass
@@ -373,6 +373,35 @@ class MinitreeReader(object):
         out_text += "\\\\ \\hline \n"
         print out_text
 
+    def print_list_paper(self, samples):
+        out_text = ""
+        ic = 0
+        for category in self.category_list:
+            if ic == 0:
+                out_text += category.name
+            else:
+                out_text += " & " + category.name
+            ic += 1
+
+        out_text += " \\\\ \\hline \n"
+
+        for sample in samples:
+            out_text += sample.name
+
+            for category in self.category_list:
+                ch_name = category.name
+
+                exp_, stat_, sys_dic_ = sample.yields[ch_name]
+
+                if 'data' in sample.name:
+                    out_text += ' & ' + str(exp_)
+                else:
+                    sys_ = self.get_sys_val(exp_, sys_dic_)
+                    out_text += ' & ' + self.get_str(exp_, stat_, sys_)
+                
+            out_text += " \\\\ \n"
+        print out_text
+
     def process(self):
         self.get_cuts()
         all_samples = self.get_samples()
@@ -400,8 +429,10 @@ class MinitreeReader(object):
         new_samples.append(self.combine_samples(all_samples[0:-1], "expected"))
         new_samples.append(all_samples[-1])
             
-
-        self.print_list(new_samples)
+        if self.options.paper:
+            self.print_list_paper(new_samples)
+        else:
+            self.print_list(new_samples)
 
 
 if __name__ == "__main__":
@@ -444,6 +475,7 @@ if __name__ == "__main__":
     parser.add_option("--noVBS", dest='noVBS', default=False, action='store_true', help="no VBS events")
 
     parser.add_option("-v","--verbose", dest='debug', default=False, help="in a debug mode", action='store_true')
+    parser.add_option("-p","--paper", dest='paper', default=False, help="paper style", action='store_true')
 
     (options, args) = parser.parse_args()
 

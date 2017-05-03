@@ -76,7 +76,6 @@ def process( dir_name="histograms", scale_qcd=True, is_debug=False):
                 n_qcd = n_data-n_bkg
                 hist.Scale( (n_qcd)/hist.Integral() )
 
-
             hist_list.append(hist)
 
         out_dir = "plots/"
@@ -88,7 +87,7 @@ def process( dir_name="histograms", scale_qcd=True, is_debug=False):
             hist_list, tag_list, out_name,
             hist.GetXaxis().GetTitle(),
             hist.GetYaxis().GetTitle(),
-            is_log, has_data, has_ratio)
+            is_log, has_data)
 
     print "QCD:",n_qcd
     # close all the files
