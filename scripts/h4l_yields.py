@@ -419,7 +419,7 @@ class MinitreeReader(object):
 
         new_samples = []
         if self.options.comb_zz:
-            index = 2 if self.options.noVBS else 3
+            index = 2 if (self.options.noVBS or self.options.spVBS) else 3
             combined = self.combine_samples(all_samples[0:index], "combinedZZ")
             new_samples.append(combined)
             new_samples += all_samples[index:-1]
@@ -472,10 +472,13 @@ if __name__ == "__main__":
 
     # no VBF-like category in HighMass
     parser.add_option("--noVBF", dest='no_VBF', default=False, action='store_true', help="no VBF-like category")
+    # no VBS samples in HighMass
     parser.add_option("--noVBS", dest='noVBS', default=False, action='store_true', help="no VBS events")
+    # separate VBS samples in yields
+    parser.add_option("--spVBS", default=False, action='store_true', help="separate VBS events")
 
     parser.add_option("-v","--verbose", dest='debug', default=False, help="in a debug mode", action='store_true')
-    parser.add_option("-p","--paper", dest='paper', default=False, help="paper style", action='store_true')
+    parser.add_option("--paper", dest='paper', default=False, help="paper style", action='store_true')
 
     (options, args) = parser.parse_args()
 
