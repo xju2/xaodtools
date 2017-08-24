@@ -26,7 +26,7 @@ class Sample(object):
         self.sys_dic = {}
         self.scale = 1.0
         self.yields = {}
-    
+
     def get_yield(self, category, options):
 
         if "data" not in self.name:
@@ -176,17 +176,14 @@ class MinitreeReader(object):
                 qq_zz.file_list.append(mc_dir + 'mc15_13TeV.361090.Sherpa_CT10_llll_M4l100.root')
             elif self.options.sherpa == 2.2:
                 print "use Sherpa 2.2 for qqZZ"
-                # qqZZ, Sherpa, 2.2.1,
-                # It's likely the overlap is not removed...
-                # don't use 345107, 345108, for now. 2017-03-01
+                # qqZZ, Sherpa, 2.2.2,
                 qq_zz.file_list.append(mc_dir+'mc15_13TeV.363490.Sherpa_221_NNPDF30NNLO_llll.root')
                 qq_zz.file_list.append(mc_dir+'mc15_13TeV.345107.Sherpa_221_NNPDF30NNLO_llll_m4l100_300_filt100_150.root')
                 qq_zz.file_list.append(mc_dir+'mc15_13TeV.345108.Sherpa_221_NNPDF30NNLO_llll_m4l300.root')
-                qq_zz.scale = 1.0411
+                #qq_zz.scale = 1.0411
 
-            qq_zz.sys_dic = self.get_sys(['norm_qqZZ.txt','theory_qqZZ.txt'])
+            qq_zz.sys_dic = self.get_sys(['norm_qqZZ.txt'])
             sample_list.append(qq_zz)
-        
 
             # ggZZ
             gg_zz = Sample('ggZZ')
@@ -217,7 +214,7 @@ class MinitreeReader(object):
             ttv.file_list.append(mc_dir + 'mc15_13TeV.361626.Sherpa_CT10_ZZZ_4l2v.root')
             ttv.file_list.append(mc_dir + 'mc15_13TeV.410144.Sherpa_NNPDF30NNLO_ttW.root')
             ttv.file_list.append(mc_dir + 'mc15_13TeV.410142.Sherpa_NNPDF30NNLO_ttll_mll5.root')
-            ttv.sys_dic = self.get_sys(['norm_qqZZ.txt','theory_qqZZ.txt'])
+            ttv.sys_dic = self.get_sys(['norm_qqZZ.txt'])
             sample_list.append(ttv)
 
             # data
@@ -269,12 +266,14 @@ class MinitreeReader(object):
             except :
                 pass
                 # print line,"cannot be recognised"
+
+            #print curr_section, sys_name, mean
             sys_map[curr_section][sys_name] = mean
             if self.options.debug:
                 print curr_section,sys_name,mean
 
     @staticmethod
-    def combined_sys(list_sys): 
+    def combined_sys(list_sys):
         # construct a new dictionary to save sys info
         total_exp = sum([x for x,y,z in list_sys])
 
@@ -300,6 +299,7 @@ class MinitreeReader(object):
 
     def get_sys_val(self, exp, sys_dic):
         if type(sys_dic) is dict:
+            print exp, sys_dic
             return math.sqrt(sum([(exp*y)**2 for y in sys_dic.values()]))
         else:
             return sys_dic
@@ -343,7 +343,7 @@ class MinitreeReader(object):
 
             for sample in samples:
                 if self.options.debug:
-                    print "IN sample: ", sample.name
+                    print "IN sample: ", sample.name, ch_name
 
                 exp_, stat_, sys_dic_ = sample.yields[ch_name]
 
@@ -352,7 +352,8 @@ class MinitreeReader(object):
                 else:
                     sys_ = self.get_sys_val(exp_, sys_dic_)
                     out_text += ' & ' + self.get_str(exp_, stat_, sys_)
-                
+                    print "system:", sys_, exp_
+
             out_text += " \\\\ \n"
 
 
@@ -398,7 +399,7 @@ class MinitreeReader(object):
                 else:
                     sys_ = self.get_sys_val(exp_, sys_dic_)
                     out_text += ' & ' + self.get_str(exp_, stat_, sys_)
-                
+
             out_text += " \\\\ \n"
         print out_text
 
@@ -408,7 +409,7 @@ class MinitreeReader(object):
 
         # get yields for each sample for each category
         # save the information in a 2-D list:
-        # all_res[channel][sample] = (exp, stats, sys_dic) 
+        # all_res[channel][sample] = (exp, stats, sys_dic)
         if len(self.category_list) > 0 and len(all_samples) > 0:
             for category in self.category_list:
                 for sample in all_samples:
@@ -428,7 +429,7 @@ class MinitreeReader(object):
 
         new_samples.append(self.combine_samples(all_samples[0:-1], "expected"))
         new_samples.append(all_samples[-1])
-            
+
         if self.options.paper:
             self.print_list_paper(new_samples)
         else:
@@ -458,11 +459,16 @@ if __name__ == "__main__":
                       default="/Users/xju/Documents/Higgs/H4l/highmass/yields/")
     parser.add_option("--prod", dest='prod', default=None, help="Use production")
 
-    parser.add_option("--lumi", dest='lumi', default=-1, type='float', help='final luminosity')
-    parser.add_option("--digits", dest='digits', default=2, type='int', help="digits in final numbers")
-    parser.add_option("--split", dest='split', default=False, action='store_true', help="split stats and sys")
-    parser.add_option("--noCombLep", dest='noCombLep', default=False, help="not combine 2mu2e with 2e2mu", action='store_true')
-    parser.add_option("--combZZ", dest='comb_zz', default=False, help="combine qq/gg/qqjj", action='store_true')
+    parser.add_option("--lumi", dest='lumi', default=-1, type='float',
+                      help='final luminosity')
+    parser.add_option("--digits", dest='digits', default=2, type='int',
+                      help="digits in final numbers")
+    parser.add_option("--split", dest='split', default=False, action='store_true',
+                      help="split stats and sys")
+    parser.add_option("--noCombLep", dest='noCombLep', default=False,
+                      help="not combine 2mu2e with 2e2mu", action='store_true')
+    parser.add_option("--combZZ", dest='comb_zz', default=False,
+                      help="combine qq/gg/qqjj", action='store_true')
 
     parser.add_option("--test", dest='test', default=False, action='store_true', help="no VBF in highmass")
 

@@ -51,49 +51,53 @@ class Comparison:
                 mass += 50
             else:
                 mass += 100
-
         h1 = ROOT.TH1F(name, name, len(bin_list)-1, array('f', bin_list))
 
+        tree.SetBranchStatus("*", 0)
+        tree.SetBranchStatus("run", 1)
+        tree.SetBranchStatus("w_MCw", 1)
+        tree.SetBranchStatus("higgs_m_fidBorn_4lsel", 1)
+        tree.SetBranchStatus("dijet_m_fidBorn_4lsel", 1)
+        tree.SetBranchStatus("dijet_deltaeta_fidBorn_4lsel", 1)
+        tree.SetBranchStatus("event_type_fidBorn_4lsel", 1)
         total_weight = 0
         for ientry in xrange(tree.GetEntries()):
             tree.GetEntry(ientry)
-            if not self.has_large_weight(tree):
-                total_weight += tree.w_MCw
-
-        print "total weight:", total_weight
-
-        for ientry in xrange(tree.GetEntries()):
-            tree.GetEntry(ientry)
-            if tree.higgs_m_fidBorn_4lsel == -999:
-                continue
             if self.has_large_weight(tree):
                 continue
 
-            pass_VBF = tree.dijet_m_fidBorn_4lsel > 400 and tree.dijet_deltaeta_fidBorn_4lsel > 3.3
+            total_weight += tree.w_MCw
+            if tree.higgs_m_fidBorn_4lsel == -999:
+                continue
+
+            pass_VBF = tree.dijet_m_fidBorn_4lsel > 400 and abs(tree.dijet_deltaeta_fidBorn_4lsel) > 3.3
             pass_cuts = False
             event_type = tree.event_type_fidBorn_4lsel
-            if cut == 1 and not pass_VBF and event_type == 0:
-                # ggF 4mu
-                pass_cuts = True
-            elif cut == 2 and not pass_VBF and event_type == 1:
-                # ggF 4e
-                pass_cuts = True
-            elif cut == 3 and not pass_VBF and (event_type == 2 or event_type == 3):
-                # ggF 2mu2e
-                pass_cuts = True
-            elif cut == 4 and pass_VBF:
-                pass_cuts = True
-            elif cut == -1:
-                pass_cuts = True
-            else:
-                pass
+            #if cut == 1 and not pass_VBF and event_type == 0:
+            #    # ggF 4mu
+            #    pass_cuts = True
+            #elif cut == 2 and not pass_VBF and event_type == 1:
+            #    # ggF 4e
+            #    pass_cuts = True
+            #elif cut == 3 and not pass_VBF and (event_type == 2 or event_type == 3):
+            #    # ggF 2mu2e
+            #    pass_cuts = True
+            #elif cut == 4 and pass_VBF:
+            #    pass_cuts = True
+            #elif cut == -1:
+            #    pass_cuts = True
+            #else:
+            #    pass
 
-            if pass_cuts:
-                h1.Fill(tree.higgs_m_fidBorn_4lsel, tree.w_MCw/total_weight)
+            if pass_VBF:
+                h1.Fill(tree.higgs_m_fidBorn_4lsel, tree.w_MCw)
 
+        print "total weight:", total_weight
         if h1.GetEntries() == 0 or h1.GetIntegral() == 0:
             print h1.GetName(),"is empty!"
             exit(1)
+
+        h1.Scale(1./total_weight)
         return h1
 
     def go(self):
@@ -135,10 +139,10 @@ class Comparison:
         t6 = f6.Get(tree_name)
 
         cuts_dic = {}
-        cuts_dic["inc"] = -1
-        cuts_dic["4mu"] = 1
-        cuts_dic["4e"] = 2
-        cuts_dic["2e2mu"] = 3
+        #cuts_dic["inc"] = -1
+        #cuts_dic["4mu"] = 1
+        #cuts_dic["4e"] = 2
+        #cuts_dic["2e2mu"] = 3
         cuts_dic["VBF"] = 4
 
         all_histograms = []
@@ -157,6 +161,9 @@ class Comparison:
             all_histograms.append(h4)
             all_histograms.append(h5)
             all_histograms.append(h6)
+            for hist in all_histograms:
+                hist.Rebin(4)
+                hist.Scale(1./hist.Integral())
 
             list_ckkw = [h1, h2, h3]
             tag_ckkw = ["Nominal", "ckkw 15", "ckkw 30"]

@@ -2,7 +2,10 @@
 __doc__="""
 compare the histograms made from read_monojet_minitree.py
 """
-from ploter import Ploter
+import sys
+sys.path.insert(0, '/afs/cern.ch/user/x/xju/work/h4l/h4lcode/root_plot_utils')
+from root_plot_utils.ploter import Ploter
+
 import ROOT
 ROOT.gROOT.SetBatch()
 
@@ -83,11 +86,13 @@ def process( dir_name="histograms", scale_qcd=True, is_debug=False):
 
         has_ratio = True
         plot_helper = Ploter()
+        plot_helper.show_sum_bkg = False
         plot_helper.stack_hists(
             hist_list, tag_list, out_name,
             hist.GetXaxis().GetTitle(),
             hist.GetYaxis().GetTitle(),
-            is_log, has_data)
+            is_log, has_data
+        )
 
     print "QCD:",n_qcd
     # close all the files

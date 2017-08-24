@@ -16,7 +16,12 @@ class Ploter:
         self.has_data = False
 
         # predefined colors
-        self.COLORS = [64, 95, 28, 29, 209, 5, 432, 433, 434, 435, 436, 8, 6]
+        self.COLORS = [
+            206, # red
+            64, # sky-blue
+            95, 28, 29, 209, 5,
+            432, 433, 434, 435, 436, 8, 6
+        ]
         self.LINE_STYLE = [1]*10
         self.VerticalCanvasSplit = 0.4
 
@@ -360,7 +365,7 @@ class Ploter:
             no_fill = False
 
         self.color(hist_list, no_fill)
-      
+
         if self.add_ratio:
             self.prepare_2pad_canvas('canvas', 600, 600)
             self.pad2.cd()
@@ -373,7 +378,7 @@ class Ploter:
                 ratio_x, ratio_y = kwargs["ratio_range"]
             except KeyError:
                 ratio_x, ratio_y = 0.55, 1.42
-        
+
             self.add_ratio_panel(hist_list, ratio_title, ratio_x, ratio_y, True)
             self.pad1.cd()
         else:
@@ -408,7 +413,7 @@ class Ploter:
 
         for i, hist in enumerate(hist_list):
             if add_yield:
-                legend.AddEntry(hist, "{}: {:.0f}".format(tag_list[i], hist.Integral()))
+                legend.AddEntry(hist, "{}: {:.3E}".format(tag_list[i], hist.Integral()))
             else:
                 legend.AddEntry(hist, tag_list[i])
 
@@ -433,12 +438,10 @@ class Ploter:
 
         helper.mkdir_p(out_folder)
 
-
         if is_logy:
             self.can.SaveAs(out_folder+"/"+out_name+"_Log.eps")
         else:
             self.can.SaveAs(out_folder+"/"+out_name+".eps")
-
 
     def set_y_offset(self):
         if not self.add_ratio:
