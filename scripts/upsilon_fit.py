@@ -13,8 +13,9 @@ import math
 
 import AtlasStyle
 if not hasattr(ROOT, "my,Text"):
-    ROOT.gROOT.LoadMacro("/afs/cern.ch/user/x/xju/tool/AtlasUtils.C")
-    ROOT.gROOT.LoadMacro("/afs/cern.ch/user/x/xju/tool/loader.c")
+    marco_dir = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
+    ROOT.gROOT.LoadMacro(marco_dir+"AtlasUtils.C")
+    ROOT.gROOT.LoadMacro(marco_dir+"loader.c")
 
 
 ROOT.gROOT.SetBatch()
